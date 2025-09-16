@@ -3,258 +3,233 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Heart Horror: Yellow Mode - Dynamic Attacks</title>
+<title>Undertale/Deltarune Inspired Game</title>
 <style>
-body{margin:0;background:#111;color:white;font-family:'Courier New',monospace;overflow:hidden;}
-canvas{display:block;margin:auto;background:#222;}
-#ui{position:absolute;top:10px;left:10px;color:white;font-size:16px;}
-.bar-container{background:#333;border:1px solid #fff;width:200px;height:20px;margin-bottom:5px;}
-.bar{height:100%;background:red;width:100%;transition:width 0.1s;}
-#burstBar{background:cyan;width:0%;transition:width 0.1s;}
-#messages{position:absolute;bottom:10px;left:10px;width:90%;font-size:18px;color:yellow;white-space:pre-line;}
-#keybindsMenu{position:absolute;top:50px;left:10px;background:#222;padding:10px;display:none;border:1px solid #fff;}
-#keybindsMenu input{width:40px;}
-button{margin-top:5px;}
+  body { margin:0; background:#000; color:#fff; font-family:sans-serif; overflow:hidden; }
+  canvas { display:block; margin:0 auto; background:#111; }
+  #ui { position:absolute; top:10px; left:50%; transform:translateX(-50%); color:#fff; text-align:center; font-family:sans-serif; }
+  #messages { margin-top:10px; height:60px; overflow-y:auto; font-size:14px; }
 </style>
 </head>
 <body>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <div id="ui">
-  <div>HP: <span id="hpText">100</span></div>
-  <div class="bar-container"><div id="hpBar" class="bar"></div></div>
-  <div>Burst: <span id="burstText">Ready</span></div>
-  <div class="bar-container"><div id="burstBar"></div></div>
-  <div>Night: <span id="nightText">1</span></div>
-  <button id="keybindButton">Change Keybinds</button>
+  <div>HP: <span id="hp">100</span> | Burst: <span id="burst">0%</span> | Night: <span id="night">1</span></div>
+  <div id="messages"></div>
 </div>
-
-<div id="keybindsMenu">
-  <div>Up: <input id="keyUp" maxlength="1"></div>
-  <div>Down: <input id="keyDown" maxlength="1"></div>
-  <div>Left: <input id="keyLeft" maxlength="1"></div>
-  <div>Right: <input id="keyRight" maxlength="1"></div>
-  <div>Burst: <input id="keyBurst" maxlength="1"></div>
-  <button id="saveKeys">Save</button>
-  <button id="closeKeys">Close</button>
-</div>
-
-<div id="messages">Welcome to Heart Horror: Dynamic Attacks!</div>
-
 <script>
-const canvas=document.getElementById('gameCanvas');
-const ctx=canvas.getContext('2d');
-let width=canvas.width,height=canvas.height;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-// ---- Player ----
-let player={x:width/2,y:height-100,size:20,hp:100,speed:4,burstReady:true,burstTimer:0};
-let burstActive=false,BURST_DURATION=180,BURST_COOLDOWN=300;
+// --- Game Settings ---
+let keybinds = JSON.parse(localStorage.getItem('keybinds')) || {up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight', burst:'q'};
+const box = {x:150, y:100, width:500, height:400};
+let player = {x: box.x+box.width/2, y: box.y+box.height/2, size:20, hp:100, burst:0, burstActive:false};
+let bullets = [];
+let bosses = [];
+let currentBossIndex = 0;
+let night = 1;
+let messages = [];
+let lastTime = 0;
 
-// ---- Keybinds ----
-let keys={};
-let keybinds=JSON.parse(localStorage.getItem('keybinds'))||{up:'W',down:'S',left:'A',right:'D',burst:'Q'};
-document.getElementById('keyUp').value=keybinds.up;
-document.getElementById('keyDown').value=keybinds.down;
-document.getElementById('keyLeft').value=keybinds.left;
-document.getElementById('keyRight').value=keybinds.right;
-document.getElementById('keyBurst').value=keybinds.burst;
-
-document.addEventListener('keydown',e=>keys[e.key.toUpperCase()]=true);
-document.addEventListener('keyup',e=>keys[e.key.toUpperCase()]=false);
-
-document.getElementById('keybindButton').addEventListener('click',()=>{document.getElementById('keybindsMenu').style.display='block';});
-document.getElementById('closeKeys').addEventListener('click',()=>{document.getElementById('keybindsMenu').style.display='none';});
-document.getElementById('saveKeys').addEventListener('click',()=>{
-  keybinds.up=document.getElementById('keyUp').value.toUpperCase();
-  keybinds.down=document.getElementById('keyDown').value.toUpperCase();
-  keybinds.left=document.getElementById('keyLeft').value.toUpperCase();
-  keybinds.right=document.getElementById('keyRight').value.toUpperCase();
-  keybinds.burst=document.getElementById('keyBurst').value.toUpperCase();
-  localStorage.setItem('keybinds',JSON.stringify(keybinds));
-  document.getElementById('keybindsMenu').style.display='none';
-});
-
-// ---- UI ----
-let night=1;
-let messages=[];
-function addMessage(msg){messages.push(msg);if(messages.length>5)messages.shift();}
-
-// ---- Attack Box ----
-let attackBox={x:width/2-100,y:height-200,width:200,height:150};
-
-// ---- Bullets ----
-let bullets=[];
-function spawnBullet(x,y,type,color,target){
-  bullets.push({x,y,type,typePos:{angle:0,speed:0,timer:0},color,target});
-  if(type=="homing"){bullets[bullets.length-1].typePos.speed=2;}
-  if(type=="stop"){bullets[bullets.length-1].typePos.timer=60;bullets[bullets.length-1].typePos.speed=2;}
+// --- Utility Functions ---
+function addMessage(msg){
+  messages.push(msg);
+  if(messages.length>5) messages.shift();
+  document.getElementById('messages').innerText = messages.join('\n');
 }
 
-// ---- Enemies/Bosses ----
-let bosses=[
-  {name:"Shadow Phantom",color:"purple",size:20,speed:1.5,patterns:["down","homing","stop"],hp:20},
-  {name:"Bone Horror",color:"white",size:25,speed:2,patterns:["zigzag","homing","stop"],hp:25},
-  {name:"Creeper Face",color:"green",size:30,speed:1.2,patterns:["circle","homing","stop"],hp:30},
-  {name:"Radiant Horror",color:"gold",size:50,speed:2.5,patterns:["radiance","homing","stop"],hp:100} // final boss
-];
-let enemies=[];
-function spawnEnemies(n){
-  enemies=[];
-  for(let i=0;i<n;i++){
-    let boss=bosses[(night+i-1)%bosses.length];
-    enemies.push({
-      x:Math.random()*(width-40)+20,
-      y:-Math.random()*300,
-      size:boss.size,
-      speed:boss.speed,
-      color:boss.color,
-      patterns:boss.patterns.slice(),
-      name:boss.name,
-      hp:boss.hp,
-      attackCooldown:0
-    });
+function random(min,max){ return Math.random()*(max-min)+min; }
+function clamp(val,min,max){ return Math.max(min, Math.min(max,val)); }
+
+// --- Boss Definitions ---
+class Boss {
+  constructor(name,color,hp,attacks){
+    this.name=name; this.color=color; this.hp=hp; this.maxHp=hp; this.attacks=attacks; this.attackIndex=0; this.timer=0;
+  }
+  getCurrentAttack(){ return this.attacks[this.attackIndex]; }
+  nextAttack(){ this.attackIndex = (this.attackIndex+1)%this.attacks.length; this.timer=0; }
+}
+
+// Example attacks
+function createBosses(){
+  bosses = [
+    new Boss("Redfang","#ff5555",50,[
+      {type:"spread",count:8,speed:2,interval:1},
+      {type:"homing",count:1,speed:3,interval:2}
+    ]),
+    new Boss("Blazewing","#ffaa00",80,[
+      {type:"circle",count:12,speed:2,interval:1},
+      {type:"stopmove",duration:1.5}
+    ]),
+    new Boss("Frostbite","#55ffff",100,[
+      {type:"zigzag",count:10,speed:2.5,interval:1.2},
+      {type:"homing",count:2,speed:3,interval:2}
+    ]),
+    // Add more bosses up to 20...
+    new Boss("Radiance","#ffffaa",300,[
+      {type:"radiance",count:20,speed:3,interval:0.5},
+      {type:"homing",count:5,speed:3.5,interval:1},
+      {type:"stopmove",duration:1}
+    ])
+  ];
+}
+
+// --- Bullet Mechanics ---
+class Bullet {
+  constructor(x,y,vx,vy,color,size=8){ this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.color=color; this.size=size; }
+  update(dt){
+    this.x += this.vx*dt;
+    this.y += this.vy*dt;
+  }
+  draw(){
+    ctx.fillStyle=this.color;
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill();
   }
 }
-spawnEnemies(1);
 
-// ---- Update ----
-function update(){
-  // Player movement
-  if(keys[keybinds.up])player.y-=player.speed;
-  if(keys[keybinds.down])player.y+=player.speed;
-  if(keys[keybinds.left])player.x-=player.speed;
-  if(keys[keybinds.right])player.x+=player.speed;
-  player.x=Math.max(attackBox.x,Math.min(attackBox.x+attackBox.width,player.x));
-  player.y=Math.max(attackBox.y,Math.min(attackBox.y+attackBox.height,player.y));
+// --- Input ---
+let keys = {};
+document.addEventListener('keydown',e=>{ keys[e.key]=true; });
+document.addEventListener('keyup',e=>{ keys[e.key]=false; });
 
-  // Burst mechanic
-  if(keys[keybinds.burst] && player.burstReady){
-    burstActive=true;
-    player.burstReady=false;
-    player.burstTimer=BURST_DURATION;
-    bullets=[];
-    addMessage("Burst activated!");
+// --- Player Movement ---
+function updatePlayer(dt){
+  let speed = 200;
+  if(keys[keybinds.up]) player.y -= speed*dt;
+  if(keys[keybinds.down]) player.y += speed*dt;
+  if(keys[keybinds.left]) player.x -= speed*dt;
+  if(keys[keybinds.right]) player.x += speed*dt;
+  player.x = clamp(player.x, box.x+player.size, box.x+box.width-player.size);
+  player.y = clamp(player.y, box.y+player.size, box.y+box.height-player.size);
+
+  // Burst
+  if(keys[keybinds.burst] && player.burst>=100 && !player.burstActive){
+    player.burstActive = true; player.burst=0; addMessage("BURST ACTIVATED!");
+    setTimeout(()=>{ player.burstActive=false; addMessage("Burst ended"); },3000);
   }
-  if(burstActive){
-    player.burstTimer--;
-    if(player.burstTimer<=0) burstActive=false;
-  } else if(!player.burstReady){
-    player.burstTimer++;
-    if(player.burstTimer>=BURST_COOLDOWN){player.burstReady=true;player.burstTimer=BURST_COOLDOWN;}
-  }
+  if(!player.burstActive && player.burst<100) player.burst += dt*10;
+  document.getElementById('hp').innerText = player.hp;
+  document.getElementById('burst').innerText = Math.floor(player.burst);
+}
 
-  // Enemy actions
-  enemies.forEach(e=>{
-    // Move
-    e.y+=e.speed;
+// --- Boss AI & Attack Patterns ---
+function spawnBullets(boss,dt){
+  boss.timer += dt;
+  let atk = boss.getCurrentAttack();
+  if(!atk) return;
 
-    // Attack spawn cooldown
-    e.attackCooldown--;
-    if(e.attackCooldown<=0){
-      let pattern=e.patterns[Math.floor(Math.random()*e.patterns.length)];
-      if(pattern=="down") spawnBullet(e.x,e.y,"down","red");
-      if(pattern=="zigzag") spawnBullet(e.x,e.y,"zigzag","white");
-      if(pattern=="circle"){
-        for(let i=0;i<8;i++) spawnBullet(e.x,e.y,"circle","blue",{angle:i*Math.PI/4});
+  if(!atk.lastSpawn) atk.lastSpawn=0;
+  if(boss.timer - atk.lastSpawn >= (atk.interval||1)){
+    atk.lastSpawn = boss.timer;
+    if(atk.type==="spread"){
+      for(let i=0;i<atk.count;i++){
+        let angle = (i/atk.count)*Math.PI*2;
+        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle)*atk.speed, boss.color));
       }
-      if(pattern=="homing") spawnBullet(e.x,e.y,"homing","cyan",{x:player.x,y:player.y});
-      if(pattern=="stop") spawnBullet(e.x,e.y,"stop","magenta",{x:player.x,y:player.y});
-      if(pattern=="radiance"){
-        for(let i=0;i<8;i++) spawnBullet(e.x,e.y,"circle","gold",{angle:i*Math.PI/4});
+    } else if(atk.type==="circle"){
+      for(let i=0;i<atk.count;i++){
+        let angle = (i/atk.count)*Math.PI*2;
+        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle)*atk.speed, boss.color));
       }
-      e.attackCooldown=120; // cooldown between attacks
+    } else if(atk.type==="homing"){
+      for(let i=0;i<atk.count;i++){
+        let dx = player.x-(box.x+box.width/2);
+        let dy = player.y-(box.y+50);
+        let len = Math.hypot(dx,dy);
+        bullets.push(new Bullet(box.x+box.width/2,box.y+50, dx/len*atk.speed, dy/len*atk.speed, boss.color));
+      }
+    } else if(atk.type==="zigzag"){
+      for(let i=0;i<atk.count;i++){
+        let angle = (i/atk.count)*Math.PI;
+        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle*2)*atk.speed, boss.color));
+      }
+    } else if(atk.type==="radiance"){
+      for(let i=0;i<atk.count;i++){
+        let angle = (i/atk.count)*Math.PI*2 + boss.timer;
+        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle)*atk.speed, boss.color));
+      }
+    } else if(atk.type==="stopmove"){
+      atk.endTime = boss.timer + (atk.duration||1);
+      bullets.forEach(b=>b.vx=b.vy=0);
     }
+  }
+
+  if(atk.type==="stopmove" && boss.timer>=atk.endTime){
+    boss.nextAttack();
+  }
+}
+
+// --- Update Bullets ---
+function updateBullets(dt){
+  bullets.forEach(b=>{
+    if(!player.burstActive){
+      let dx = b.x-player.x, dy=b.y-player.y;
+      if(Math.hypot(dx,dy)<b.size+player.size){
+        player.hp -= 10;
+        addMessage("Ouch! -10 HP");
+        b.toRemove=true;
+      }
+    }
+    b.update(dt);
+    if(b.x<0 || b.x>canvas.width || b.y<0 || b.y>canvas.height) b.toRemove=true;
   });
-
-  // Update bullets
-  bullets.forEach((b,j)=>{
-    if(b.type=="down") b.y+=3;
-    if(b.type=="zigzag"){b.y+=2;b.x+=Math.sin(b.y/15)*5;}
-    if(b.type=="circle"){b.x+=Math.cos(b.typePos.angle)*3;b.y+=Math.sin(b.typePos.angle)*3;b.typePos.angle+=0.05;}
-    if(b.type=="homing"){
-      let dx=b.target.x-b.x;
-      let dy=b.target.y-b.y;
-      let dist=Math.sqrt(dx*dx+dy*dy);
-      b.x+=dx/dist*b.typePos.speed;
-      b.y+=dy/dist*b.typePos.speed;
-    }
-    if(b.type=="stop"){
-      if(b.typePos.timer>0){b.typePos.timer--;} 
-      else{
-        let dx=b.target.x-b.x;
-        let dy=b.target.y-b.y;
-        let dist=Math.sqrt(dx*dx+dy*dy);
-        b.x+=dx/dist*b.typePos.speed;
-        b.y+=dy/dist*b.typePos.speed;
-      }
-    }
-
-    // Collision
-    if(b.x>attackBox.x && b.x<attackBox.x+attackBox.width && b.y>attackBox.y && b.y<attackBox.y+attackBox.height && !burstActive){
-      player.hp-=0.5;
-      bullets.splice(j,1);
-      addMessage("Hit!");
-    }
-  });
-
-  bullets=bullets.filter(b=>b.x>0 && b.x<width && b.y>0 && b.y<height);
-
-  // Night progression
-  if(enemies.length===0){night++;spawnEnemies(1);addMessage("Night "+night+" begins...");}
-
-  // UI update
-  document.getElementById('hpText').innerText=Math.floor(player.hp);
-  document.getElementById('hpBar').style.width=(player.hp/100*100)+'%';
-  document.getElementById('burstText').innerText=player.burstReady?'Ready':'Charging';
-  document.getElementById('burstBar').style.width=(burstActive?100:player.burstTimer/BURST_COOLDOWN*100)+'%';
-  document.getElementById('nightText').innerText=night;
-
-  if(player.hp<=0){addMessage("You were consumed...");alert("Game Over!");window.location.reload();}
+  bullets = bullets.filter(b=>!b.toRemove);
 }
 
-// ---- Render ----
-function render(){
-  ctx.clearRect(0,0,width,height);
-
+// --- Draw ---
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   // Attack box
-  ctx.strokeStyle='yellow';
-  ctx.lineWidth=4;
-  ctx.strokeRect(attackBox.x,attackBox.y,attackBox.width,attackBox.height);
+  ctx.strokeStyle="#fff"; ctx.lineWidth=3;
+  ctx.strokeRect(box.x,box.y,box.width,box.height);
 
-  // Player heart
-  ctx.fillStyle='red';
-  ctx.beginPath();
-  ctx.arc(player.x,player.y,player.size,0,Math.PI*2);
-  ctx.fill();
-  if(burstActive){
-    ctx.strokeStyle='cyan';
-    ctx.lineWidth=5;
-    ctx.beginPath();
-    ctx.arc(player.x,player.y,player.size+10,0,Math.PI*2);
-    ctx.stroke();
-  }
+  // Player
+  ctx.fillStyle="red";
+  ctx.beginPath(); ctx.arc(player.x,player.y,player.size,0,Math.PI*2); ctx.fill();
 
   // Bullets
-  bullets.forEach(b=>{
-    ctx.fillStyle=b.color;
-    ctx.beginPath();
-    ctx.arc(b.x,b.y,6,0,Math.PI*2);
-    ctx.fill();
-  });
+  bullets.forEach(b=>b.draw());
 
-  // Enemies
-  enemies.forEach(e=>{
-    ctx.fillStyle=e.color;
-    ctx.beginPath();
-    ctx.arc(e.x,e.y,e.size,0,Math.PI*2);
-    ctx.fill();
-  });
-
-  document.getElementById('messages').innerText=messages.join('\n');
+  // Boss info
+  let boss = bosses[currentBossIndex];
+  if(boss){
+    ctx.fillStyle=boss.color;
+    ctx.fillRect(600,50,150,20);
+    ctx.fillStyle="#000"; ctx.fillRect(600,50,150*(1-boss.hp/boss.maxHp),20);
+    ctx.fillStyle="#fff"; ctx.fillText(boss.name,600,45);
+  }
 }
 
-// ---- Game Loop ----
-function loop(){update();render();requestAnimationFrame(loop);}
-loop();
+// --- Game Loop ---
+function loop(timestamp){
+  let dt = (timestamp-lastTime)/1000;
+  lastTime = timestamp;
+
+  updatePlayer(dt);
+  let boss = bosses[currentBossIndex];
+  if(boss){
+    spawnBullets(boss,dt);
+    updateBullets(dt);
+    if(boss.hp<=0){
+      addMessage(`${boss.name} defeated!`);
+      currentBossIndex++;
+      night++;
+      document.getElementById('night').innerText = night;
+      if(currentBossIndex>=bosses.length){
+        addMessage("All bosses defeated! You win!");
+        cancelAnimationFrame(raf);
+      }
+    }
+  }
+
+  draw();
+  raf = requestAnimationFrame(loop);
+}
+
+// --- Start Game ---
+createBosses();
+let raf = requestAnimationFrame(loop);
 </script>
 </body>
 </html>
