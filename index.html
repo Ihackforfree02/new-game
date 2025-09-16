@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Bullet Heart Duel — Run Mode</title>
+<title>Bullet Heart Duel — 50 Level Run</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <style>
   html,body { margin:0; background:#0b0b0f; color:#e7e7ef; font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
@@ -51,7 +51,7 @@
     </div>
   </div>
 
-  <div class="small">Single-file fangame-style engine. Progress and HP save automatically.</div>
+  <div class="small">50-level run. Progress and HP save automatically. Bosses at 10/20/30/40/50.</div>
 </div>
 
 <script>
@@ -66,25 +66,27 @@
       iframes: 800, maxHP: 92,
       grazeRadius: 18, grazeScore: 3, dmgShake: 5
     },
-    cycle: { surviveSec: 60, attackSec: 10 }, // boss cycles only
+    cycle: { surviveSec: 60, attackSec: 10 },
     sfx: { enabled: true, vol: 0.18 },
-    bullets: { playerSpeed: 6.5, playerCooldown: 140, playerDmg: 10 },
+    bullets: { playerSpeed: 6.7, playerCooldown: 130, playerDmg: 10 },
     burst: { max: 100, gainPerGraze: 1.2, damage: 120, clearBullets: true, cooldown: 3000 },
     visual: {
       bg:'#000', trail:true, trailAlpha:0.07,
       warn:'#ffd166', beam:'#73c0ff',
       bone:'#e5e5ff', knife:'#ffaa99', orb:'#a1ffea',
-      fall:'#ffcc88', hammer:'#ff9d6c', fire:'#ff6b3d', heal:'#7affb7'
+      fall:'#ffcc88', hammer:'#ff9d6c', fire:'#ff6b3d'
     },
-    saveKey: 'bhd_run_v2'
+    MAX_LEVEL: 50,
+    saveKey: 'bhd_run_v3_50'
   };
 
   const SKINS = [
-    { id:'classic', name:'Classic', color:'#ff4d6d', trail:'#ffb3c1' },
-    { id:'ember',   name:'Ember',   color:'#ff9a63', trail:'#ffd0b7' },
-    { id:'sapphire',name:'Sapphire',color:'#59b0ff', trail:'#b7daff' },
-    { id:'emerald', name:'Emerald', color:'#53ffa3', trail:'#b9ffd6' },
-    { id:'void',    name:'Void',    color:'#d5ccff', trail:'#a18aff' }
+    { id:'classic',  name:'Classic',  color:'#ff4d6d', trail:'#ffb3c1' },
+    { id:'ember',    name:'Ember',    color:'#ff9a63', trail:'#ffd0b7' },
+    { id:'sapphire', name:'Sapphire', color:'#59b0ff', trail:'#b7daff' },
+    { id:'emerald',  name:'Emerald',  color:'#53ffa3', trail:'#b9ffd6' },
+    { id:'void',     name:'Void',     color:'#d5ccff', trail:'#a18aff' },
+    { id:'carbon',   name:'Carbon',   color:'#b3b3b3', trail:'#e0e0e0' }
   ];
 
   // ======================= DOM =======================
@@ -109,18 +111,18 @@
   function loadSave(){
     try{
       const raw = localStorage.getItem(CONFIG.saveKey);
-      if (!raw) return { level:1, hp:CONFIG.player.maxHP, best:0, skin:'classic', unlocked:['classic'], muted:false };
+      if (!raw) return { level:1, hp:CONFIG.player.maxHP, best:0, skin:'classic', unlocked:['classic'], muted:false, completed:false };
       const s = JSON.parse(raw);
       if (s.muted) CONFIG.sfx.enabled = false;
-      // sanitize
-      s.level = Math.max(1, s.level|0);
-      s.hp = Math.max(1, Math.min(CONFIG.player.maxHP, s.hp|0));
+      s.level = clamp(s.level|0, 1, CONFIG.MAX_LEVEL);
+      s.hp = clamp(s.hp|0, 1, CONFIG.player.maxHP);
       s.unlocked = Array.isArray(s.unlocked) && s.unlocked.length ? s.unlocked : ['classic'];
       s.skin = s.unlocked.includes(s.skin) ? s.skin : s.unlocked[0];
       s.best = s.best|0;
+      s.completed = !!s.completed;
       return s;
     } catch(e){
-      return { level:1, hp:CONFIG.player.maxHP, best:0, skin:'classic', unlocked:['classic'], muted:false };
+      return { level:1, hp:CONFIG.player.maxHP, best:0, skin:'classic', unlocked:['classic'], muted:false, completed:false };
     }
   }
   function persist(){
@@ -131,12 +133,13 @@
         best: save.best|0,
         skin: save.skin,
         unlocked: Array.from(new Set(save.unlocked)),
-        muted: !CONFIG.sfx.enabled
+        muted: !CONFIG.sfx.enabled,
+        completed: !!save.completed
       }));
     }catch(e){}
   }
   function hardReset(){
-    save = { level:1, hp:CONFIG.player.maxHP, best:0, skin:'classic', unlocked:['classic'], muted:!CONFIG.sfx.enabled };
+    save = { level:1, hp:CONFIG.player.maxHP, best:0, skin:'classic', unlocked:['classic'], muted:!CONFIG.sfx.enabled, completed:false };
     persist();
     startRun();
   }
@@ -163,15 +166,9 @@
   const circleRectHit=(cx,cy,r, rx,ry,rw,rh)=>{const nx=clamp(cx,rx,rx+rw),ny=clamp(cy,ry,ry+rh);const dx=cx-nx,dy=cy-ny;return dx*dx+dy*dy<=r*r;};
 
   // ======================= ENTITIES =======================
-  const bullets=[];   // enemy bullets
-  const hazards=[];   // beams, falls, hammers, fires
-  const telegraphs=[];
-  const pshots=[];
-  const floatTexts=[];
-
+  const bullets=[]; const hazards=[]; const telegraphs=[]; const pshots=[]; const floatTexts=[];
   function clearWave(){ bullets.length=0; hazards.length=0; telegraphs.length=0; pshots.length=0; floatTexts.length=0; }
-
-  function popup(x,y,text,color='#7affb7'){ floatTexts.push({x,y,vy:-0.4,t:0,life:900,text,color}); }
+  function popup(x,y,text,color='#a6c8ff'){ floatTexts.push({x,y,vy:-0.4,t:0,life:1000,text,color}); }
 
   // enemy spawners
   function spawnOrb(x,y,vx,vy,r=6,dmg=7){ bullets.push({kind:'orb',x,y,vx,vy,r,dmg,color:CONFIG.visual.orb}); }
@@ -186,11 +183,10 @@
   function spawnHammerArc(cx,cy,radius,span,delay=700,hold=450,dmg=14){
     telegraphs.push({kind:'hammerWarnArc',cx,cy,radius,span,delay,t:0}); hazards.push({kind:'hammerArc',cx,cy,radius,span,active:false,t:0,hold,dmg,color:CONFIG.visual.hammer});
   }
-  // Fire: jets and fireballs
   function spawnFireJetVertical(x, delay=600, hold=900, dmg=10){
     telegraphs.push({kind:'fireWarnCol',x,delay,t:0}); hazards.push({kind:'fireCol',x,active:false,t:0,w:40,hold,dmg,color:CONFIG.visual.fire});
   }
-  function spawnFireBall(x,y,ang,spd=2.2,r=7,dmg=9){
+  function spawnFireBall(x,y,ang,spd=2.3,r=7,dmg=9){
     bullets.push({kind:'fire',x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r,dmg,color:CONFIG.visual.fire, flicker:0});
   }
 
@@ -200,43 +196,57 @@
     pshots.push({x,y,vx:dx/n*sp,vy:dy/n*sp,r:3,color:'#c0ff7a',dmg:CONFIG.bullets.playerDmg});
   }
 
+  // ======================= DIFFICULTY SCALING =======================
+  function decade(level){ return Math.ceil(level/10); }
+  function isBossLevel(level){ return level % 10 === 0; }
+  function levelScale(level){
+    // base grows slightly per level, with a bump each decade
+    const dec = decade(level);
+    const intra = (level - (dec-1)*10); // 1..10
+    const perLevel = 1 + 0.05*(intra-1);   // 1.00 → 1.45 within a decade
+    const perDecade = 1 + 0.18*(dec-1);    // 1.00, 1.18, 1.36, 1.54, 1.72
+    return perLevel * perDecade;
+  }
+
   // ======================= PATTERNS =======================
   const Patterns = {
-    // generic survival patterns for non-boss levels
-    corridorBeams: (t,dt,a,lvl)=>{
+    corridorBeams: (t,dt,a,ls)=>{
       t.acc=(t.acc||0)+dt;
-      if (t.acc>1100){
+      const rate = 1100/ls;
+      if (t.acc>rate){
         t.acc=0;
-        const rows = 2 + (lvl%3);
+        const rows = 2 + Math.floor(ls%3);
         for (let i=0;i<rows;i++){
           if (Math.random()<0.5){
             const y = Math.floor(rand(a.y+50,a.y+a.h-50));
-            spawnBeam(a.x,y,a.w,8, 480-20*lvl, 640, 10+lvl);
+            spawnBeam(a.x,y,a.w,8, Math.max(300, 520 - 30*ls), Math.max(420, 640 - 10*ls), 8+Math.floor(ls));
           } else {
             const x = Math.floor(rand(a.x+50,a.x+a.w-50));
-            spawnBeam(x,a.y,8,a.h, 480-20*lvl, 640, 10+lvl);
+            spawnBeam(x,a.y,8,a.h, Math.max(300, 520 - 30*ls), Math.max(420, 640 - 10*ls), 8+Math.floor(ls));
           }
         }
         tone(300,0.04,'sine');
       }
     },
-    crossBones: (t,dt,a,lvl)=>{
+    crossBones: (t,dt,a,ls)=>{
       t.acc=(t.acc||0)+dt;
-      if (t.acc > 260){
+      const rate = Math.max(120, 260 - 8*ls);
+      if (t.acc > rate){
         t.acc=0;
-        const s = 2.0 + 0.15*lvl;
+        const s = 1.9 + 0.18*ls;
         const y = Math.floor(rand(a.y+20,a.y+a.h-20));
-        spawnBone(a.x-24,y,22,10, s,0,8+lvl);
-        spawnBone(a.x+a.w+4,y,22,10, -s,0,8+lvl);
+        spawnBone(a.x-24,y,22,10, s,0,8+Math.floor(ls/2));
+        spawnBone(a.x+a.w+4,y,22,10, -s,0,8+Math.floor(ls/2));
         const x = Math.floor(rand(a.x+20,a.x+a.w-20));
-        spawnBone(x,a.y-24,10,22, 0,s,8+lvl);
-        spawnBone(x,a.y+a.h+4,10,22, 0,-s,8+lvl);
+        spawnBone(x,a.y-24,10,22, 0,s,8+Math.floor(ls/2));
+        spawnBone(x,a.y+a.h+4,10,22, 0,-s,8+Math.floor(ls/2));
         tone(420,0.03);
       }
     },
-    chaseOrbs: (t,dt,a,lvl,player)=>{
+    chaseOrbs: (t,dt,a,ls,player)=>{
       t.acc=(t.acc||0)+dt;
-      if (t.acc>520-20*lvl){
+      const rate = Math.max(220, 520 - 14*ls);
+      if (t.acc>rate){
         t.acc=0;
         const edges = [
           {x: rand(a.x, a.x+a.w), y: a.y-10},
@@ -244,46 +254,48 @@
           {x: a.x-10, y: rand(a.y, a.y+a.h)},
           {x: a.x+a.w+10, y: rand(a.y, a.y+a.h)}
         ];
-        for (let k=0;k<2+Math.floor(lvl/3);k++){
+        for (let k=0;k<2+Math.floor(ls/3);k++){
           const e = edges[Math.floor(rand(0,4))];
           const ang = Math.atan2(player.y - e.y, player.x - e.x);
-          spawnOrb(e.x,e.y, Math.cos(ang)*(1.7+0.18*lvl), Math.sin(ang)*(1.7+0.18*lvl), 7, 7+lvl);
+          spawnOrb(e.x,e.y, Math.cos(ang)*(1.6+0.12*ls), Math.sin(ang)*(1.6+0.12*ls), 7, 7+Math.floor(ls/2));
         }
       }
       bullets.forEach(b=>{
         if (b.kind==='orb'){
           const ang = Math.atan2(game.player.y - b.y, game.player.x - b.x);
-          b.vx = b.vx*0.97 + Math.cos(ang)*0.06*(1+0.02*lvl);
-          b.vy = b.vy*0.97 + Math.sin(ang)*0.06*(1+0.02*lvl);
+          b.vx = b.vx*0.97 + Math.cos(ang)*0.05*(1+0.02*ls);
+          b.vy = b.vy*0.97 + Math.sin(ang)*0.05*(1+0.02*ls);
         }
       });
     },
-    // boss-only: hammers + fire
-    hammerAndFire: (t,dt,a,lvl,player)=>{
+    hammerAndFire: (t,dt,a,ls,player)=>{
+      // ls ~ levelScale
       t.acc=(t.acc||0)+dt; t.fire=(t.fire||0)+dt;
-      if (t.acc>1400){
+      const colDelay = Math.max(280, 560 - 18*ls);
+      const arcDelay = Math.max(300, 540 - 16*ls);
+      const fireDelay = Math.max(180, 360 - 10*ls);
+
+      if (t.acc>Math.min(1400, 1400/Math.sqrt(ls))){
         t.acc=0;
-        // columns and arcs
-        const cols = 2 + Math.floor(lvl/2);
+        const cols = 2 + Math.floor(ls/2);
         for (let i=0;i<cols;i++){
           const x = Math.floor(rand(a.x+60, a.x+a.w-60));
-          spawnHammerColumn(x, 580-20*lvl, 520+40*lvl, 12+lvl);
+          spawnHammerColumn(x, colDelay, Math.max(420, 520+25*ls), 10+Math.floor(ls));
         }
         const cx = a.x + a.w/2, cy = a.y + a.h/2;
-        const span = Math.PI/3 + lvl*0.12;
+        const span = Math.min(Math.PI/1.6, Math.PI/3 + ls*0.10);
         const ang = Math.atan2(player.y-cy, player.x-cx);
-        spawnHammerArc(cx,cy, 160+lvl*16, {a:ang-span/2, b:ang+span/2}, 540-20*lvl, 480+30*lvl, 12+lvl);
+        spawnHammerArc(cx,cy, 150+ls*14, {a:ang-span/2, b:ang+span/2}, arcDelay, Math.max(380, 480+20*ls), 10+Math.floor(ls));
         tone(200,0.06,'triangle');
       }
-      if (t.fire>360){
+      if (t.fire>fireDelay){
         t.fire=0;
-        // fire jets + fireballs
-        const jets = 1 + Math.floor(lvl/3);
+        const jets = 1 + Math.floor(ls/3);
         for (let i=0;i<jets;i++){
           const x = Math.floor(rand(a.x+50, a.x+a.w-50));
-          spawnFireJetVertical(x, 420-10*lvl, 800, 8+lvl);
+          spawnFireJetVertical(x, Math.max(220, 420-10*ls), Math.max(600, 800), 8+Math.floor(ls));
         }
-        const balls = 3 + Math.floor(lvl/2);
+        const balls = 3 + Math.floor(ls/2);
         for (let i=0;i<balls;i++){
           const pos = [
             {x: rand(a.x,a.x+a.w), y: a.y-10},
@@ -291,21 +303,27 @@
             {x: a.x-10, y: rand(a.y,a.y+a.h)},
             {x: a.x+a.w+10, y: rand(a.y,a.y+a.h)}
           ][Math.floor(rand(0,4))];
-          const ang = Math.atan2(player.y-pos.y, player.x-pos.x) + rand(-0.2,0.2);
-          spawnFireBall(pos.x,pos.y, ang, 2.1+0.1*lvl, 7, 9+lvl);
+          const ang = Math.atan2(player.y-pos.y, player.x-pos.x) + rand(-0.22,0.22);
+          spawnFireBall(pos.x,pos.y, ang, 2.0+0.10*ls, 7, 9+Math.floor(ls));
         }
         tone(360,0.05,'sawtooth');
       }
     }
   };
 
-  // ======================= BOSSES =======================
+  // ======================= BOSSES (5 unique) =======================
   const Bosses = [
-    { name:'Hammer Saint', color:'#ffd2ae', hp: 1000, patterns: [(t,dt,a,l,p)=>Patterns.hammerAndFire(t,dt,a,2,p)] },
-    { name:'Forge Warden', color:'#ffb38f', hp: 1200, patterns: [(t,dt,a,l,p)=>Patterns.hammerAndFire(t,dt,a,3,p)] },
-    { name:'Anvil Sovereign', color:'#ffcaa1', hp: 1400, patterns: [(t,dt,a,l,p)=>Patterns.hammerAndFire(t,dt,a,4,p)] }
+    { name:'Hammer Saint',     color:'#ffd2ae', hp: 1200, style:1 },
+    { name:'Forge Warden',     color:'#ffb38f', hp: 1500, style:2 },
+    { name:'Anvil Sovereign',  color:'#ffcaa1', hp: 1800, style:3 },
+    { name:'Pyre Regent',      color:'#ff9f7a', hp: 2100, style:4 },
+    { name:'Caldera Monarch',  color:'#ffa86b', hp: 2500, style:5 }
   ];
-  function pickBoss(idx){ return Bosses[Math.min(Bosses.length-1, Math.floor(idx/10)%Bosses.length)]; }
+  function pickBoss(level){
+    // 10→boss[0], 20→[1], 30→[2], 40→[3], 50→[4]
+    const idx = Math.min(4, Math.floor(level/10)-1);
+    return Bosses[idx];
+  }
 
   // ======================= GAME STATE =======================
   let game, paused=false, lastT=performance.now(), shake=0, score=0;
@@ -322,27 +340,30 @@
       burst: 0, burstCD: 0, shootCD: 0
     };
   }
-  function makeBoss(def){
-    return { name:def.name, color:def.color, hp:def.hp, maxHP:def.hp, patterns:def.patterns, time:0 };
+  function makeBoss(def, level){
+    const ls = levelScale(level);
+    // HP scales with decade to keep pace
+    const scaleHP = 1 + 0.15*(decade(level)-1);
+    return { name:def.name, color:def.color, hp: Math.ceil(def.hp*scaleHP), maxHP: Math.ceil(def.hp*scaleHP), style:def.style, time:0 };
   }
 
   function startRun(){
+    if (save.completed && save.level>=CONFIG.MAX_LEVEL){
+      save.level = CONFIG.MAX_LEVEL;
+    }
     game = {
       player: makePlayer(),
       arena: { ...CONFIG.arena },
-      level: save.level|0, // 1-based
+      level: save.level|0,
       state: isBossLevel(save.level) ? 'bossSurvive' : 'survive',
       timer: (isBossLevel(save.level) ? CONFIG.cycle.surviveSec : CONFIG.cycle.surviveSec) * 1000,
-      boss: isBossLevel(save.level) ? makeBoss(pickBoss(save.level)) : null,
-      bossPhaseTimer: 0,
+      boss: isBossLevel(save.level) ? makeBoss(pickBoss(save.level), save.level) : null,
       won: false, deathTime:0, t:0
     };
-    score = save.best|0; // keep score across sessions as "run score" baseline
+    score = Math.max(score|0, save.best|0);
     clearWave();
     updateUI();
   }
-
-  function isBossLevel(level){ return level % 10 === 0; }
 
   // ======================= DAMAGE/HEAL =======================
   function damagePlayer(amount){
@@ -352,36 +373,44 @@
     shake = Math.max(shake, CONFIG.player.dmgShake);
     tone(120,0.08,'sawtooth');
     if (p.hp<=0){ p.alive=false; p.hp=0; game.deathTime=game.t; }
-    save.hp = Math.max(0, Math.ceil(p.hp)); persist();
-    updateUI();
+    save.hp = Math.max(0, Math.ceil(p.hp)); persist(); updateUI();
   }
   function damageBoss(amount){
     if (!game.boss) return;
     game.boss.hp = Math.max(0, game.boss.hp - amount);
-    if (game.boss.hp<=0 && !game.won){
-      onBossDefeated();
-    }
+    if (game.boss.hp<=0 && !game.won){ onBossDefeated(); }
   }
   function onBossDefeated(){
     game.won = true;
-    score += 2000;
+    score += 2500;
     tone(660,0.25,'triangle'); tone(880,0.25,'sine');
-    // Unlock a new skin reward if available
+    // Unlock skin reward (if any locked remain)
     const locked = SKINS.map(s=>s.id).filter(id=>!save.unlocked.includes(id));
     if (locked.length){
       const award = locked[Math.floor(Math.random()*locked.length)];
       save.unlocked.push(award);
-      popup(canvas.width/2, 90, 'New Skin Unlocked!', '#a6c8ff');
-      popup(canvas.width/2, 110, SKINS.find(s=>s.id===award).name, '#a6c8ff');
-      // auto-equip? keep current; user can press K to cycle
+      popup(canvas.width/2, 90, 'New Skin Unlocked!');
+      popup(canvas.width/2, 110, SKINS.find(s=>s.id===award).name);
     }
-    // advance to next level after a brief moment
     setTimeout(()=>{
-      save.level = Math.max(1, (save.level|0) + 1);
+      advanceLevel();
+    }, 900);
+  }
+
+  function advanceLevel(){
+    if (save.level >= CONFIG.MAX_LEVEL){
+      save.completed = true;
       save.best = Math.max(save.best|0, Math.floor(score));
       persist();
-      startRun();
-    }, 900);
+      // Show completion, then restart or stay
+      popup(canvas.width/2, 70, 'Run Complete!');
+      setTimeout(()=>{ startRun(); }, 1200);
+      return;
+    }
+    save.level = clamp((save.level|0)+1, 1, CONFIG.MAX_LEVEL);
+    save.best = Math.max(save.best|0, Math.floor(score));
+    persist();
+    startRun();
   }
 
   // ======================= LOOP =======================
@@ -390,9 +419,10 @@
     if (paused || !game) return;
     game.t += dt;
 
-    const a = game.arena, p = game.player;
+    const a = game.arena, p = game.player, lvl = game.level;
+    const ls = levelScale(lvl);
 
-    // input/move
+    // input/move (WASD + Arrows)
     let sp = CONFIG.player.speed * (keys.ShiftLeft||keys.ShiftRight ? 1 : CONFIG.player.boost);
     let vx = (keys.ArrowRight||keys.KeyD?1:0) - (keys.ArrowLeft||keys.KeyA?1:0);
     let vy = (keys.ArrowDown||keys.KeyS?1:0) - (keys.ArrowUp||keys.KeyW?1:0);
@@ -404,22 +434,15 @@
 
     // waves
     if (game.state==='survive'){
-      // regular level patterns
-      Patterns.corridorBeams(patternState.cb = patternState.cb||{}, dt, a, game.level);
-      Patterns.crossBones(  patternState.xb = patternState.xb||{}, dt, a, game.level);
-      Patterns.chaseOrbs(   patternState.co = patternState.co||{}, dt, a, game.level, p);
+      Patterns.corridorBeams(patternState.cb = patternState.cb||{}, dt, a, ls);
+      Patterns.crossBones(  patternState.xb = patternState.xb||{}, dt, a, ls);
+      Patterns.chaseOrbs(   patternState.co = patternState.co||{}, dt, a, ls, p);
     } else if (game.state==='bossSurvive'){
-      // boss patterns (hammers + fire)
-      const patterns = game.boss.patterns;
-      for (let i=0;i<patterns.length;i++){
-        const key=`b_${i}`; patternState[key]=patternState[key]||{};
-        patterns[i](patternState[key], dt, a, Math.max(2, Math.floor(game.level/5)), p);
-      }
+      Patterns.hammerAndFire(patternState.hf = patternState.hf||{}, dt, a, Math.max(2, ls), p);
     } else if (game.state==='bossAttack'){
-      // player shooting
       p.shootCD -= dt;
       if ((keys.Space) && p.shootCD<=0){
-        p.shootCD = CONFIG.bullets.playerCooldown;
+        p.shootCD = CONFIG.bullets.playerCooldown/Math.min(1.4, Math.sqrt(ls));
         spawnPShot(p.x, p.y-2, 0, -1);
         tone(500,0.03,'triangle');
       }
@@ -432,19 +455,17 @@
       if (b.kind==='knife') b.angle += b.spin;
       if (b.kind==='fire') b.flicker = 1 - Math.random()*0.4;
 
-      // bounds
-      if (b.x<-200 || b.x>canvas.width+200 || b.y<-200 || b.y>canvas.height+200){ bullets.splice(i,1); continue; }
+      if (b.x<-240 || b.x>canvas.width+240 || b.y<-240 || b.y>canvas.height+240){ bullets.splice(i,1); continue; }
 
       let hit=false;
       if (b.kind==='rect'){ if (circleRectHit(p.x,p.y,p.r, b.x,b.y,b.w,b.h)) hit=true; }
       else if (b.kind==='knife'){ if (circleRectHit(p.x,p.y,p.r, b.x-6,b.y-8,12,16)) hit=true; }
       else if (b.kind==='orb' || b.kind==='fire'){
-        if (dist2(p.x,p.y,b.x,b.y) <= (p.r+(b.r||6))*(p.r+(b.r||6))) hit=true;
-        // graze
+        const rr=(b.r||6)+p.r; if (dist2(p.x,p.y,b.x,b.y) <= rr*rr) hit=true;
         const gR = (CONFIG.player.grazeRadius + (b.r||6) + p.r);
         if (!hit && dist2(p.x,p.y,b.x,b.y) <= gR*gR){
           score += CONFIG.player.grazeScore * dt/16;
-          p.burst = clamp(p.burst + CONFIG.burst.gainPerGraze*(dt/16), 0, CONFIG.burst.max);
+          p.burst = clamp(p.burst + (CONFIG.burst.gainPerGraze*(dt/16))*Math.min(1.5, 0.9+0.02*ls), 0, CONFIG.burst.max);
         }
       }
       if (hit) damagePlayer(b.dmg||8);
@@ -484,7 +505,7 @@
       }
     }
 
-    // telegraphs activate hazards
+    // telegraphs
     for (let i=telegraphs.length-1;i>=0;i--){
       const tg=telegraphs[i]; tg.t=(tg.t||0)+dt;
       if (tg.kind==='beamWarn' && tg.t>=tg.delay){
@@ -506,15 +527,14 @@
       }
     }
 
-    // player shots → boss core (boss attack only)
+    // player shots → boss core
     for (let i=pshots.length-1;i>=0;i--){
       const s=pshots[i];
       s.x += s.vx; s.y += s.vy;
       if (game.state==='bossAttack'){
         const cx = canvas.width/2, cy = 70, r = 36;
         if (dist2(s.x,s.y,cx,cy) <= (r+2)*(r+2)){
-          damageBoss(s.dmg);
-          popup(s.x, s.y, `-${s.dmg}`, '#ffd6a1');
+          damageBoss(s.dmg); popup(s.x, s.y, `-${s.dmg}`, '#ffd6a1');
           pshots.splice(i,1); continue;
         }
       }
@@ -525,19 +545,16 @@
     if (p.burstCD>0) p.burstCD -= dt;
     if (keys.KeyE && p.burst>=CONFIG.burst.max && p.burstCD<=0){
       p.burst=0; p.burstCD=CONFIG.burst.cooldown;
-      if (CONFIG.burst.clearBullets){ bullets.length=0; hazards.length=0; telegraphs.length=0; }
+      bullets.length=0; hazards.length=0; telegraphs.length=0;
       damageBoss(CONFIG.burst.damage);
-      popup(p.x, p.y-20, 'BURST!', '#a6c8ff');
+      popup(p.x, p.y-20, 'BURST!');
       tone(280,0.08,'sawtooth'); tone(560,0.12,'square'); tone(840,0.14,'triangle');
     }
 
-    // timers and state transitions
+    // timers & state transitions
     game.timer -= dt;
     if (game.state==='survive'){
-      if (game.timer<=0){
-        // regular level complete → next level
-        levelUp();
-      }
+      if (game.timer<=0){ advanceLevel(); }
     } else if (game.state==='bossSurvive'){
       if (game.timer<=0){
         game.state='bossAttack';
@@ -546,7 +563,6 @@
       }
     } else if (game.state==='bossAttack'){
       if (game.timer<=0){
-        // go back to boss survive unless boss is dead
         if (!game.won){
           game.state='bossSurvive';
           game.timer = CONFIG.cycle.surviveSec*1000;
@@ -556,29 +572,19 @@
     }
 
     // score
-    score += (game.state==='bossAttack'?10:6) * (dt/1000) * (1 + Math.floor((game.level-1)/10)*0.2);
+    score += (game.state==='bossAttack'?10:6) * (dt/1000) * (1 + 0.15*(decade(lvl)-1));
     save.best = Math.max(save.best|0, Math.floor(score));
 
     // death
     if (!p.alive && game.t - game.deathTime > 1200){
-      // On death: keep level, restore HP to max so you can try again from same level
-      save.hp = CONFIG.player.maxHP;
-      persist();
-      startRun();
+      // retry same level; HP resets to full on retry
+      save.hp = CONFIG.player.maxHP; persist(); startRun();
     }
 
     updateUI();
   }
 
-  function levelUp(){
-    // advance level; HP carries over (no auto-heal)
-    save.level = Math.max(1, (save.level|0) + 1);
-    persist();
-    startRun();
-  }
-
   // ======================= DRAW =======================
-  let hpFlashT=0;
   function updateUI(){
     const p=game.player;
     const hpPct = Math.max(0,p.hp)/CONFIG.player.maxHP*100;
@@ -588,8 +594,9 @@
     burstFill.style.width = bPct.toFixed(1)+'%';
     burstText.textContent = p.burst>=CONFIG.burst.max ? 'Ready (E)' : `${Math.floor(bPct)}%`;
 
-    lvText.textContent = `Level ${game.level}${isBossLevel(game.level)?' (Boss)':''}`;
+    const bossLabel = isBossLevel(game.level) ? ' (Boss)' : '';
     phaseText.textContent = game.state.replace('boss','Boss ').replace('survive','Survive').replace('Attack','Attack');
+    lvText.textContent = `Level ${game.level}${bossLabel}`;
     timerText.textContent = `${Math.max(0,Math.ceil(game.timer/1000))}s`;
     scoreText.textContent = `Score ${Math.floor(score)}`;
     const skinName = (SKINS.find(s=>s.id===save.skin)||SKINS[0]).name;
@@ -597,7 +604,6 @@
   }
 
   function draw(){
-    // bg/trail
     if (CONFIG.visual.trail){ ctx.fillStyle='rgba(0,0,0,'+CONFIG.visual.trailAlpha+')'; ctx.fillRect(0,0,canvas.width,canvas.height); }
     else { ctx.fillStyle=CONFIG.visual.bg; ctx.fillRect(0,0,canvas.width,canvas.height); }
 
@@ -608,7 +614,7 @@
     const a = game.arena;
     ctx.strokeStyle=CONFIG.arena.color; ctx.lineWidth=CONFIG.arena.border; ctx.strokeRect(a.x,a.y,a.w,a.h);
 
-    // boss core target (only during boss)
+    // milestone boss core
     if (isBossLevel(game.level)){
       const cx=canvas.width/2, cy=70, r=36;
       ctx.fillStyle = game.boss?.color || '#bbb'; ctx.globalAlpha=0.5;
@@ -666,6 +672,8 @@
       ctx.font='bold 26px system-ui'; ctx.fillText('You fell. Restarting level…', canvas.width/2, 56);
     } else if (game.won){
       ctx.font='bold 26px system-ui'; ctx.fillText('Boss Down! Advancing…', canvas.width/2, 56);
+    } else if (save.completed && save.level===CONFIG.MAX_LEVEL && !isBossLevel(save.level) && game.timer>0){
+      ctx.font='bold 24px system-ui'; ctx.fillText('Run Complete! Reset to start over.', canvas.width/2, 56);
     }
 
     ctx.restore();
@@ -688,7 +696,6 @@
     let pos = unlocked.indexOf(curIndex);
     pos = (pos+1) % unlocked.length;
     save.skin = SKINS[unlocked[pos]].id;
-    // Immediately apply
     if (game && game.player){
       const skin = SKINS.find(s=>s.id===save.skin) || SKINS[0];
       game.player.baseColor = skin.color; game.player.trail = skin.trail;
@@ -697,10 +704,11 @@
   }
 
   // ======================= MAIN LOOP =======================
+  let last = performance.now();
   function loop(){
     const t = performance.now();
-    const dt = clamp(t - lastT, 0, 40);
-    lastT = t;
+    const dt = clamp(t - last, 0, 40);
+    last = t;
     if (!game) startRun();
     step(dt);
     draw();
