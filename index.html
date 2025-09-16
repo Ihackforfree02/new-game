@@ -3,529 +3,243 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MR GAMES+ Undertale Game</title>
+<title>Heart Horror: Undertale Edition</title>
 <style>
-  html, body { margin:0; padding:0; overflow:hidden; background:black; font-family: 'Courier New', monospace; }
-  canvas { display:block; margin:0 auto; background:#000; }
-  #ui { position:absolute; top:10px; left:10px; color:white; font-size:18px; }
-  #menu { position:absolute; top:0; left:0; width:100%; height:100%; background:#111; display:flex; align-items:center; justify-content:center; flex-direction:column; }
-  .menu-button { padding:15px 30px; margin:10px; border:2px solid white; cursor:pointer; color:white; font-size:24px; }
-  .menu-button:hover { background:white; color:black; }
+body{margin:0;background:black;overflow:hidden;font-family:'Courier New',monospace;color:white;}
+canvas{display:block;margin:auto;background:#111;}
+#ui{position:absolute;top:10px;left:10px;width:100%;color:white;font-size:16px;}
+.bar-container{background:#333;border:1px solid #fff;width:200px;height:20px;margin-bottom:5px;}
+.bar{height:100%;background:red;width:100%;}
+#burstBar{background:cyan;width:0%;transition:width 0.2s;}
+#messages{position:absolute;bottom:10px;left:10px;width:90%;font-size:18px;color:lime;white-space:pre-line;}
+#keybindsMenu{position:absolute;top:50px;left:10px;background:#222;padding:10px;display:none;border:1px solid #fff;}
+#keybindsMenu input{width:40px;}
+button{margin-top:5px;}
 </style>
 </head>
 <body>
-<div id="menu">
-  <h1 style="color:white; font-size:48px;">MR GAMES+ UNDERTALE</h1>
-  <div class="menu-button" onclick="startGame()">Start Game</div>
-  <div class="menu-button" onclick="loadGame()">Continue</div>
-  <div class="menu-button" onclick="resetGame()">Reset Save</div>
-</div>
-<div id="ui"></div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<div id="ui">
+  <div>HP: <span id="hpText">100</span></div>
+  <div class="bar-container"><div id="hpBar" class="bar"></div></div>
+  <div>Burst: <span id="burstText">Ready</span></div>
+  <div class="bar-container"><div id="burstBar"></div></div>
+  <div>Night: <span id="nightText">1</span></div>
+  <button id="keybindButton">Change Keybinds</button>
+</div>
+
+<div id="keybindsMenu">
+  <div>Move Up: <input id="keyUp" maxlength="1"></div>
+  <div>Move Down: <input id="keyDown" maxlength="1"></div>
+  <div>Move Left: <input id="keyLeft" maxlength="1"></div>
+  <div>Move Right: <input id="keyRight" maxlength="1"></div>
+  <div>Burst: <input id="keyBurst" maxlength="1"></div>
+  <button id="saveKeys">Save</button>
+  <button id="closeKeys">Close</button>
+</div>
+
+<div id="messages">Welcome to Heart Horror: Undertale Edition...</div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const ui = document.getElementById('ui');
-let gameState = 'menu'; // menu, fight, dialogue
-let level = 1;
-let player = { x:400, y:500, w:32, h:32, speed:5, hp:20, maxHp:20, dash:0, dashMax:3, dashCooldown:0 };
-let bullets = [];
-let enemies = [];
-let dialogueQueue = [];
-let saveData = JSON.parse(localStorage.getItem('mrGamesSave')) || {level:1, hp:20, upgrades:[]};
+let width=canvas.width,height=canvas.height;
 
-function startGame() {
-    document.getElementById('menu').style.display = 'none';
-    loadLevel(saveData.level);
-}
-function loadGame() {
-    if(saveData.level) {
-        document.getElementById('menu').style.display = 'none';
-        player.hp = saveData.hp;
-        loadLevel(saveData.level);
-    } else alert("No save found!");
-}
-function resetGame() {
-    localStorage.removeItem('mrGamesSave');
-    alert("Save reset!");
-}
+// --- Player ---
+let player={x:width/2,y:height-100,size:20,hp:100,speed:4,burstReady:true,burstTimer:0};
+let burstActive=false,BURST_DURATION=180,BURST_COOLDOWN=300;
 
-function saveGame() {
-    saveData.level = level;
-    saveData.hp = player.hp;
-    localStorage.setItem('mrGamesSave', JSON.stringify(saveData));
-}
+// --- Key Management ---
+let keys={};
+let keybinds = JSON.parse(localStorage.getItem('keybinds'))||{up:'W',down:'S',left:'A',right:'D',burst:'Q'};
+document.getElementById('keyUp').value=keybinds.up;
+document.getElementById('keyDown').value=keybinds.down;
+document.getElementById('keyLeft').value=keybinds.left;
+document.getElementById('keyRight').value=keybinds.right;
+document.getElementById('keyBurst').value=keybinds.burst;
 
-// Utility
-function clamp(val, min, max){ return Math.max(min, Math.min(max, val)); }
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function distance(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+document.addEventListener('keydown',e=>keys[e.key.toUpperCase()]=true);
+document.addEventListener('keyup',e=>keys[e.key.toUpperCase()]=false);
 
-// Input
-let keys = {};
-document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
-
-// Bullets
-function spawnBullet(x,y,vx,vy,color='white',size=8){ bullets.push({x,y,vx,vy,color,size}); }
-
-// Enemies
-function spawnEnemy(x,y,hp,pattern,name){ enemies.push({x,y,hp,maxHp:hp,pattern,name,timer:0}); }
-
-// Level Loader
-function loadLevel(lv) {
-    bullets = [];
-    enemies = [];
-    level = lv;
-    switch(lv){
-        case 1:
-            spawnEnemy(400,100,15,'basic','Dummy');
-            dialogueQueue.push("A Dummy appears!");
-            break;
-        case 2:
-            spawnEnemy(400,100,25,'arc','Fallen Hero');
-            dialogueQueue.push("Fallen Hero wants to fight!");
-            break;
-        case 3:
-            spawnEnemy(400,100,30,'spiral','Mad Scientist');
-            dialogueQueue.push("Mad Scientist attacks!");
-            break;
-        case 4:
-            spawnEnemy(400,100,40,'rain','Ice Queen');
-            dialogueQueue.push("Ice Queen descends!");
-            break;
-        case 5:
-            spawnEnemy(400,100,50,'multi','King of Chaos');
-            dialogueQueue.push("The King of Chaos challenges you!");
-            break;
-    }
-    gameState='dialogue';
-}
-
-// Dialogue System
-function nextDialogue() {
-    if(dialogueQueue.length>0) dialogueQueue.shift();
-    else gameState='fight';
-}
-
-// Game Loop
-function update() {
-    if(gameState==='fight'){
-        // Player Movement
-        if(keys['arrowleft']||keys['a']) player.x-=player.speed;
-        if(keys['arrowright']||keys['d']) player.x+=player.speed;
-        if(keys['arrowup']||keys['w']) player.y-=player.speed;
-        if(keys['arrowdown']||keys['s']) player.y+=player.speed;
-        player.x = clamp(player.x,0,canvas.width-player.w);
-        player.y = clamp(player.y,0,canvas.height-player.h);
-        
-        // Dash mechanic
-        if(keys[' '] && player.dashCooldown<=0 && player.dash<player.dashMax){
-            player.dash+=1;
-            player.dashCooldown=60;
-            // temporary speed boost
-            player.x += (keys['arrowright']?-1:0)*50;
-            player.x -= (keys['arrowleft']?-1:0)*50;
-            player.y += (keys['arrowdown']?-1:0)*50;
-            player.y -= (keys['arrowup']?-1:0)*50;
-        }
-        if(player.dashCooldown>0) player.dashCooldown--;
-
-        // Enemy attacks
-        enemies.forEach(e=>{
-            e.timer++;
-            if(e.pattern==='basic' && e.timer%60===0) spawnBullet(e.x,e.y,0,3,'red',10);
-            if(e.pattern==='arc' && e.timer%120===0){
-                for(let a=-60;a<=60;a+=15){
-                    let rad = a*Math.PI/180;
-                    spawnBullet(e.x,e.y,3*Math.sin(rad),3*Math.cos(rad),'orange',8);
-                }
-            }
-            if(e.pattern==='spiral' && e.timer%5===0){
-                let angle = e.timer*0.1;
-                spawnBullet(e.x,e.y,3*Math.cos(angle),3*Math.sin(angle),'purple',6);
-            }
-            if(e.pattern==='rain' && e.timer%20===0){
-                spawnBullet(rand(0,canvas.width),0,0,4,'cyan',6);
-            }
-            if(e.pattern==='multi' && e.timer%80===0){
-                for(let a=0;a<360;a+=30){
-                    let rad = a*Math.PI/180;
-                    spawnBullet(e.x,e.y,4*Math.cos(rad),4*Math.sin(rad),'yellow',7);
-                }
-            }
-        });
-
-        // Bullets update
-        bullets.forEach(b=>{
-            b.x+=b.vx;
-            b.y+=b.vy;
-            if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height) b.dead=true;
-            if(b.x+ b.size>player.x && b.x<player.x+player.w && b.y+ b.size>player.y && b.y<player.y+player.h){
-                player.hp--;
-                b.dead=true;
-            }
-        });
-        bullets = bullets.filter(b=>!b.dead);
-
-        // Check enemies dead
-        enemies = enemies.filter(e=>{
-            if(e.hp<=0) { levelUp(); return false; }
-            return true;
-        });
-    }
-}
-
-function levelUp(){
-    dialogueQueue.push("You defeated the enemy!");
-    level++;
-    saveGame();
-    loadLevel(level>5?1:level); // loop for testing
-}
-
-// Draw
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    // Background
-    ctx.fillStyle='black';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    if(gameState==='dialogue'){
-        ctx.fillStyle='white';
-        ctx.font='24px Courier New';
-        ctx.fillText(dialogueQueue[0] || '', 50, 550);
-    }
-    if(gameState==='fight'){
-        // Player
-        ctx.fillStyle='green';
-        ctx.fillRect(player.x,player.y,player.w,player.h);
-
-        // Bullets
-        bullets.forEach(b=>{
-            ctx.fillStyle=b.color;
-            ctx.beginPath();
-            ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
-            ctx.fill();
-        });
-
-        // Enemies
-        enemies.forEach(e=>{
-            ctx.fillStyle='red';
-            ctx.fillRect(e.x-20,e.y-20,40,40);
-            // HP Bar
-            ctx.fillStyle='white';
-            ctx.fillRect(e.x-25,e.y-30,50,5);
-            ctx.fillStyle='red';
-            ctx.fillRect(e.x-25,e.y-30,50*(e.hp/e.maxHp),5);
-        });
-
-        // UI
-        ui.innerHTML = `HP: ${player.hp}/${player.maxHp} | Dash: ${player.dash}/${player.dashMax}`;
-    }
-}
-
-canvas.addEventListener('click', ()=>{ if(gameState==='dialogue') nextDialogue(); });
-
-function loop(){
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
-
-loop();
-</script>// ================== PART 2: Boss Phases & Level Enhancements ==================
-
-// Dynamic Backgrounds
-function drawBackground() {
-    switch(level){
-        case 1: ctx.fillStyle='black'; break;
-        case 2: ctx.fillStyle='darkred'; break;
-        case 3: ctx.fillStyle='darkblue'; break;
-        case 4: ctx.fillStyle='darkcyan'; break;
-        case 5: 
-            // Animated chaos background
-            for(let i=0;i<50;i++){
-                ctx.fillStyle=`hsl(${(Date.now()/10+i*7)%360},50%,50%)`;
-                ctx.fillRect(rand(0,canvas.width),rand(0,canvas.height),rand(2,6),rand(2,6));
-            }
-            return;
-        default: ctx.fillStyle='black';
-    }
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-}
-
-// Boss AI Phases
-function bossAI(e){
-    if(!e.phase) e.phase = 1;
-
-    e.timer++;
-
-    switch(e.name){
-        case 'Dummy':
-            if(e.hp<e.maxHp/2) e.pattern='arc';
-            break;
-        case 'Fallen Hero':
-            if(e.hp<e.maxHp*0.7) e.pattern='spiral';
-            if(e.hp<e.maxHp*0.3) e.pattern='multi';
-            break;
-        case 'Mad Scientist':
-            if(e.hp<e.maxHp*0.5 && e.phase===1){ e.phase=2; e.timer=0; dialogueQueue.push("Mad Scientist enrages!"); }
-            break;
-        case 'Ice Queen':
-            if(e.hp<e.maxHp*0.6 && e.phase===1){ e.phase=2; e.timer=0; e.pattern='multi'; dialogueQueue.push("Ice Queen summons blizzard!"); }
-            break;
-        case 'King of Chaos':
-            if(e.hp<e.maxHp*0.75 && e.phase===1){ e.phase=2; e.timer=0; dialogueQueue.push("King of Chaos unleashes madness!"); }
-            if(e.hp<e.maxHp*0.4 && e.phase===2){ e.phase=3; e.timer=0; e.pattern='multi'; }
-            break;
-    }
-}
-
-// Level Rewards
-function levelReward(){
-    if(level===1) { player.maxHp += 5; player.hp+=5; dialogueQueue.push("You gained +5 HP!"); }
-    if(level===2) { player.maxHp += 5; player.hp+=5; dialogueQueue.push("You gained +5 HP!"); }
-    if(level===3) { player.maxHp += 10; player.hp+=10; dialogueQueue.push("You gained +10 HP!"); }
-    if(level===4) { player.maxHp += 10; player.hp+=10; dialogueQueue.push("You gained +10 HP!"); }
-    if(level===5) { player.maxHp += 20; player.hp+=20; dialogueQueue.push("You gained +20 HP!"); }
-}
-
-// Enhanced Enemy Attack Patterns
-function enhancedEnemyAttack(e){
-    // random bullets
-    if(e.pattern==='multi' && e.timer%50===0){
-        for(let a=0;a<360;a+=20){
-            let rad = a*Math.PI/180;
-            spawnBullet(e.x,e.y,5*Math.cos(rad),5*Math.sin(rad),'magenta',7);
-        }
-    }
-    // occasional homing bullets
-    if(e.pattern==='spiral' && e.timer%60===0){
-        let angle = Math.atan2(player.y - e.y, player.x - e.x);
-        spawnBullet(e.x,e.y,4*Math.cos(angle),4*Math.sin(angle),'lime',6);
-    }
-}
-
-// Update Function Extension
-const oldUpdate = update;
-update = function(){
-    oldUpdate(); // Keep all original updates
-
-    // Boss AI & enhanced attacks
-    enemies.forEach(e=>{
-        bossAI(e);
-        enhancedEnemyAttack(e);
-    });
-
-    // Regenerate dash over time
-    if(player.dashCooldown===0 && player.dash>0) player.dash--;
-}
-
-// Draw Function Extension
-const oldDraw = draw;
-draw = function(){
-    drawBackground(); // Draw dynamic backgrounds first
-    oldDraw();        // Then draw everything else
-
-    // Optional: show phase for bosses
-    enemies.forEach(e=>{
-        if(e.phase) {
-            ctx.fillStyle='white';
-            ctx.font='16px Courier New';
-            ctx.fillText(`Phase: ${e.phase}`, e.x-20, e.y-40);
-        }
-    });
-}
-
-// Overwrite levelUp to add rewards and dialogue
-levelUp = function(){
-    dialogueQueue.push("You defeated the enemy!");
-    levelReward(); // give bonuses
-    saveGame();
-    level++;
-    if(level>5){
-        dialogueQueue.push("Congratulations! You beat all levels!");
-        level=1; // loop for replay
-    }
-    loadLevel(level);
-}
- // ================== PART 3: Dialogue, Combat, Menu, & Polish ==================
-
-// Dialogue System
-let dialogueQueue = [];
-let dialogueActive = false;
-function drawDialogue(){
-    if(dialogueQueue.length>0){
-        dialogueActive=true;
-        ctx.fillStyle='rgba(0,0,0,0.7)';
-        ctx.fillRect(50, canvas.height-120, canvas.width-100, 80);
-        ctx.fillStyle='white';
-        ctx.font='18px Courier New';
-        let text = dialogueQueue[0];
-        wrapText(ctx, text, 60, canvas.height-90, canvas.width-120, 22);
-    } else dialogueActive=false;
-}
-
-function nextDialogue(){
-    if(dialogueQueue.length>0) dialogueQueue.shift();
-}
-
-// Text wrapping helper
-function wrapText(ctx, text, x, y, maxWidth, lineHeight){
-    let words = text.split(' ');
-    let line = '';
-    for(let n=0;n<words.length;n++){
-        let testLine = line + words[n] + ' ';
-        let metrics = ctx.measureText(testLine);
-        if(metrics.width > maxWidth && n>0){
-            ctx.fillText(line, x, y);
-            line = words[n] + ' ';
-            y += lineHeight;
-        } else line = testLine;
-    }
-    ctx.fillText(line, x, y);
-}
-
-// Player Attack/Defend
-function playerAttack(){
-    if(!dialogueActive){
-        let target = enemies[0]; // single enemy for simplicity
-        if(target){
-            let dmg = rand(5,15);
-            target.hp -= dmg;
-            dialogueQueue.push(`You dealt ${dmg} damage!`);
-            if(target.hp<=0){
-                dialogueQueue.push(`${target.name} defeated!`);
-                levelUp();
-            }
-        }
-    }
-}
-
-function playerDefend(){
-    if(!dialogueActive){
-        dialogueQueue.push("You brace for the next attack!");
-        player.defending=true;
-        setTimeout(()=>{player.defending=false}, 1000);
-    }
-}
-
-// Menu System
-let inMenu = false;
-function drawMenu(){
-    if(inMenu){
-        ctx.fillStyle='rgba(0,0,0,0.8)';
-        ctx.fillRect(50,50,200,150);
-        ctx.fillStyle='white';
-        ctx.font='20px Courier New';
-        ctx.fillText("MENU", 90, 80);
-        ctx.fillText("1. Attack", 60, 110);
-        ctx.fillText("2. Defend", 60, 140);
-        ctx.fillText("3. Save", 60, 170);
-    }
-}
-
-// Menu Input
-document.addEventListener('keydown', function(e){
-    if(inMenu && !dialogueActive){
-        switch(e.key){
-            case '1': playerAttack(); break;
-            case '2': playerDefend(); break;
-            case '3': saveGame(); dialogueQueue.push("Game Saved!"); break;
-        }
-    }
-    if(e.key==='Enter' && dialogueActive){
-        nextDialogue();
-    }
-    if(e.key==='Escape'){
-        inMenu = !inMenu;
-    }
+document.getElementById('keybindButton').addEventListener('click',()=>{document.getElementById('keybindsMenu').style.display='block';});
+document.getElementById('closeKeys').addEventListener('click',()=>{document.getElementById('keybindsMenu').style.display='none';});
+document.getElementById('saveKeys').addEventListener('click',()=>{
+  keybinds.up=document.getElementById('keyUp').value.toUpperCase();
+  keybinds.down=document.getElementById('keyDown').value.toUpperCase();
+  keybinds.left=document.getElementById('keyLeft').value.toUpperCase();
+  keybinds.right=document.getElementById('keyRight').value.toUpperCase();
+  keybinds.burst=document.getElementById('keyBurst').value.toUpperCase();
+  localStorage.setItem('keybinds',JSON.stringify(keybinds));
+  document.getElementById('keybindsMenu').style.display='none';
 });
 
-// Simple Sound Effects
-function playSound(type){
-    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    switch(type){
-        case 'attack': oscillator.frequency.value = 400; break;
-        case 'defend': oscillator.frequency.value = 200; break;
-        case 'levelup': oscillator.frequency.value = 600; break;
-        default: oscillator.frequency.value = 300;
-    }
-    oscillator.type='square';
-    oscillator.start();
-    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
-}
+// --- Night & Messages ---
+let night=1;
+let messages=[];
+function addMessage(msg){messages.push(msg);if(messages.length>5)messages.shift();}
 
-// Particle Effects for attacks
-let particles = [];
-function spawnParticles(x,y,color){
-    for(let i=0;i<10;i++){
-        particles.push({
-            x, y,
-            vx: rand(-2,2),
-            vy: rand(-2,2),
-            life: rand(20,50),
-            color
-        });
-    }
-}
+// --- Attack Box ---
+let attackBox={x:width/2-100,y:height-200,width:200,height:150};
 
-function drawParticles(){
-    particles.forEach((p,i)=>{
-        ctx.fillStyle=p.color;
-        ctx.fillRect(p.x,p.y,2,2);
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life--;
-        if(p.life<=0) particles.splice(i,1);
+// --- Enemies/Bosses ---
+let enemies=[];
+let bosses=[
+  {name:"Shadow Phantom",color:"purple",size:20,speed:1.5,pattern:"down",hp:20},
+  {name:"Bone Horror",color:"white",size:25,speed:2,pattern:"zigzag",hp:25},
+  {name:"Creeper Face",color:"green",size:30,speed:1.2,pattern:"circle",hp:30},
+  {name:"Night Terror",color:"red",size:35,speed:2.5,pattern:"fast",hp:35},
+  {name:"Ghost Howler",color:"blue",size:28,speed:1.8,pattern:"zigzag",hp:28},
+  {name:"Fright Maw",color:"orange",size:32,speed:2,pattern:"circle",hp:32},
+  {name:"Specter King",color:"gold",size:40,speed:2,pattern:"circle",hp:40},
+  {name:"The Wailer",color:"magenta",size:25,speed:3,pattern:"zigzag",hp:30},
+  {name:"Darkwing",color:"darkblue",size:30,speed:2.2,pattern:"fast",hp:35},
+  {name:"Soul Leech",color:"pink",size:28,speed:2,pattern:"zigzag",hp:32},
+  {name:"Hollow Shade",color:"grey",size:35,speed:2.5,pattern:"circle",hp:38},
+  {name:"Frightshade",color:"violet",size:25,speed:2.5,pattern:"down",hp:30},
+  {name:"Nightmare Eye",color:"lightblue",size:32,speed:3,pattern:"fast",hp:40},
+  {name:"Bone Fiend",color:"white",size:28,speed:2.5,pattern:"zigzag",hp:35},
+  {name:"Spirit Reaper",color:"cyan",size:30,speed:2.8,pattern:"circle",hp:38},
+  {name:"Void Howler",color:"black",size:35,speed:3,pattern:"fast",hp:40},
+  {name:"Phantom Knight",color:"silver",size:32,speed:2.5,pattern:"zigzag",hp:42},
+  {name:"Eclipse",color:"darkred",size:40,speed:2.8,pattern:"circle",hp:45},
+  {name:"Soul Eater",color:"darkgreen",size:38,speed:3,pattern:"fast",hp:48},
+  {name:"Radiant Horror",color:"gold",size:50,speed:2.5,pattern:"radiance",hp:100} // final boss
+];
+
+function spawnEnemies(n){
+  enemies=[];
+  for(let i=0;i<n;i++){
+    let boss=bosses[(night+i-1)%bosses.length];
+    enemies.push({
+      x:Math.random()*(width-40)+20,
+      y:-Math.random()*300,
+      size:boss.size,
+      speed:boss.speed,
+      color:boss.color,
+      pattern:boss.pattern,
+      name:boss.name,
+      hp:boss.hp
     });
+  }
 }
+spawnEnemies(1);
 
-// Extend attack/defend with particles & sound
-function playerAttack(){
-    if(!dialogueActive){
-        let target = enemies[0];
-        if(target){
-            let dmg = rand(5,15);
-            target.hp -= dmg;
-            spawnParticles(target.x, target.y,'yellow');
-            playSound('attack');
-            dialogueQueue.push(`You dealt ${dmg} damage!`);
-            if(target.hp<=0){
-                dialogueQueue.push(`${target.name} defeated!`);
-                playSound('levelup');
-                levelUp();
-            }
-        }
+// --- Bullets ---
+let bullets=[];
+function spawnBullet(x,y,angle,speed,color){bullets.push({x,y,angle,speed,color});}
+
+// --- Update ---
+function update(){
+  // Movement
+  if(keys[keybinds.up])player.y-=player.speed;
+  if(keys[keybinds.down])player.y+=player.speed;
+  if(keys[keybinds.left])player.x-=player.speed;
+  if(keys[keybinds.right])player.x+=player.speed;
+  player.x=Math.max(attackBox.x,Math.min(attackBox.x+attackBox.width,player.x));
+  player.y=Math.max(attackBox.y,Math.min(attackBox.y+attackBox.height,player.y));
+
+  // Burst
+  if(keys[keybinds.burst] && player.burstReady){
+    burstActive=true;
+    player.burstReady=false;
+    player.burstTimer=BURST_DURATION;
+    bullets=[];
+    addMessage("Burst activated! All attacks cleared!");
+  }
+  if(burstActive){
+    player.burstTimer--;
+    if(player.burstTimer<=0) burstActive=false;
+  } else if(!player.burstReady){
+    player.burstTimer++;
+    if(player.burstTimer>=BURST_COOLDOWN){player.burstReady=true;player.burstTimer=BURST_COOLDOWN;}
+  }
+
+  // Enemy behavior
+  enemies.forEach(e=>{
+    if(e.pattern=="down") e.y+=e.speed;
+    else if(e.pattern=="zigzag"){e.y+=e.speed;e.x+=Math.sin(e.y/20)*3;}
+    else if(e.pattern=="circle"){e.x+=Math.sin(e.y/30)*4;e.y+=e.speed;}
+    else if(e.pattern=="fast") e.y+=e.speed*1.5;
+    else if(e.pattern=="radiance"){
+      // Radiance style bullets
+      for(let i=0;i<6;i++){
+        spawnBullet(e.x,e.y,i*Math.PI/3+performance.now()/500,3,'gold');
+      }
+      e.y+=e.speed*0.2;
     }
+
+    // Collision with attack box
+    bullets.forEach((b,j)=>{
+      if(b.x>attackBox.x && b.x<attackBox.x+attackBox.width && b.y>attackBox.y && b.y<attackBox.y+attackBox.height && !burstActive){
+        player.hp-=0.5;
+        bullets.splice(j,1);
+        addMessage("Hit by attack!");
+      }
+      b.x+=Math.cos(b.angle)*b.speed;
+      b.y+=Math.sin(b.angle)*b.speed;
+    });
+  });
+
+  // Remove off-screen bullets
+  bullets=bullets.filter(b=>b.x>0 && b.x<width && b.y>0 && b.y<height);
+
+  // Night progression
+  if(enemies.length===0){night++;spawnEnemies(1);addMessage("Night "+night+" begins...");}
+
+  // UI updates
+  document.getElementById('hpText').innerText=Math.floor(player.hp);
+  document.getElementById('hpBar').style.width=(player.hp/100*100)+'%';
+  document.getElementById('burstText').innerText=player.burstReady?'Ready':'Charging';
+  document.getElementById('burstBar').style.width=(burstActive?100:player.burstTimer/BURST_COOLDOWN*100)+'%';
+  document.getElementById('nightText').innerText=night;
+
+  if(player.hp<=0){addMessage("You have been consumed...");alert("Game Over on Night "+night);window.location.reload();}
 }
 
-function playerDefend(){
-    if(!dialogueActive){
-        dialogueQueue.push("You brace for the next attack!");
-        player.defending=true;
-        spawnParticles(player.x, player.y,'cyan');
-        playSound('defend');
-        setTimeout(()=>{player.defending=false}, 1000);
-    }
+// --- Render ---
+function render(){
+  ctx.clearRect(0,0,width,height);
+  // Attack box
+  ctx.strokeStyle='white';
+  ctx.lineWidth=2;
+  ctx.strokeRect(attackBox.x,attackBox.y,attackBox.width,attackBox.height);
+
+  // Player heart
+  ctx.fillStyle='red';
+  ctx.beginPath();
+  ctx.arc(player.x,player.y,player.size,0,Math.PI*2);
+  ctx.fill();
+
+  if(burstActive){
+    ctx.strokeStyle='cyan';ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.arc(player.x,player.y,player.size+10,0,Math.PI*2);
+    ctx.stroke();
+  }
+
+  // Bullets
+  bullets.forEach(b=>{
+    ctx.fillStyle=b.color;
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,6,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // Enemies
+  enemies.forEach(e=>{
+    ctx.fillStyle=e.color;
+    ctx.beginPath();
+    ctx.arc(e.x,e.y,e.size,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  document.getElementById('messages').innerText=messages.join('\n');
 }
 
-// ================== MAIN LOOP EXTENSIONS ==================
-const oldMainLoop = mainLoop;
-mainLoop = function(){
-    oldMainLoop();
-    drawDialogue();
-    drawMenu();
-    drawParticles();
-}
-
-// ================== HELPER FUNCTIONS ==================
-function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
-
-// ================== AUTO SAVE ON START ==================
-loadGame();     
+// --- Loop ---
+function loop(){update();render();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
