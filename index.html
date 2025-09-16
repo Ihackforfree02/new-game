@@ -3,233 +3,218 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Undertale/Deltarune Inspired Game</title>
+<title>Pixel Heart Boss Rush</title>
 <style>
-  body { margin:0; background:#000; color:#fff; font-family:sans-serif; overflow:hidden; }
-  canvas { display:block; margin:0 auto; background:#111; }
-  #ui { position:absolute; top:10px; left:50%; transform:translateX(-50%); color:#fff; text-align:center; font-family:sans-serif; }
-  #messages { margin-top:10px; height:60px; overflow-y:auto; font-size:14px; }
+  body { margin:0; background:black; color:white; font-family: monospace; overflow:hidden; }
+  canvas { display:block; margin:0 auto; background:#111; image-rendering: pixelated; }
+  #colorPicker { position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:10; }
 </style>
 </head>
 <body>
+<select id="colorPicker">
+  <option value="#ff0000">Red</option>
+  <option value="#00ff00">Green</option>
+  <option value="#0000ff">Blue</option>
+  <option value="#ffff00">Yellow</option>
+  <option value="#ff00ff">Magenta</option>
+</select>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
-<div id="ui">
-  <div>HP: <span id="hp">100</span> | Burst: <span id="burst">0%</span> | Night: <span id="night">1</span></div>
-  <div id="messages"></div>
-</div>
+
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-// --- Game Settings ---
-let keybinds = JSON.parse(localStorage.getItem('keybinds')) || {up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight', burst:'q'};
-const box = {x:150, y:100, width:500, height:400};
-let player = {x: box.x+box.width/2, y: box.y+box.height/2, size:20, hp:100, burst:0, burstActive:false};
-let bullets = [];
-let bosses = [];
-let currentBossIndex = 0;
-let night = 1;
-let messages = [];
-let lastTime = 0;
+// ---------------------- Player ----------------------
+let player = {
+    x: canvas.width/2 - 10,
+    y: canvas.height - 60,
+    width: 20,
+    height: 20,
+    color: "#ff0000",
+    hp: 100,
+    maxHp: 100,
+    speed: 5,
+    burst: 100,
+    burstActive: false
+};
 
-// --- Utility Functions ---
-function addMessage(msg){
-  messages.push(msg);
-  if(messages.length>5) messages.shift();
-  document.getElementById('messages').innerText = messages.join('\n');
-}
-
-function random(min,max){ return Math.random()*(max-min)+min; }
-function clamp(val,min,max){ return Math.max(min, Math.min(max,val)); }
-
-// --- Boss Definitions ---
-class Boss {
-  constructor(name,color,hp,attacks){
-    this.name=name; this.color=color; this.hp=hp; this.maxHp=hp; this.attacks=attacks; this.attackIndex=0; this.timer=0;
-  }
-  getCurrentAttack(){ return this.attacks[this.attackIndex]; }
-  nextAttack(){ this.attackIndex = (this.attackIndex+1)%this.attacks.length; this.timer=0; }
-}
-
-// Example attacks
-function createBosses(){
-  bosses = [
-    new Boss("Redfang","#ff5555",50,[
-      {type:"spread",count:8,speed:2,interval:1},
-      {type:"homing",count:1,speed:3,interval:2}
-    ]),
-    new Boss("Blazewing","#ffaa00",80,[
-      {type:"circle",count:12,speed:2,interval:1},
-      {type:"stopmove",duration:1.5}
-    ]),
-    new Boss("Frostbite","#55ffff",100,[
-      {type:"zigzag",count:10,speed:2.5,interval:1.2},
-      {type:"homing",count:2,speed:3,interval:2}
-    ]),
-    // Add more bosses up to 20...
-    new Boss("Radiance","#ffffaa",300,[
-      {type:"radiance",count:20,speed:3,interval:0.5},
-      {type:"homing",count:5,speed:3.5,interval:1},
-      {type:"stopmove",duration:1}
-    ])
-  ];
-}
-
-// --- Bullet Mechanics ---
-class Bullet {
-  constructor(x,y,vx,vy,color,size=8){ this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.color=color; this.size=size; }
-  update(dt){
-    this.x += this.vx*dt;
-    this.y += this.vy*dt;
-  }
-  draw(){
-    ctx.fillStyle=this.color;
-    ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill();
-  }
-}
-
-// --- Input ---
+// ---------------------- Input ----------------------
 let keys = {};
-document.addEventListener('keydown',e=>{ keys[e.key]=true; });
-document.addEventListener('keyup',e=>{ keys[e.key]=false; });
+document.addEventListener("keydown", (e) => { keys[e.key.toLowerCase()] = true; });
+document.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+document.getElementById("colorPicker").addEventListener("change", (e)=>{ player.color=e.target.value; });
 
-// --- Player Movement ---
-function updatePlayer(dt){
-  let speed = 200;
-  if(keys[keybinds.up]) player.y -= speed*dt;
-  if(keys[keybinds.down]) player.y += speed*dt;
-  if(keys[keybinds.left]) player.x -= speed*dt;
-  if(keys[keybinds.right]) player.x += speed*dt;
-  player.x = clamp(player.x, box.x+player.size, box.x+box.width-player.size);
-  player.y = clamp(player.y, box.y+player.size, box.y+box.height-player.size);
+// ---------------------- Bullets ----------------------
+let playerBullets = [];
+let bossBullets = [];
 
-  // Burst
-  if(keys[keybinds.burst] && player.burst>=100 && !player.burstActive){
-    player.burstActive = true; player.burst=0; addMessage("BURST ACTIVATED!");
-    setTimeout(()=>{ player.burstActive=false; addMessage("Burst ended"); },3000);
-  }
-  if(!player.burstActive && player.burst<100) player.burst += dt*10;
-  document.getElementById('hp').innerText = player.hp;
-  document.getElementById('burst').innerText = Math.floor(player.burst);
-}
+// ---------------------- Bosses ----------------------
+let currentBoss = 0;
+let inBattle = false;
+let dialogue = "";
 
-// --- Boss AI & Attack Patterns ---
-function spawnBullets(boss,dt){
-  boss.timer += dt;
-  let atk = boss.getCurrentAttack();
-  if(!atk) return;
-
-  if(!atk.lastSpawn) atk.lastSpawn=0;
-  if(boss.timer - atk.lastSpawn >= (atk.interval||1)){
-    atk.lastSpawn = boss.timer;
-    if(atk.type==="spread"){
-      for(let i=0;i<atk.count;i++){
-        let angle = (i/atk.count)*Math.PI*2;
-        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle)*atk.speed, boss.color));
-      }
-    } else if(atk.type==="circle"){
-      for(let i=0;i<atk.count;i++){
-        let angle = (i/atk.count)*Math.PI*2;
-        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle)*atk.speed, boss.color));
-      }
-    } else if(atk.type==="homing"){
-      for(let i=0;i<atk.count;i++){
-        let dx = player.x-(box.x+box.width/2);
-        let dy = player.y-(box.y+50);
-        let len = Math.hypot(dx,dy);
-        bullets.push(new Bullet(box.x+box.width/2,box.y+50, dx/len*atk.speed, dy/len*atk.speed, boss.color));
-      }
-    } else if(atk.type==="zigzag"){
-      for(let i=0;i<atk.count;i++){
-        let angle = (i/atk.count)*Math.PI;
-        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle*2)*atk.speed, boss.color));
-      }
-    } else if(atk.type==="radiance"){
-      for(let i=0;i<atk.count;i++){
-        let angle = (i/atk.count)*Math.PI*2 + boss.timer;
-        bullets.push(new Bullet(box.x+box.width/2,box.y+50, Math.cos(angle)*atk.speed, Math.sin(angle)*atk.speed, boss.color));
-      }
-    } else if(atk.type==="stopmove"){
-      atk.endTime = boss.timer + (atk.duration||1);
-      bullets.forEach(b=>b.vx=b.vy=0);
+class Boss {
+    constructor(name, color, maxHp, attacks, spriteDrawFunc) {
+        this.name = name;
+        this.color = color;
+        this.hp = maxHp;
+        this.maxHp = maxHp;
+        this.attacks = attacks;
+        this.spriteDraw = spriteDrawFunc;
+        this.attackCooldown = 0;
+        this.phase = 0;
     }
-  }
-
-  if(atk.type==="stopmove" && boss.timer>=atk.endTime){
-    boss.nextAttack();
-  }
 }
 
-// --- Update Bullets ---
-function updateBullets(dt){
-  bullets.forEach(b=>{
-    if(!player.burstActive){
-      let dx = b.x-player.x, dy=b.y-player.y;
-      if(Math.hypot(dx,dy)<b.size+player.size){
-        player.hp -= 10;
-        addMessage("Ouch! -10 HP");
-        b.toRemove=true;
-      }
+let bosses = [
+    new Boss("Spikey","#ff00ff",50, ["spread","homing"], function(ctx,x,y){ctx.fillStyle=this.color; ctx.fillRect(x,y,40,40);}),
+    new Boss("Glowtail","#00ffff",60, ["zigzag","stopMove"], function(ctx,x,y){ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(x+20,y+20,20,0,Math.PI*2); ctx.fill();}),
+    new Boss("Lumin","#ffff00",70, ["spiral","homing"], function(ctx,x,y){ctx.fillStyle=this.color; ctx.fillRect(x+10,y,20,40); ctx.fillRect(x,y+10,40,20);}),
+    new Boss("Shadow","#222222",80, ["stopMove","spread"], function(ctx,x,y){ctx.fillStyle=this.color; ctx.fillRect(x,y,40,40); ctx.fillStyle="#555"; ctx.fillRect(x+5,y+5,30,30);}),
+    new Boss("Radiance","#ffffff",150, ["spiral","homing","spread"], function(ctx,x,y){ctx.fillStyle=this.color; for(let i=0;i<8;i++){ ctx.beginPath(); ctx.moveTo(x+20,y+20); ctx.lineTo(x+20+30*Math.cos(i*Math.PI/4),y+20+30*Math.sin(i*Math.PI/4)); ctx.strokeStyle=this.color; ctx.stroke();}})
+];
+
+let boss = bosses[currentBoss];
+let bossX = canvas.width/2 - 20;
+let bossY = 100;
+
+// ---------------------- Player Shooting ----------------------
+function shoot() {
+    playerBullets.push({x:player.x+player.width/2-5, y:player.y, width:10, height:10, speed:7});
+}
+
+// ---------------------- Player Burst ----------------------
+function activateBurst() {
+    if(player.burst>=100 && !player.burstActive){
+        player.burstActive=true;
+        setTimeout(()=>{player.burstActive=false; player.burst=0;},3000);
     }
-    b.update(dt);
-    if(b.x<0 || b.x>canvas.width || b.y<0 || b.y>canvas.height) b.toRemove=true;
-  });
-  bullets = bullets.filter(b=>!b.toRemove);
 }
 
-// --- Draw ---
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // Attack box
-  ctx.strokeStyle="#fff"; ctx.lineWidth=3;
-  ctx.strokeRect(box.x,box.y,box.width,box.height);
-
-  // Player
-  ctx.fillStyle="red";
-  ctx.beginPath(); ctx.arc(player.x,player.y,player.size,0,Math.PI*2); ctx.fill();
-
-  // Bullets
-  bullets.forEach(b=>b.draw());
-
-  // Boss info
-  let boss = bosses[currentBossIndex];
-  if(boss){
-    ctx.fillStyle=boss.color;
-    ctx.fillRect(600,50,150,20);
-    ctx.fillStyle="#000"; ctx.fillRect(600,50,150*(1-boss.hp/boss.maxHp),20);
-    ctx.fillStyle="#fff"; ctx.fillText(boss.name,600,45);
-  }
+// ---------------------- Boss Attacks ----------------------
+function bossAttack(){
+    if(boss.attackCooldown<=0){
+        let attackType = boss.attacks[Math.floor(Math.random()*boss.attacks.length)];
+        switch(attackType){
+            case "spread":
+                for(let i=-2;i<=2;i++){ bossBullets.push({x:bossX+20,y:bossY+40,width:10,height:10,vx:i*2,vy:3,color:boss.color}); }
+                break;
+            case "homing":
+                let angle = Math.atan2(player.y-bossY,player.x-bossX);
+                bossBullets.push({x:bossX+20,y:bossY+20,width:10,height:10,vx:4*Math.cos(angle),vy:4*Math.sin(angle),color:boss.color});
+                break;
+            case "spiral":
+                for(let i=0;i<8;i++){
+                    bossBullets.push({x:bossX+20,y:bossY+20,width:10,height:10,vx:3*Math.cos(i*Math.PI/4 + Date.now()/500),vy:3*Math.sin(i*Math.PI/4 + Date.now()/500),color:boss.color});
+                }
+                break;
+            case "stopMove":
+                // Stop bullets briefly
+                bossBullets.forEach(b=>{b.vx=0;b.vy=0;});
+                setTimeout(()=>{bossBullets.forEach(b=>{b.vx=(Math.random()*4-2); b.vy=3;});},2000);
+                break;
+        }
+        boss.attackCooldown=60;
+    } else boss.attackCooldown--;
 }
 
-// --- Game Loop ---
-function loop(timestamp){
-  let dt = (timestamp-lastTime)/1000;
-  lastTime = timestamp;
+// ---------------------- Update ----------------------
+function update(){
+    // Player movement
+    if(keys["arrowleft"] && player.x>0) player.x-=player.speed;
+    if(keys["arrowright"] && player.x+player.width<canvas.width) player.x+=player.speed;
+    if(keys["arrowup"] && player.y>0) player.y-=player.speed;
+    if(keys["arrowdown"] && player.y+player.height<canvas.height) player.y+=player.speed;
+    if(keys[" "]) shoot();
+    if(keys["q"]) activateBurst();
 
-  updatePlayer(dt);
-  let boss = bosses[currentBossIndex];
-  if(boss){
-    spawnBullets(boss,dt);
-    updateBullets(dt);
+    // Update bullets
+    playerBullets.forEach((b,i)=> { b.y-=b.speed; if(b.y<0) playerBullets.splice(i,1); });
+
+    bossAttack();
+
+    bossBullets.forEach((b,i)=>{
+        if(!player.burstActive){
+            b.x+=b.vx; b.y+=b.vy;
+            if(b.x<0 || b.x>canvas.width || b.y<0 || b.y>canvas.height) bossBullets.splice(i,1);
+            if(b.x<player.x+player.width && b.x+b.width>player.x && b.y<player.y+player.height && b.y+b.height>player.y){
+                player.hp-=1;
+                bossBullets.splice(i,1);
+            }
+        }
+    });
+
+    // Check collision with boss
+    playerBullets.forEach((b,i)=>{
+        if(b.x<bossX+40 && b.x+10>bossX && b.y<bossY+40 && b.y+10>bossY){
+            boss.hp-=1;
+            playerBullets.splice(i,1);
+        }
+    });
+
+    // Burst charge
+    if(player.burst<100 && !player.burstActive) player.burst+=0.5;
+
+    // Boss defeated
     if(boss.hp<=0){
-      addMessage(`${boss.name} defeated!`);
-      currentBossIndex++;
-      night++;
-      document.getElementById('night').innerText = night;
-      if(currentBossIndex>=bosses.length){
-        addMessage("All bosses defeated! You win!");
-        cancelAnimationFrame(raf);
-      }
+        currentBoss++;
+        if(currentBoss>=bosses.length){ dialogue="YOU WIN!"; inBattle=false; return;}
+        boss=bosses[currentBoss];
+        boss.hp=boss.maxHp;
+        bossX=canvas.width/2-20;
+        bossY=100;
     }
-  }
-
-  draw();
-  raf = requestAnimationFrame(loop);
 }
 
-// --- Start Game ---
-createBosses();
-let raf = requestAnimationFrame(loop);
+// ---------------------- Draw ----------------------
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // Player
+    ctx.fillStyle=player.color;
+    ctx.fillRect(player.x,player.y,player.width,player.height);
+
+    // Player bullets
+    playerBullets.forEach(b=>{ctx.fillStyle="#fff";ctx.fillRect(b.x,b.y,b.width,b.height);});
+    // Boss bullets
+    bossBullets.forEach(b=>{ctx.fillStyle=b.color;ctx.fillRect(b.x,b.y,b.width,b.height);});
+
+    // Player HP
+    ctx.fillStyle="red";
+    ctx.fillRect(20,20,200,20);
+    ctx.fillStyle="green";
+    ctx.fillRect(20,20,200*(player.hp/player.maxHp),20);
+    ctx.strokeStyle="white"; ctx.strokeRect(20,20,200,20);
+
+    // Burst bar
+    ctx.fillStyle="yellow";
+    ctx.fillRect(20,50,200*(player.burst/100),10);
+    ctx.strokeStyle="white"; ctx.strokeRect(20,50,200,10);
+
+    // Boss HP
+    ctx.fillStyle="red";
+    ctx.fillRect(canvas.width-220,20,200,20);
+    ctx.fillStyle="cyan";
+    ctx.fillRect(canvas.width-220,20,200*(boss.hp/boss.maxHp),20);
+    ctx.strokeStyle="white"; ctx.strokeRect(canvas.width-220,20,200,20);
+    ctx.fillStyle="white";
+    ctx.fillText(boss.name, canvas.width-220,15);
+
+    // Boss sprite
+    boss.spriteDraw(ctx,bossX,bossY);
+
+    // Dialogue
+    ctx.fillStyle="white";
+    ctx.fillText(dialogue,20,canvas.height-30);
+}
+
+// ---------------------- Game Loop ----------------------
+function loop(){
+    update();
+    draw();
+    if(player.hp>0 && currentBoss<bosses.length) requestAnimationFrame(loop);
+    else if(player.hp<=0) { ctx.fillStyle="white"; ctx.fillText("GAME OVER", canvas.width/2-50, canvas.height/2);}
+}
+loop();
 </script>
 </body>
 </html>
