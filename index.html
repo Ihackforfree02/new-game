@@ -2,92 +2,94 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Bullet Heart Run — EZ Remix</title>
+<title>Bullet Heart Run — Wind Charge</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <style>
   html,body { margin:0; background:#0b0b0f; color:#e7e7ef; font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
   #wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px; }
   canvas { background:#000; border:2px solid #e7e7ef; image-rendering: pixelated; touch-action:none; }
-  .hud { width: 940px; max-width: 96vw; display:flex; justify-content:space-between; align-items:center; }
+  .hud { width: 980px; max-width: 96vw; display:flex; justify-content:space-between; align-items:center; }
   .small { font-size:12px; opacity:.8; }
-  .bar { height:10px; background:#26263b; border:1px solid #3a3a5d; position:relative; width:240px; }
-  .fill { height:100%; background:#7affb7; }
-  .bar.blue .fill { background:#6cb6ff; }
+  .bar { height:10px; background:#26263b; border:1px solid #3a3a5d; position:relative; width:260px; }
+  .fill { height:100%; background:#6cb6ff; }
+  .bar.green .fill { background:#7affb7; }
   .pill { padding:4px 8px; border-radius:999px; border:1px solid #3a3a5d; }
   button { background:#191924; color:#e7e7ef; border:1px solid #3a3a5d; padding:6px 10px; cursor:pointer; }
   button:hover { background:#20203a; }
   dialog { border:1px solid #3a3a5d; background:#12121a; color:#e7e7ef; padding:14px; max-width:92vw; }
   .row { display:flex; gap:8px; align-items:center; margin:6px 0; flex-wrap:wrap; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:10px; }
   .card { border:1px solid #3a3a5d; padding:10px; background:#141422; cursor:pointer; }
   .card:hover { background:#1b1b2d; }
-  label { font-size:13px; opacity:.9; }
-  select, input[type=text] { background:#191924; color:#e7e7ef; border:1px solid #3a3a5d; padding:4px 6px; }
+  .shop-item { display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid #3a3a5d; padding:8px; background:#141422; }
+  .swatch { width:18px; height:18px; border-radius:4px; border:1px solid #aaa; display:inline-block; }
+  .note { font-size:12px; opacity:.85; }
 </style>
 </head>
 <body>
 <div id="wrap">
   <div class="hud" id="hudTop">
-    <span id="status">Move, Survive, Upgrade. Keys: Pause=P • Mute=M • Burst=E • Shoot=Space (Boss) • Ability=Q • Skins=K • Keybinds=O</span>
+    <span id="status">WASD/Arrows: Move • Wind Charge: E • Dash: Shift • Shoot: Space (Boss) • Ability: Q • Pause: P • Mute: M • Shop: B</span>
     <div style="display:flex; gap:8px;">
       <button id="pauseBtn">Pause</button>
       <button id="muteBtn">Mute</button>
+      <button id="shopBtn">Shop</button>
       <button id="resetBtn">Reset run</button>
-      <button id="keybindsBtn">Keybinds</button>
     </div>
   </div>
 
-  <canvas id="game" width="940" height="680"></canvas>
+  <canvas id="game" width="980" height="700"></canvas>
 
   <div class="hud" id="hudBottom">
-    <div style="display:flex; gap:16px; align-items:center;">
+    <div style="display:flex; gap:14px; align-items:center;">
       <span>HP</span>
-      <div class="bar"><div id="hpFill" class="fill" style="width:100%;"></div></div>
+      <div class="bar green" style="width:220px;"><div id="hpFill" class="fill" style="width:100%;"></div></div>
       <span id="hpText"></span>
     </div>
-    <div style="display:flex; gap:16px; align-items:center;">
-      <span>TP</span>
-      <div class="bar blue"><div id="tpFill" class="fill" style="width:0%;"></div></div>
+    <div style="display:flex; gap:14px; align-items:center;">
+      <span>Wind</span>
+      <div class="bar" style="width:220px;"><div id="tpFill" class="fill" style="width:0%;"></div></div>
       <span id="tpText"></span>
     </div>
-    <div style="display:flex; gap:16px; align-items:center;">
+    <div style="display:flex; gap:12px; align-items:center;">
       <span class="pill" id="lvText"></span>
       <span class="pill" id="phaseText"></span>
       <span class="pill" id="timerText"></span>
-      <span class="pill" id="scoreText"></span>
+      <span class="pill" id="dashText"></span>
+      <span class="pill" id="abilText"></span>
+      <span class="pill" id="goldText"></span>
       <span class="pill" id="skinText"></span>
     </div>
   </div>
 
-  <div class="small">Easier start. Bosses at 5/10/15… Rotating homing greens with whites, despawn after 10s. Upgrades, abilities, keybinds, music. Single file.</div>
+  <div class="small">Wind Charge clears bullets, pushes danger, and grants brief invincibility. Pickups: heals, force field, gold. Bosses every 5 levels. Greens rotate with whites and despawn after 10s.</div>
 </div>
 
-<!-- Upgrades modal -->
 <dialog id="upgradeDlg">
   <div style="font-weight:700; margin-bottom:8px;">Choose an upgrade</div>
-  <div class="row" id="upgrid"></div>
+  <div class="grid" id="upgrid"></div>
   <div class="row" style="justify-content:flex-end;">
     <button id="skipUpg">Skip</button>
   </div>
 </dialog>
 
-<!-- Keybinds modal -->
-<dialog id="keysDlg">
-  <div style="font-weight:700; margin-bottom:8px;">Keybinds</div>
-  <div class="row">
-    <label>Up</label><input data-action="up" class="keyCap" type="text" size="8" readonly>
-    <label>Down</label><input data-action="down" class="keyCap" type="text" size="8" readonly>
-    <label>Left</label><input data-action="left" class="keyCap" type="text" size="8" readonly>
-    <label>Right</label><input data-action="right" class="keyCap" type="text" size="8" readonly>
-  </div>
-  <div class="row">
-    <label>Burst</label><input data-action="burst" class="keyCap" type="text" size="8" readonly>
-    <label>Shoot</label><input data-action="shoot" class="keyCap" type="text" size="8" readonly>
-    <label>Ability</label><input data-action="ability" class="keyCap" type="text" size="8" readonly>
-    <label>Pause</label><input data-action="pause" class="keyCap" type="text" size="8" readonly>
-  </div>
+<dialog id="infoDlg">
+  <div style="font-weight:700; margin-bottom:8px;">Ability unlocked!</div>
+  <div id="infoBody" class="note"></div>
   <div class="row" style="justify-content:flex-end;">
-    <button id="keysSave">Save</button>
-    <button id="keysCancel">Close</button>
+    <button id="infoOk">Got it</button>
+  </div>
+</dialog>
+
+<dialog id="shopDlg">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-weight:700;">Skin shop</div>
+    <div>Gold: <span id="shopGold">0</span></div>
+  </div>
+  <div class="row note">Skins are cosmetic. Pixel Heart is the default.</div>
+  <div class="grid" id="shopGrid"></div>
+  <div class="row" style="justify-content:flex-end;">
+    <button id="shopClose">Close</button>
   </div>
 </dialog>
 
@@ -95,51 +97,27 @@
 (() => {
   'use strict';
 
-  // ======================= CONFIG =======================
   const CONFIG = {
-    arena: { x: 160, y: 120, w: 620, h: 460, border: 3, color: '#c9c9ff' },
-    player: {
-      r: 8, speed: 3.2, boost: 1.25,
-      iframes: 900, maxHP: 96,
-      grazeRadius: 20, dmgShake: 4, healPerLevel: 8
-    },
+    arena: { x: 170, y: 120, w: 640, h: 460, border: 3, color: '#c9c9ff' },
+    player: { r: 8, speed: 3.0, boost: 1.2, iframes: 900, baseMaxHP: 90, grazeR: 20, dmgShake: 4, dashIframes: 520, dashCD: 1800, dashDist: 140 },
     cycle: { surviveSec: 20, attackSec: 10 },
     sfx: { enabled: true, vol: 0.14, music: true },
-    bullets: { playerSpeed: 6.6, playerCooldown: 140, playerDmg: 10 },
-    burst: {
-      max: 100,
-      gainPerGraze: 0.35,       // easier overall but still steady
-      proxRadius: 100,
-      proxPerSec: 0.15,
-      passivePerSec: 0.05,
-      perSecondCap: 9,
-      damage: 120,
-      clearBullets: true,
-      cooldown: 2800,
-      antiPauseLockMs: 700
-    },
-    MAX_LEVEL: 50,
-    saveKey: 'bhd_ez_v1',
-    // Visuals
-    visual: {
-      bg:'#000', // no trails as requested
-      warn:'#ffd166', beam:'#73c0ff',
-      bone:'#e5e5ff', knife:'#efc7b6',
-      orbWhite:'#ffffff', orbGreen:'#57ff9b',
-      fire:'#ff6b3d', hammer:'#ff9d6c'
-    }
+    bullets: { playerSpeed: 6.4, playerCooldown: 120, playerDmg: 10 },
+    wind: { max: 100, grazeGain: 0.32, proxR: 100, proxPerSec: 0.12, passivePerSec: 0.04, perSecondCap: 8.5, damage: 140, clearBullets: true, pushForce: 2.6, duration: 1400, cooldown: 3200, antiPauseLock: 700 },
+    drops: { heal: { hp: 18 }, force: { time: 16000 }, coin: { gold: [3,7] } },
+    MAX_LEVEL: 50, saveKey: 'bhr_wind_v2',
+    visual: { warn:'#ffd166', beam:'#73c0ff', bone:'#e5e5ff', knife:'#efc7b6', orbWhite:'#ffffff', orbGreen:'#57ff9b', fire:'#ff6b3d', hammer:'#ff9d6c', coin:'#ffd873', heal:'#7affb7', field:'#a1d8ff' }
   };
 
-  // ======================= SKINS (ball color only) =======================
   const SKINS = [
-    { id:'green', name:'Green', color:'#57ff9b' },
-    { id:'blue',  name:'Blue',  color:'#59b0ff' },
-    { id:'red',   name:'Red',   color:'#ff5d73' },
-    { id:'amber', name:'Amber', color:'#ffc04d' },
-    { id:'violet',name:'Violet',color:'#b98cff' }
+    { id:'pixel', name:'Pixel Heart', cost:0, color:'#ff485a', pixel:true, owned:true, default:true },
+    { id:'emerald', name:'Emerald Core', cost:50, color:'#57ff9b' },
+    { id:'sapphire', name:'Sapphire Pulse', cost:50, color:'#59b0ff' },
+    { id:'amber', name:'Amber Ember', cost:60, color:'#ffc04d' },
+    { id:'violet', name:'Violet Bloom', cost:80, color:'#b98cff' },
+    { id:'void', name:'Void Fragment', cost:120, color:'#cfc2ff' }
   ];
 
-  // ======================= DOM =======================
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
@@ -150,459 +128,294 @@
   const lvText = document.getElementById('lvText');
   const phaseText = document.getElementById('phaseText');
   const timerText = document.getElementById('timerText');
-  const scoreText = document.getElementById('scoreText');
+  const dashText = document.getElementById('dashText');
+  const abilText = document.getElementById('abilText');
+  const goldText = document.getElementById('goldText');
   const skinText = document.getElementById('skinText');
 
   const pauseBtn = document.getElementById('pauseBtn');
   const muteBtn = document.getElementById('muteBtn');
+  const shopBtn = document.getElementById('shopBtn');
   const resetBtn = document.getElementById('resetBtn');
-  const keybindsBtn = document.getElementById('keybindsBtn');
 
   const upgradeDlg = document.getElementById('upgradeDlg');
   const upgrid = document.getElementById('upgrid');
   const skipUpg = document.getElementById('skipUpg');
 
-  const keysDlg = document.getElementById('keysDlg');
-  const keyCaps = Array.from(document.querySelectorAll('.keyCap'));
-  const keysSave = document.getElementById('keysSave');
-  const keysCancel = document.getElementById('keysCancel');
+  const infoDlg = document.getElementById('infoDlg');
+  const infoBody = document.getElementById('infoBody');
+  const infoOk = document.getElementById('infoOk');
 
-  // ======================= SAVE =======================
+  const shopDlg = document.getElementById('shopDlg');
+  const shopGrid = document.getElementById('shopGrid');
+  const shopGold = document.getElementById('shopGold');
+  const shopClose = document.getElementById('shopClose');
+
   function loadSave(){
     try{
       const raw = localStorage.getItem(CONFIG.saveKey);
-      if (!raw) return {
-        level:1, hp:CONFIG.player.maxHP, best:0,
-        skin:'green', unlocked:['green'],
-        upgrades:{ hp:0, speed:0, tpMax:0, dmg:0, shield:0 },
-        binds: defaultBinds(),
-        muted:false, music:true
-      };
+      if (!raw) return { level:1, hp:CONFIG.player.baseMaxHP, best:0, gold:0, skin:'pixel', skinsOwned:['pixel'], upgrades:{ hp:0,speed:0,windMax:0,windPower:0,dash:0,dmg:0 }, abilities:{ blink:false,pulse:false,slow:false }, infoShown:{ blink:false,pulse:false,slow:false }, muted:false, music:true };
       const s = JSON.parse(raw);
       s.level = clamp(s.level|0, 1, CONFIG.MAX_LEVEL);
-      s.hp = clamp(s.hp|0, 1, CONFIG.player.maxHP + (s.upgrades?.hp||0)*8);
-      s.unlocked = Array.isArray(s.unlocked)&&s.unlocked.length? s.unlocked : ['green'];
-      s.skin = s.unlocked.includes(s.skin)? s.skin : s.unlocked[0];
-      s.upgrades = s.upgrades||{ hp:0, speed:0, tpMax:0, dmg:0, shield:0 };
-      s.binds = s.binds||defaultBinds();
+      s.hp = clamp(s.hp|0, 1, 999);
+      s.gold = Math.max(0, s.gold|0);
+      s.skinsOwned = Array.isArray(s.skinsOwned) ? s.skinsOwned : ['pixel'];
+      if (!s.skinsOwned.includes('pixel')) s.skinsOwned.push('pixel');
+      s.skin = s.skinsOwned.includes(s.skin) ? s.skin : 'pixel';
+      s.upgrades = Object.assign({ hp:0,speed:0,windMax:0,windPower:0,dash:0,dmg:0 }, s.upgrades||{});
+      s.abilities = Object.assign({ blink:false,pulse:false,slow:false }, s.abilities||{});
+      s.infoShown = Object.assign({ blink:false,pulse:false,slow:false }, s.infoShown||{});
       if (s.muted) CONFIG.sfx.enabled = false;
       if (s.music===false) CONFIG.sfx.music = false;
       return s;
     }catch(e){
-      return {
-        level:1, hp:CONFIG.player.maxHP, best:0,
-        skin:'green', unlocked:['green'],
-        upgrades:{ hp:0, speed:0, tpMax:0, dmg:0, shield:0 },
-        binds: defaultBinds(), muted:false, music:true
-      };
+      return { level:1, hp:CONFIG.player.baseMaxHP, best:0, gold:0, skin:'pixel', skinsOwned:['pixel'], upgrades:{ hp:0,speed:0,windMax:0,windPower:0,dash:0,dmg:0 }, abilities:{ blink:false,pulse:false,slow:false }, infoShown:{ blink:false,pulse:false,slow:false }, muted:false, music:true };
     }
   }
   function persist(){
     try{
-      localStorage.setItem(CONFIG.saveKey, JSON.stringify({
-        level: save.level,
-        hp: Math.max(0, Math.ceil(game?.player?.hp ?? save.hp)),
-        best: save.best|0,
-        skin: save.skin,
-        unlocked: Array.from(new Set(save.unlocked)),
-        upgrades: save.upgrades,
-        binds: save.binds,
-        muted: !CONFIG.sfx.enabled,
-        music: CONFIG.sfx.music
-      }));
+      localStorage.setItem(CONFIG.saveKey, JSON.stringify({ level: save.level, hp: Math.max(0, Math.ceil(game?.player?.hp ?? save.hp)), best: save.best|0, gold: save.gold|0, skin: save.skin, skinsOwned: Array.from(new Set(save.skinsOwned)), upgrades: save.upgrades, abilities: save.abilities, infoShown: save.infoShown, muted: !CONFIG.sfx.enabled, music: CONFIG.sfx.music }));
     }catch(e){}
   }
   function hardReset(){
-    save = {
-      level:1, hp:CONFIG.player.maxHP, best:0,
-      skin:'green', unlocked:['green'],
-      upgrades:{ hp:0, speed:0, tpMax:0, dmg:0, shield:0 },
-      binds: defaultBinds(), muted:!CONFIG.sfx.enabled, music:CONFIG.sfx.music
-    };
-    persist();
-    startRun();
+    save = { level:1, hp:CONFIG.player.baseMaxHP, best:0, gold:0, skin:'pixel', skinsOwned:['pixel'], upgrades:{ hp:0,speed:0,windMax:0,windPower:0,dash:0,dmg:0 }, abilities:{ blink:false,pulse:false,slow:false }, infoShown:{ blink:false,pulse:false,slow:false }, muted:!CONFIG.sfx.enabled, music:CONFIG.sfx.music };
+    persist(); startRun();
   }
   let save = loadSave();
 
-  // ======================= KEYBINDS =======================
-  function defaultBinds(){
-    return {
-      up: 'KeyW', down:'KeyS', left:'KeyA', right:'KeyD',
-      burst:'KeyE', shoot:'Space', ability:'KeyQ',
-      pause:'KeyP'
-    };
-  }
-  function openKeybinds(){
-    keyCaps.forEach(inp=>{
-      const action = inp.dataset.action;
-      inp.value = codeToLabel(save.binds[action]||'');
-      inp.onfocus = ()=>{ inp.value='Press a key'; };
-      inp.onkeydown = (e)=>{
-        e.preventDefault();
-        save.binds[action] = e.code;
-        inp.value = codeToLabel(e.code);
-      };
-    });
-    keysDlg.showModal();
-  }
-  keysSave.onclick = ()=>{ persist(); keysDlg.close(); };
-  keysCancel.onclick = ()=> keysDlg.close();
-  keybindsBtn.onclick = openKeybinds;
-
-  function codeToLabel(code){
-    if (code==='Space') return 'Space';
-    if (code.startsWith('Arrow')) return code.replace('Arrow','');
-    return code.replace('Key','').replace('Digit','');
-  }
-
-  // ======================= AUDIO (SFX + simple music) =======================
   let audioCtx, musicTimer=0, musicNote=0, musicEnabledTried=false;
-  function ensureAudio(){
-    try{
-      audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-    }catch(e){}
-  }
+  function ensureAudio(){ try{ audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   function tone(freq, dur=0.06, type='square', vol=CONFIG.sfx.vol){
     if (!CONFIG.sfx.enabled) return;
-    try{
-      ensureAudio();
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type=type; o.frequency.value=freq;
-      g.gain.value=0; g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
-      o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur+0.02);
-    }catch(e){}
+    try{ ensureAudio(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=0; g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur+0.02);}catch(e){}
   }
   function musicStep(dt){
     if (!CONFIG.sfx.music || !CONFIG.sfx.enabled) return;
-    ensureAudio();
-    musicTimer += dt;
-    const beat = 380; // ms per note
+    ensureAudio(); musicTimer += dt; const beat = 360;
     if (musicTimer >= beat){
       musicTimer = 0;
-      // lightweight looping motif (C minor-ish)
-      const seq = [261.6, 311.1, 349.2, 392.0, 349.2, 311.1];
-      tone(seq[musicNote % seq.length], 0.18, 'triangle', 0.06);
-      musicNote++;
+      const block = Math.floor(((game?.level)||1-1)/5);
+      const scales = [[261.6,329.6,392.0,523.3],[293.7,349.2,415.3,587.3],[246.9,311.1,369.9,493.9],[329.6,392.0,493.9,659.3]];
+      const seq = scales[block % scales.length]; tone(seq[musicNote % seq.length], 0.18, 'triangle', 0.06); musicNote++;
     }
   }
 
-  // ======================= UTIL =======================
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const rand=(a,b)=>a + Math.random()*(b-a);
   const dist2=(x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy;};
   const circleRectHit=(cx,cy,r, rx,ry,rw,rh)=>{const nx=clamp(cx,rx,rx+rw),ny=clamp(cy,ry,ry+rh);const dx=cx-nx,dy=cy-ny;return dx*dx+dy*dy<=r*r;};
 
-  // ======================= ENTITIES =======================
-  const bullets=[]; const hazards=[]; const telegraphs=[]; const pshots=[]; const floatTexts=[];
-  function clearWave(){ bullets.length=0; hazards.length=0; telegraphs.length=0; pshots.length=0; floatTexts.length=0; }
+  const bullets=[]; const hazards=[]; const telegraphs=[]; const pshots=[]; const floatTexts=[]; const pickups=[];
+  function clearWave(){ bullets.length=0; hazards.length=0; telegraphs.length=0; pshots.length=0; floatTexts.length=0; pickups.length=0; }
+  function popup(x,y,text,color='#a6c8ff'){ floatTexts.push({x,y,vy:-0.4,t:0,life:1100,text,color}); }
 
-  function popup(x,y,text,color='#a6c8ff'){ floatTexts.push({x,y,vy:-0.4,t:0,life:1000,text,color}); }
-
-  // Enemy spawners
-  function spawnOrbWhite(x,y,vx,vy,r=6,dmg=6){ bullets.push({kind:'orbW',x,y,vx,vy,r,dmg,color:CONFIG.visual.orbWhite, ttl:10000}); }
+  function spawnOrbWhite(x,y,vx,vy,r=6,dmg=5){ bullets.push({kind:'orbW',x,y,vx,vy,r,dmg,color:CONFIG.visual.orbWhite, ttl:10000}); }
   function spawnOrbHoming(x,y,vx,vy,r=6,dmg=6){ bullets.push({kind:'orbG',x,y,vx,vy,r,dmg,color:CONFIG.visual.orbGreen, ttl:10000, homing:true}); }
   function spawnBone(x,y,w,h,vx,vy,dmg=6){ bullets.push({kind:'rect',x,y,w,h,vx,vy,dmg,color:CONFIG.visual.bone}); }
   function spawnKnife(x,y,ang,spd,dmg=7){ bullets.push({kind:'knife',x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,w:6,h:16,angle:ang,spin:0.16,dmg,color:CONFIG.visual.knife}); }
-  function spawnBeam(x,y,w,h,delay=650,hold=700,dmg=8){
-    telegraphs.push({kind:'beamWarn',x,y,w,h,t:0,delay}); hazards.push({kind:'beam',x,y,w,h,active:false,t:0,hold,dmg,color:CONFIG.visual.beam});
-  }
-  function spawnHammerColumn(x,delay=700,hold=500,dmg=10){
-    telegraphs.push({kind:'hammerWarnCol',x,delay,t:0}); hazards.push({kind:'hammerCol',x,active:false,t:0,w:70,hold,dmg,color:CONFIG.visual.hammer});
-  }
-  function spawnHammerArc(cx,cy,radius,span,delay=700,hold=450,dmg=10){
-    telegraphs.push({kind:'hammerWarnArc',cx,cy,radius,span,delay,t:0}); hazards.push({kind:'hammerArc',cx,cy,radius,span,active:false,t:0,hold,dmg,color:CONFIG.visual.hammer});
-  }
-  function spawnFireBall(x,y,ang,spd=2.0,r=7,dmg=7){
-    bullets.push({kind:'fire',x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r,dmg,color:CONFIG.visual.fire, ttl:10000});
+  function spawnBeam(x,y,w,h,delay=650,hold=700,dmg=8){ telegraphs.push({kind:'beamWarn',x,y,w,h,t:0,delay}); hazards.push({kind:'beam',x,y,w,h,active:false,t:0,hold,dmg,color:CONFIG.visual.beam}); }
+  function spawnHammerColumn(x,delay=700,hold=500,dmg=10){ telegraphs.push({kind:'hammerWarnCol',x,delay,t:0}); hazards.push({kind:'hammerCol',x,active:false,t:0,w:70,hold,dmg,color:CONFIG.visual.hammer}); }
+  function spawnHammerArc(cx,cy,radius,span,delay=700,hold=450,dmg=10){ telegraphs.push({kind:'hammerWarnArc',cx,cy,radius,span,delay,t:0}); hazards.push({kind:'hammerArc',cx,cy,radius,span,active:false,t:0,hold,dmg,color:CONFIG.visual.hammer}); }
+  function spawnFireBall(x,y,ang,spd=2.0,r=7,dmg=7){ bullets.push({kind:'fire',x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r,dmg,color:CONFIG.visual.fire, ttl:10000}); }
+
+  function spawnPickup(kind, x, y){
+    if (kind==='coin'){ pickups.push({kind,x,y,vx:rand(-0.4,0.4),vy:rand(0.3,0.8),t:0}); }
+    else if (kind==='heal'){ pickups.push({kind,x,y,vx:rand(-0.2,0.2),vy:rand(0.2,0.6),t:0}); }
+    else if (kind==='force'){ pickups.push({kind,x,y,vx:rand(-0.2,0.2),vy:rand(0.2,0.6),t:0}); }
   }
 
-  // Player shots
-  function spawnPShot(x,y,dx,dy){
-    const sp = CONFIG.bullets.playerSpeed; const n = Math.hypot(dx,dy)||1;
-    pshots.push({x,y,vx:dx/n*sp,vy:dy/n*sp,r:3,color:'#c0ff7a',dmg:CONFIG.bullets.playerDmg + save.upgrades.dmg});
-  }
+  function spawnPShot(x,y,dx,dy){ const sp = CONFIG.bullets.playerSpeed; const n = Math.hypot(dx,dy)||1; pshots.push({x,y,vx:dx/n*sp,vy:dy/n*sp,r:3,color:'#c0ff7a',dmg:CONFIG.bullets.playerDmg + save.upgrades.dmg}); }
 
-  // ======================= BOSSES (5 unique across 50) =======================
   const Bosses = [
-    { name:'Hammer Saint',     color:'#ffd2ae', hp: 1100 },
-    { name:'Forge Warden',     color:'#ffb38f', hp: 1350 },
-    { name:'Anvil Sovereign',  color:'#ffcaa1', hp: 1650 },
-    { name:'Pyre Regent',      color:'#ff9f7a', hp: 2000 },
-    { name:'Caldera Monarch',  color:'#ffa86b', hp: 2400 }
+    { name:'Hammer Saint',     color:'#ffd2ae', baseHP: 1100 },
+    { name:'Forge Warden',     color:'#ffb38f', baseHP: 1400 },
+    { name:'Anvil Sovereign',  color:'#ffcaa1', baseHP: 1700 },
+    { name:'Pyre Regent',      color:'#ff9f7a', baseHP: 2050 },
+    { name:'Caldera Monarch',  color:'#ffa86b', baseHP: 2450 }
   ];
   function isBossLevel(level){ return level % 5 === 0; }
-  function pickBoss(level){ return Bosses[Math.min(4, Math.floor(level/10))]; }
+  function pickBoss(level){ const idx = Math.min(4, Math.floor((level-1)/10)); const def = Bosses[idx]; const scale = 1 + 0.12*(Math.floor((level-1)/10)); return { name:def.name, color:def.color, hp: Math.ceil(def.baseHP*scale), maxHP: Math.ceil(def.baseHP*scale) }; }
 
-  // ======================= LEVEL THEMES AND PATTERNS =======================
-  // Rotating ring that includes white + (slightly) homing green orbs; greens also have ttl 10s.
   function rotatingOrbit(t,dt,a,lvl,player){
-    if (!t.init){
-      t.init=true; t.R=140; t.ang=0; t.rate=1000; t.timer=0;
-    }
+    if (!t.init){ t.init=true; t.R=140; t.ang=0; t.timer=0; }
     t.ang += dt*0.001*(0.8+0.05*lvl);
     t.timer += dt;
     const cx = a.x + a.w/2, cy = a.y + a.h/2;
-    const count = 10 + Math.floor(lvl);
-    for (let i=0;i<count;i++){
-      const ang = t.ang + i*(Math.PI*2)/count;
-      const x = cx + Math.cos(ang)*t.R, y = cy + Math.sin(ang)*t.R;
-      if (i%2===0){
-        const s=1.2 + 0.05*lvl;
-        spawnOrbWhite(x,y, Math.cos(ang+Math.PI/2)*s, Math.sin(ang+Math.PI/2)*s, 6, 6);
-      } else {
-        const s=1.1 + 0.05*lvl;
-        spawnOrbHoming(x,y, Math.cos(ang+Math.PI/2)*s, Math.sin(ang+Math.PI/2)*s, 6, 6);
+    if (t.timer>600){
+      t.timer=0;
+      const count = 8 + Math.floor(2*lvl);
+      for (let i=0;i<count;i++){
+        const ang = t.ang + i*(Math.PI*2)/count;
+        const s = 1.2 + 0.06*lvl;
+        const x = cx + Math.cos(ang)*t.R, y = cy + Math.sin(ang)*t.R;
+        if (i%2===0) spawnOrbWhite(x,y, Math.cos(ang+Math.PI/2)*s, Math.sin(ang+Math.PI/2)*s, 6, 6);
+        else spawnOrbHoming(x,y, Math.cos(ang+Math.PI/2)*s, Math.sin(ang+Math.PI/2)*s, 6, 7);
       }
     }
   }
-  function fallingBones(t,dt,a,lvl){
-    t.acc=(t.acc||0)+dt;
-    if (t.acc>260){
-      t.acc=0;
-      const x = Math.floor(rand(a.x+20, a.x+a.w-20));
-      spawnBone(x, a.y-24, 18, 12, 0, 1.6+0.06*lvl, 6);
-    }
-  }
-  function slowKnives(t,dt,a,lvl,player){
-    t.acc=(t.acc||0)+dt;
-    if (t.acc>850){
-      t.acc=0;
-      const cx=a.x+a.w/2, cy=a.y+a.h/2;
-      for (let i=0;i<4;i++){
-        const ang = Math.atan2(player.y-cy, player.x-cx) + (i-1.5)*0.6;
-        spawnKnife(cx,cy,ang,2.0+0.05*lvl,7);
-      }
-    }
-  }
-  function corridorBeams(t,dt,a,lvl){
-    t.acc=(t.acc||0)+dt;
-    if (t.acc>Math.max(420, 900 - 50*lvl)){
-      t.acc=0;
-      const vertical = Math.random()<0.5;
-      if (vertical){
-        const x = Math.floor(rand(a.x+60, a.x+a.w-60));
-        spawnBeam(x,a.y,8,a.h, 600-20*lvl, 700, 8);
-      } else {
-        const y = Math.floor(rand(a.y+60, a.y+a.h-60));
-        spawnBeam(a.x,y,a.w,8, 600-20*lvl, 700, 8);
-      }
-    }
-  }
-  function edgeFire(t,dt,a,lvl,player){
-    t.acc=(t.acc||0)+dt;
-    if (t.acc>520){
-      t.acc=0;
-      const pos = [
-        {x: rand(a.x,a.x+a.w), y: a.y-10},
-        {x: rand(a.x,a.x+a.w), y: a.y+a.h+10},
-        {x: a.x-10, y: rand(a.y,a.y+a.h)},
-        {x: a.x+a.w+10, y: rand(a.y,a.y+a.h)}
-      ][Math.floor(rand(0,4))];
-      const ang = Math.atan2(player.y-pos.y, player.x-pos.x) + rand(-0.16,0.16);
-      spawnFireBall(pos.x,pos.y,ang,1.9+0.03*lvl,7,7);
-    }
-  }
-  function hammerAndArc(t,dt,a,lvl,player){
-    t.acc=(t.acc||0)+dt; t.arc=(t.arc||0)+dt;
-    if (t.acc>1100){
-      t.acc=0;
-      const cols = 1 + Math.floor(lvl/2);
-      for (let i=0;i<cols;i++){
-        const x = Math.floor(rand(a.x+60, a.x+a.w-60));
-        spawnHammerColumn(x, 600-20*lvl, 600, 9);
-      }
-    }
-    if (t.arc>1300){
-      t.arc=0;
-      const cx=a.x+a.w/2, cy=a.y+a.h/2;
-      const span = Math.PI/3 + 0.08*lvl;
-      const ang = Math.atan2(player.y-cy, player.x-cx);
-      spawnHammerArc(cx,cy, 150+10*lvl, {a:ang-span/2, b:ang+span/2}, 600-20*lvl, 520, 9);
-    }
-  }
+  function fallingBones(t,dt,a,lvl){ t.acc=(t.acc||0)+dt; if (t.acc>280){ t.acc=0; const x = Math.floor(rand(a.x+24, a.x+a.w-24)); spawnBone(x, a.y-24, 18, 12, 0, 1.5+0.06*lvl, 6); } }
+  function slowKnives(t,dt,a,lvl,player){ t.acc=(t.acc||0)+dt; if (t.acc>850){ t.acc=0; const cx=a.x+a.w/2, cy=a.y+a.h/2; for (let i=0;i<4;i++){ const ang = Math.atan2(player.y-cy, player.x-cx) + (i-1.5)*0.6; spawnKnife(cx,cy,ang,2.0+0.05*lvl,7);} } }
+  function corridorBeams(t,dt,a,lvl){ t.acc=(t.acc||0)+dt; if (t.acc>Math.max(400, 820 - 45*lvl)){ t.acc=0; const vertical = Math.random()<0.5; if (vertical){ const x = Math.floor(rand(a.x+60, a.x+a.w-60)); spawnBeam(x,a.y,8,a.h, 560-20*lvl, 700, 8);} else { const y = Math.floor(rand(a.y+60, a.y+a.h-60)); spawnBeam(a.x,y,a.w,8, 560-20*lvl, 700, 8);} } }
+  function edgeFire(t,dt,a,lvl,player){ t.acc=(t.acc||0)+dt; if (t.acc>520){ t.acc=0; const pos = [{x: rand(a.x,a.x+a.w), y: a.y-10},{x: rand(a.x,a.x+a.w), y: a.y+a.h+10},{x: a.x-10, y: rand(a.y,a.y+a.h)},{x: a.x+a.w+10, y: rand(a.y,a.y+a.h)}][Math.floor(rand(0,4))]; const ang = Math.atan2(player.y-pos.y, player.x-pos.x) + rand(-0.16,0.16); spawnFireBall(pos.x,pos.y,ang,1.8+0.04*lvl,7,7);} }
+  function hammerAndArc(t,dt,a,lvl,player){ t.acc=(t.acc||0)+dt; t.arc=(t.arc||0)+dt; if (t.acc>1100){ t.acc=0; const cols = 1 + Math.floor(lvl/2); for (let i=0;i<cols;i++){ const x = Math.floor(rand(a.x+60, a.x+a.w-60)); spawnHammerColumn(x, 600-20*lvl, 600, 9);} } if (t.arc>1300){ t.arc=0; const cx=a.x+a.w/2, cy=a.y+a.h/2; const span = Math.PI/3 + 0.08*lvl; const ang = Math.atan2(player.y-cy, player.x-cx); spawnHammerArc(cx,cy, 150+10*lvl, {a:ang-span/2, b:ang+span/2}, 600-20*lvl, 520, 9);} }
 
-  // Level directory: each level number maps to a pattern
-  const LevelPattern = {
-    1: (t,dt,a,l,p)=>{ fallingBones(t,dt,a,0.8); },
-    2: (t,dt,a,l,p)=>{ slowKnives(t,dt,a,0.9,p); },
-    3: (t,dt,a,l,p)=>{ corridorBeams(t,dt,a,0.9); },
-    4: (t,dt,a,l,p)=>{ edgeFire(t,dt,a,0.9,p); },
-    // Boss templates via hammer+arc + rotating orbit
-  };
-  // Auto-fill up to 50 with a varied rotation
-  const fillers = [
+  const LevelPatterns = { 1:(t,dt,a,l,p)=>{ fallingBones(t,dt,a,0.6); }, 2:(t,dt,a,l,p)=>{ slowKnives(t,dt,a,0.7,p); }, 3:(t,dt,a,l,p)=>{ corridorBeams(t,dt,a,0.8); }, 4:(t,dt,a,l,p)=>{ edgeFire(t,dt,a,0.8,p); } };
+  const mixes = [
     (t,dt,a,l,p)=>{ rotatingOrbit(t,dt,a,1.0+l*0.1,p); },
     (t,dt,a,l,p)=>{ corridorBeams(t,dt,a,1.0+l*0.1); edgeFire(t,dt,a,1.0+l*0.1,p); },
-    (t,dt,a,l,p)=>{ slowKnives(t,dt,a,1.1+l*0.1,p); fallingBones(t,dt,a,1.0+l*0.1); },
+    (t,dt,a,l,p)=>{ slowKnives(t,dt,a,1.0+l*0.1,p); fallingBones(t,dt,a,1.0+l*0.1); },
     (t,dt,a,l,p)=>{ rotatingOrbit(t,dt,a,1.0+l*0.1,p); edgeFire(t,dt,a,1.0+l*0.1,p); }
   ];
-  for (let i=5;i<=50;i++){
-    if (isBossLevel(i)){
-      LevelPattern[i] = (t,dt,a,l,p)=>{ hammerAndArc(t,dt,a,1.0+l*0.2,p); rotatingOrbit(t,dt,a,1.0+l*0.2,p); };
-    } else {
-      const pick = fillers[(i % fillers.length)];
-      LevelPattern[i] = (t,dt,a,l,p)=> pick(t,dt,a, Math.floor(i/5), p);
-    }
-  }
+  for (let i=5;i<=50;i++){ if (isBossLevel(i)) LevelPatterns[i] = (t,dt,a,l,p)=>{ hammerAndArc(t,dt,a,1.0+l*0.2,p); rotatingOrbit(t,dt,a,1.0+l*0.2,p); }; else LevelPatterns[i] = (t,dt,a,l,p)=> mixes[i % mixes.length](t,dt,a, Math.floor(i/5), p); }
 
-  // ======================= GAME STATE =======================
-  const keys={};
-  let game, paused=false, pauseLockUntil=0, lastT=performance.now(), shake=0, score=0;
+  const keys=new Set();
+  let game, paused=false, pauseLockUntil=0, lastT=performance.now(), shake=0, score=0, patternSlowT=0;
+
+  function maxHP(){ return CONFIG.player.baseMaxHP + save.upgrades.hp*10; }
+  function windMax(){ return CONFIG.wind.max + save.upgrades.windMax*25; }
 
   function makePlayer(){
-    const skin = SKINS.find(s=>s.id===save.skin) || SKINS[0];
-    const maxHP = CONFIG.player.maxHP + save.upgrades.hp*8;
-    return {
-      x: CONFIG.arena.x + CONFIG.arena.w/2,
-      y: CONFIG.arena.y + CONFIG.arena.h/2,
-      r: CONFIG.player.r,
-      color: skin.color,
-      hp: clamp(save.hp, 1, maxHP),
-      iframes: 0, alive: true,
-      tp: 0, tpCD: 0, shootCD: 0,
-      tpAcc: 0,
-      dashCD: 0, shieldCD: 0, shieldT: 0
-    };
+    const skinDef = SKINS.find(s=>s.id===save.skin) || SKINS[0];
+    return { x: CONFIG.arena.x + CONFIG.arena.w/2, y: CONFIG.arena.y + CONFIG.arena.h/2, r: CONFIG.player.r, color: skinDef.color, pixel: !!skinDef.pixel, hp: clamp(save.hp, 1, maxHP()), iframes: 0, alive: true, wind: 0, windCD: 0, windT: 0, windActive:false, tpAcc:0, tpTick:0, dashCD: 0, abilityCD: 0, ability:'none' };
   }
-  function makeBoss(level){
-    const def = pickBoss(level);
-    const scale = 1 + 0.12*(Math.floor((level-1)/10));
-    return { name:def.name, color:def.color, hp: Math.ceil(def.hp*scale), maxHP: Math.ceil(def.hp*scale) };
-  }
+  function makeBoss(level){ return pickBoss(level); }
 
   function startRun(){
-    game = {
-      player: makePlayer(),
-      arena: { ...CONFIG.arena },
-      level: save.level|0,
-      state: isBossLevel(save.level) ? 'bossSurvive' : 'survive',
-      timer: CONFIG.cycle.surviveSec * 1000,
-      boss: isBossLevel(save.level) ? makeBoss(save.level) : null,
-      won:false, deathTime:0, t:0
-    };
+    const level = save.level|0;
+    game = { player: makePlayer(), arena: { ...CONFIG.arena }, level, state: isBossLevel(level) ? 'bossSurvive' : 'survive', timer: CONFIG.cycle.surviveSec * 1000, boss: isBossLevel(level) ? makeBoss(level) : null, won:false, deathTime:0, t:0 };
+    if (level===6 && !save.abilities.blink){ save.abilities.blink=true; if (!save.infoShown.blink){ showInfo('Blink: Q to short-teleport and gain brief invincibility.', 'blink'); } }
+    if (level===12 && !save.abilities.pulse){ save.abilities.pulse=true; if (!save.infoShown.pulse){ showInfo('Shield Pulse: Q to clear nearby bullets.', 'pulse'); } }
+    if (level===18 && !save.abilities.slow){ save.abilities.slow=true; if (!save.infoShown.slow){ showInfo('Time Slow: Q to slow bullets for 3s.', 'slow'); } }
+    game.player.ability = save.abilities.slow ? 'slow' : (save.abilities.pulse ? 'pulse' : (save.abilities.blink ? 'blink' : 'none'));
     score = Math.max(score|0, save.best|0);
-    clearWave();
-    updateUI();
+    clearWave(); updateUI();
   }
 
-  // ======================= PAUSE =======================
-  function togglePause(){
-    paused = !paused;
-    if (!paused){
-      pauseLockUntil = performance.now() + CONFIG.burst.antiPauseLockMs;
-    }
-  }
+  function togglePause(){ paused = !paused; if (!paused){ pauseLockUntil = performance.now() + CONFIG.wind.antiPauseLock; } }
 
-  // ======================= DAMAGE/HEAL =======================
   function damagePlayer(amount){
     const p=game.player; if (!p.alive) return;
+    if (p.windActive) return;
     if (p.iframes>0) return;
-    if (p.shieldT>0){ // shield active absorbs one hit and grants brief iframes
-      p.shieldT = 0; p.iframes = 400; tone(300,0.05,'triangle'); return;
-    }
-    p.hp -= amount; p.iframes = CONFIG.player.iframes;
-    shake = Math.max(shake, CONFIG.player.dmgShake);
-    tone(120,0.08,'sawtooth');
+    p.hp -= amount; p.iframes = CONFIG.player.iframes; shake = Math.max(shake, CONFIG.player.dmgShake); tone(120,0.08,'sawtooth');
     if (p.hp<=0){ p.alive=false; p.hp=0; game.deathTime=game.t; }
     save.hp = Math.max(0, Math.ceil(p.hp)); persist(); updateUI();
   }
-  function damageBoss(amount){
-    if (!game.boss) return;
-    game.boss.hp = Math.max(0, game.boss.hp - amount);
-    if (game.boss.hp<=0 && !game.won){ onBossDefeated(); }
-  }
-  function healPlayer(amount){
-    const p=game.player;
-    const maxHP = CONFIG.player.maxHP + save.upgrades.hp*8;
-    const before = p.hp;
-    p.hp = clamp(p.hp + amount, 0, maxHP);
-    if (p.hp>before) popup(p.x,p.y-14, `+${Math.ceil(p.hp-before)}`, '#7affb7');
-    save.hp = Math.ceil(p.hp); persist(); updateUI();
-  }
+  function damageBoss(amount){ if (!game.boss) return; const power = amount + save.upgrades.windPower*12; game.boss.hp = Math.max(0, game.boss.hp - power); if (game.boss.hp<=0 && !game.won){ onBossDefeated(); } }
+  function healPlayer(amount){ const p=game.player; const before = p.hp; p.hp = clamp(p.hp + amount, 0, maxHP()); if (p.hp>before) popup(p.x,p.y-14, `+${Math.ceil(p.hp-before)}`, CONFIG.visual.heal); save.hp = Math.ceil(p.hp); persist(); updateUI(); }
+  function grantForceField(ms){ const p=game.player; p.iframes = Math.max(p.iframes, ms); popup(p.x, p.y-14, 'Force Field', CONFIG.visual.field); tone(300,0.08,'triangle'); }
+  function addGold(n){ save.gold = (save.gold|0) + (n|0); popup(canvas.width-90, 90, `+${n} gold`, CONFIG.visual.coin); updateUI(); persist(); }
+
   function onBossDefeated(){
     game.won=true; tone(660,0.24,'triangle'); tone(880,0.24,'sine');
-    // unlock a random skin if any locked
-    const locked = SKINS.map(s=>s.id).filter(id=>!save.unlocked.includes(id));
-    if (locked.length){
-      const award = locked[Math.floor(Math.random()*locked.length)];
-      save.unlocked.push(award);
-      popup(canvas.width/2,90,'New Skin!','#a6c8ff');
-      popup(canvas.width/2,110, SKINS.find(s=>s.id===award).name,'#a6c8ff');
-    }
-    setTimeout(()=> advanceLevel(), 800);
+    for (let i=0;i<6;i++){ spawnPickup('coin', rand(game.arena.x+20, game.arena.x+game.arena.w-20), rand(game.arena.y+20, game.arena.y+game.arena.h-20)); }
+    spawnPickup('heal', game.arena.x+game.arena.w/2, game.arena.y+game.arena.h/2);
+    spawnPickup('force', game.arena.x+game.arena.w/2+20, game.arena.y+game.arena.h/2);
+    setTimeout(()=> advanceLevel(), 900);
   }
   function advanceLevel(){
     if (save.level >= CONFIG.MAX_LEVEL){
-      save.best = Math.max(save.best|0, Math.floor(score));
-      persist();
-      popup(canvas.width/2,70,'Run Complete!');
-      setTimeout(()=>{ save.level = 1; save.hp = CONFIG.player.maxHP; persist(); startRun(); }, 1200);
-      return;
+      save.best = Math.max(save.best|0, Math.floor(score)); persist();
+      popup(canvas.width/2, 70, 'Run Complete!'); setTimeout(()=>{ save.level = 1; save.hp = maxHP(); persist(); startRun(); }, 1200); return;
     }
     save.level = clamp((save.level|0)+1, 1, CONFIG.MAX_LEVEL);
-    // heal on level up (easier)
-    healPlayer(CONFIG.player.healPerLevel + save.upgrades.hp*2);
-    save.best = Math.max(save.best|0, Math.floor(score));
-    persist();
-    // offer upgrade every 2 levels
+    healPlayer(10 + save.upgrades.hp*2);
+    save.best = Math.max(save.best|0, Math.floor(score)); persist();
     if (save.level % 2 === 0) showUpgrade();
     startRun();
   }
 
-  // ======================= UPGRADES =======================
   const UPGRADE_POOL = [
-    { id:'hp', label:'+Max HP (+8)', apply:()=>save.upgrades.hp++ },
-    { id:'speed', label:'+Move Speed', apply:()=>save.upgrades.speed++ },
-    { id:'tpMax', label:'+TP Cap (+20)', apply:()=>save.upgrades.tpMax++ },
-    { id:'dmg', label:'+Shot Damage', apply:()=>save.upgrades.dmg++ },
-    { id:'shield', label:'Ability: Stronger Shield', apply:()=>save.upgrades.shield++ }
+    { id:'hp', label:'+ Max HP (+10)', apply:()=>save.upgrades.hp++ },
+    { id:'speed', label:'+ Move Speed', apply:()=>save.upgrades.speed++ },
+    { id:'windMax', label:'+ Wind cap (+25)', apply:()=>save.upgrades.windMax++ },
+    { id:'windPower', label:'+ Wind power', apply:()=>save.upgrades.windPower++ },
+    { id:'dash', label:'- Dash cooldown', apply:()=>save.upgrades.dash++ },
+    { id:'dmg', label:'+ Shot Damage', apply:()=>save.upgrades.dmg++ }
   ];
   function showUpgrade(){
-    upgrid.innerHTML = '';
-    const picks = shuffle(UPGRADE_POOL).slice(0,3);
-    picks.forEach(u=>{
-      const card = document.createElement('div');
-      card.className='card'; card.textContent = u.label;
-      card.onclick = ()=>{
-        u.apply();
-        persist();
-        upgradeDlg.close();
-        startRun();
-      };
-      upgrid.appendChild(card);
-    });
-    skipUpg.onclick = ()=>{ upgradeDlg.close(); startRun(); };
-    upgradeDlg.showModal();
+    upgrid.innerHTML=''; const picks = shuffle(UPGRADE_POOL).slice(0,3);
+    picks.forEach(u=>{ const card = document.createElement('div'); card.className='card'; card.innerHTML = `<div>${u.label}</div><div class="note">Current: ${save.upgrades[u.id]||0}</div>`; card.onclick = ()=>{ u.apply(); persist(); upgradeDlg.close(); startRun(); }; upgrid.appendChild(card); });
+    skipUpg.onclick = ()=>{ upgradeDlg.close(); startRun(); }; upgradeDlg.showModal();
   }
   function shuffle(arr){ return arr.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
 
-  // ======================= LOOP =======================
+  function showInfo(text, key){ infoBody.textContent = text; infoOk.onclick = ()=>{ save.infoShown[key]=true; persist(); infoDlg.close(); }; infoDlg.showModal(); }
+
+  function openShop(){
+    shopGold.textContent = save.gold|0; shopGrid.innerHTML='';
+    SKINS.forEach(s=>{
+      const owned = save.skinsOwned.includes(s.id) || s.cost===0;
+      const wrap = document.createElement('div'); wrap.className='shop-item';
+      const left = document.createElement('div');
+      left.innerHTML = `<div><span class="swatch" style="background:${s.color}"></span> ${s.name}${s.default?' (Default)':''}</div><div class="note">${owned?'Owned':(`Cost: ${s.cost} gold`)}</div>`;
+      const right = document.createElement('div'); const btn = document.createElement('button');
+      btn.textContent = owned ? (save.skin===s.id ? 'Equipped' : 'Equip') : 'Buy';
+      btn.onclick = ()=>{
+        if (!owned){
+          if ((save.gold|0) >= s.cost){ save.gold -= s.cost; save.skinsOwned.push(s.id); save.skin = s.id; persist(); }
+          else { popup(canvas.width-80, 110, 'Not enough gold', '#ff8a8a'); return; }
+        } else { save.skin = s.id; persist(); }
+        if (game && game.player){ game.player.color = s.color; game.player.pixel = !!s.pixel; }
+        openShop(); updateUI();
+      };
+      right.appendChild(btn); wrap.appendChild(left); wrap.appendChild(right); shopGrid.appendChild(wrap);
+    });
+    shopDlg.showModal();
+  }
+  shopClose.onclick = ()=> shopDlg.close();
+
   const patternState = {};
   function step(dt){
-    if (!game) return;
-    if (paused) return;
-
-    game.t += dt;
-    musicStep(dt);
+    if (!game || paused) return;
+    game.t += dt; musicStep(dt);
 
     const a = game.arena, p = game.player, lvl = game.level;
-    const now = performance.now();
-    const antiPauseActive = now < pauseLockUntil;
+    const now = performance.now(); const antiPauseActive = now < pauseLockUntil;
 
-    // input/move from keybinds
-    let vx = (isDown(save.binds.right)?1:0) - (isDown(save.binds.left)?1:0);
-    let vy = (isDown(save.binds.down)?1:0) - (isDown(save.binds.up)?1:0);
+    let vx = (isDown('KeyD')||isDown('ArrowRight')?1:0) - (isDown('KeyA')||isDown('ArrowLeft')?1:0);
+    let vy = (isDown('KeyS')||isDown('ArrowDown')?1:0) - (isDown('KeyW')||isDown('ArrowUp')?1:0);
     const len = Math.hypot(vx,vy)||1; vx/=len; vy/=len;
-    const sp = (CONFIG.player.speed + save.upgrades.speed*0.25) * (keys.ShiftLeft||keys.ShiftRight ? 1 : CONFIG.player.boost);
-    p.x += vx*sp; p.y += vy*sp;
+    const mv = (CONFIG.player.speed + save.upgrades.speed*0.22) * (keys.has('ShiftLeft')||keys.has('ShiftRight') ? 1 : CONFIG.player.boost);
+    p.x += vx*mv; p.y += vy*mv;
     p.x = clamp(p.x, a.x + p.r + 2, a.x + a.w - p.r - 2);
     p.y = clamp(p.y, a.y + p.r + 2, a.y + a.h - p.r - 2);
     if (p.iframes>0) p.iframes -= dt;
 
-    // ability (Q by default): Dash or Shield
-    if (wasPressed(save.binds.ability)){
-      // dash on tap if dashCD ready, else if shield ready use shield
+    if (wasPressed('ShiftLeft') || wasPressed('ShiftRight')){
       if (p.dashCD<=0){
-        // brief dash
-        const dashV = 8 + save.upgrades.speed*0.6;
+        const dashDist = CONFIG.player.dashDist + save.upgrades.dash*10;
+        p.x = clamp(p.x + vx*dashDist, a.x + p.r + 2, a.x + a.w - p.r - 2);
+        p.y = clamp(p.y + vy*dashDist, a.y + p.r + 2, a.y + a.h - p.r - 2);
+        p.iframes = Math.max(p.iframes, CONFIG.player.dashIframes);
+        p.dashCD = Math.max(400, CONFIG.player.dashCD - save.upgrades.dash*120);
+        tone(280,0.05,'triangle');
+      }
+    }
+    if (p.dashCD>0) p.dashCD -= dt;
+
+    if (wasPressed('KeyQ') && p.ability!=='none' && p.abilityCD<=0){
+      if (p.ability==='blink'){
+        const dist = 120 + save.upgrades.speed*8;
+        p.x = clamp(p.x + vx*dist, a.x + p.r + 2, a.x + a.w - p.r - 2);
+        p.y = clamp(p.y + vy*dist, a.y + p.r + 2, a.y + a.h - p.r - 2);
+        p.iframes = Math.max(p.iframes, 250); p.abilityCD = 5000;
+      } else if (p.ability==='pulse'){
+        for (let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if (dist2(p.x,p.y,b.x,b.y) <= 120*120) bullets.splice(i,1); }
+        p.abilityCD = 8000;
+      } else if (p.ability==='slow'){
+        patternSlowT = Math.max(patternSlowT, 3000); p.abilityCD = 12000;
+      }
+      tone(240,0.06,'square');
+    }
+    if (p.abilityCD>0) p.abilityCD -= dt;
+
+    const pat = LevelPatterns[lvl] || LevelPatterns[ (lvl%5)||1 ];
+    patternState[lvl] = patternState[lvl] || {};
+    const easeLevel = Math.max(1, Math.floor((lvl-1)/5));
+    let speedScale = patternSlowT>0 ? 0.5 : 1;
+    pat(patternState[lvl], dt*speedScale, a, easeLevel, p);
+
+    if (game.state==='bossAttack'){
+      p.shootCD -= dt;
+      if ((isDown('Space
