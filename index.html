@@ -1,0 +1,646 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bullet Heart Duel</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<style>
+  html,body { margin:0; background:#0b0b0f; color:#e7e7ef; font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  #wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px; }
+  canvas { background:#000; border:2px solid #e7e7ef; image-rendering: pixelated; }
+  .hud { width:800px; max-width: 95vw; display:flex; justify-content:space-between; align-items:center; }
+  .hud span { opacity:.9; }
+  .btns { display:flex; gap:8px; }
+  button { background:#191924; color:#e7e7ef; border:1px solid #3a3a5d; padding:6px 10px; cursor:pointer; }
+  button:hover { background:#20203a; }
+  .small { font-size:12px; opacity:.8; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="hud">
+    <span id="status">Move: WASD/Arrows • R: Restart • P: Pause • M: Mute</span>
+    <div class="btns">
+      <button id="restartBtn">Restart</button>
+      <button id="pauseBtn">Pause</button>
+      <button id="muteBtn">Mute</button>
+    </div>
+  </div>
+  <canvas id="game" width="800" height="600"></canvas>
+  <div class="hud">
+    <span id="hp" aria-live="polite"></span>
+    <span id="phase"></span>
+    <span id="score"></span>
+  </div>
+  <div class="small">Original fangame-style engine. No assets required. Customize in CONFIG.</div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ========= CONFIG =========
+  const CONFIG = {
+    arena: { x: 150, y: 110, w: 500, h: 380, border: 3, color: '#c9c9ff' },
+    player: {
+      r: 7, color: '#ff4d6d', speed: 3.1, speedBoost: 1.25, iframes: 900,
+      maxHP: 92, grazeRadius: 18, grazeScore: 3, dmgShake: 5
+    },
+    boss: {
+      baseHP: 600, color: '#b6ffb3', enrageHPpct: 0.35, enrageSpeed: 1.12, contactDamage: 7
+    },
+    difficulty: {
+      globalSpeed: 1.0, patternRamp: 1.05, scorePerSecond: 5, survivalBonus: 750
+    },
+    sfx: { enabled: true, vol: 0.2 },
+    visual: {
+      bg: '#000', trail: true, trailAlpha: 0.07, warnColor: '#ffd166', beamColor: '#73c0ff',
+      boneColor: '#e5e5ff', knifeColor: '#ffaa99', orbColor: '#a1ffea', fallColor: '#ffcc88'
+    }
+  };
+
+  // ========= UTILITIES =========
+  const rand = (a,b) => a + Math.random()*(b-a);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const now = () => performance.now();
+  const rectsOverlap = (a,b) => !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y);
+  const circleRectHit = (cx,cy,r, rx,ry,rw,rh) => {
+    const nx = clamp(cx, rx, rx+rw), ny = clamp(cy, ry, ry+rh);
+    const dx = cx - nx, dy = cy - ny; return (dx*dx + dy*dy) <= r*r;
+  };
+  const dist2 = (x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy;};
+
+  // ========= AUDIO (beeps) =========
+  let audioCtx;
+  function tone(freq, dur=0.06, type='square', vol=CONFIG.sfx.vol) {
+    if (!CONFIG.sfx.enabled) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.value = 0; g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
+    } catch(e){}
+  }
+
+  // ========= CORE STATE =========
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const HPUI = document.getElementById('hp');
+  const PhaseUI = document.getElementById('phase');
+  const ScoreUI = document.getElementById('score');
+  const RestartBtn = document.getElementById('restartBtn');
+  const PauseBtn = document.getElementById('pauseBtn');
+  const MuteBtn = document.getElementById('muteBtn');
+
+  let keys = {};
+  let game;
+  let paused = false;
+  let lastT = now();
+  let shake = 0;
+  let score = 0;
+
+  // ========= PLAYER =========
+  function makePlayer() {
+    const ar = CONFIG.arena;
+    return {
+      x: ar.x + ar.w/2,
+      y: ar.y + ar.h/2,
+      r: CONFIG.player.r,
+      color: CONFIG.player.color,
+      vx:0, vy:0,
+      hp: CONFIG.player.maxHP,
+      iframes: 0,
+      alive: true,
+      grazeCount:0
+    };
+  }
+
+  // ========= BOSS & PATTERNS =========
+  function makeBoss(def) {
+    return {
+      name: def.name, color: def.color || CONFIG.boss.color,
+      hp: def.hp || CONFIG.boss.baseHP, maxHP: def.hp || CONFIG.boss.baseHP,
+      phases: def.phases, phaseIndex: 0, phaseTime: 0, enrage: false,
+      time: 0
+    };
+  }
+
+  // Attack entity lists
+  const bullets = [];  // generic moving circles or rects
+  const hazards = [];  // beams, fields
+  const telegraphs = [];
+
+  function clearEntities() {
+    bullets.length = 0;
+    hazards.length = 0;
+    telegraphs.length = 0;
+  }
+
+  function spawnBone(x,y,w,h, vx,vy, dmg=8) {
+    bullets.push({ kind:'rect', x,y,w,h, vx,vy, dmg, color: CONFIG.visual.boneColor, rot:0 });
+  }
+  function spawnKnife(x,y, angle, speed, dmg=10) {
+    const vx = Math.cos(angle)*speed, vy = Math.sin(angle)*speed;
+    bullets.push({ kind:'knife', x,y, vx,vy, w:6,h:16, dmg, angle, spin:0, color: CONFIG.visual.knifeColor });
+  }
+  function spawnOrb(x,y, vx,vy, r=6, dmg=7) {
+    bullets.push({ kind:'orb', x,y, vx,vy, r, dmg, color: CONFIG.visual.orbColor });
+  }
+  function spawnFaller(x, delay, speed=3.2, w=30, h=14, dmg=9) {
+    telegraphs.push({ kind:'fallWarn', x, y: -20, w, h, t:0, delay, color: CONFIG.visual.fallColor });
+    hazards.push({ kind:'fall', x, y:-40, w, h, speed, active:false, dmg, color: CONFIG.visual.fallColor });
+  }
+  function spawnBeam(x,y, w,h, delay=500, hold=600, dmg=12) {
+    telegraphs.push({ kind:'beamWarn', x,y,w,h, t:0, delay, color: CONFIG.visual.warnColor });
+    hazards.push({ kind:'beam', x,y,w,h, active:false, t:0, hold, dmg, color: CONFIG.visual.beamColor });
+  }
+
+  // ========= PATTERN LIBRARY =========
+  const Patterns = {
+    bonesSweep: (t, dt, arena, level=1) => {
+      // Side-to-side bone walls sweeping vertically
+      const rate = 450 / level;
+      if (t.spawnTimer == null) t.spawnTimer = 0;
+      t.spawnTimer += dt;
+      if (t.spawnTimer >= rate) {
+        t.spawnTimer = 0;
+        const side = Math.random()<0.5 ? 'L' : 'R';
+        const rows = Math.floor(rand(3, 6+level));
+        for (let i=0;i<rows;i++){
+          const y = arena.y + 20 + i*(arena.h-40)/rows;
+          const w = 22, h = 10;
+          const s = 2.2 + level*0.2;
+          const x = side==='L' ? arena.x - w - i*6 : arena.x + arena.w + i*6;
+          const vx = side==='L' ? s : -s;
+          spawnBone(x,y,w,h, vx,0);
+        }
+        tone(420, 0.03);
+      }
+    },
+    lasersBox: (t, dt, arena, level=1) => {
+      // Beams telegraph then fire, forcing micro-dodges
+      if (!t.init) {
+        t.init = true; t.stage = 0; t.timer = 0;
+      }
+      t.timer += dt;
+      if (t.stage === 0) {
+        // Warn at random columns/rows
+        if (t.timer > 300) {
+          t.timer = 0; t.stage = 1;
+          for (let i=0;i<3+level;i++){
+            const vertical = Math.random()<0.5;
+            if (vertical) {
+              const x = Math.floor(rand(arena.x+40, arena.x+arena.w-40));
+              spawnBeam(x, arena.y, 8, arena.h, 450-40*level, 500+80*level);
+            } else {
+              const y = Math.floor(rand(arena.y+40, arena.y+arena.h-40));
+              spawnBeam(arena.x, y, arena.w, 8, 450-40*level, 500+80*level);
+            }
+          }
+          tone(300,0.04,'sine');
+        }
+      } else if (t.stage === 1) {
+        // Beams are managed by hazards update; repeat cycle
+        if (t.timer > 1000+200*level) {
+          t.timer = 0; t.stage = 0;
+        }
+      }
+    },
+    orbitKnives: (t, dt, arena, level=1, player) => {
+      // Knives orbit center then fling towards player
+      if (!t.init) {
+        t.init = true; t.timer = 0; t.ang = 0; t.group = [];
+        const cx = arena.x + arena.w/2, cy = arena.y + arena.h/2;
+        const count = 8 + level*2;
+        const R = 110 + level*10;
+        for (let i=0;i<count;i++){
+          const a = i*(Math.PI*2)/count;
+          t.group.push({ x: cx + Math.cos(a)*R, y: cy + Math.sin(a)*R, a });
+        }
+      }
+      t.timer += dt; t.ang += dt*0.002*(1+0.1*level);
+      const cx = arena.x + arena.w/2, cy = arena.y + arena.h/2;
+      const R = 110 + level*10;
+      for (let k of t.group) {
+        k.a += dt*0.0015*(1+0.06*level);
+        k.x = cx + Math.cos(k.a)*R; k.y = cy + Math.sin(k.a)*R;
+        // Draw via telegraph list for fun glow (no collision yet)
+        telegraphs.push({kind:'ghost', x:k.x, y:k.y, r:4, color:CONFIG.visual.knifeColor});
+      }
+      if (t.timer > 900) {
+        t.timer = 0;
+        const speed = 3.3 + level*0.25;
+        for (let k of t.group) {
+          const a = Math.atan2(player.y - k.y, player.x - k.x);
+          spawnKnife(k.x, k.y, a, speed);
+        }
+        tone(520,0.05,'square');
+      }
+    },
+    rain: (t, dt, arena, level=1) => {
+      // Falling bars with telegraphs
+      if (t.spawnTimer == null) t.spawnTimer = 0;
+      t.spawnTimer += dt;
+      const rate = 260 - level*20;
+      if (t.spawnTimer >= Math.max(120, rate)) {
+        t.spawnTimer = 0;
+        for (let i=0;i<Math.min(6, 3+Math.floor(level)); i++){
+          spawnFaller(Math.floor(rand(arena.x+20, arena.x+arena.w-20)), 300 - level*20, 3+level*0.2, 18, 14);
+        }
+        tone(260,0.03,'triangle');
+      }
+    },
+    chaseOrbs: (t, dt, arena, level=1, player) => {
+      // Slow orbs that steer slightly toward player
+      if (t.spawnTimer == null) t.spawnTimer = 0;
+      t.spawnTimer += dt;
+      if (t.spawnTimer >= 500 - 30*level) {
+        t.spawnTimer = 0;
+        const edges = [
+          {x: rand(arena.x, arena.x+arena.w), y: arena.y-10},
+          {x: rand(arena.x, arena.x+arena.w), y: arena.y+arena.h+10},
+          {x: arena.x-10, y: rand(arena.y, arena.y+arena.h)},
+          {x: arena.x+arena.w+10, y: rand(arena.y, arena.y+arena.h)}
+        ];
+        const s = 1.8 + level*0.2;
+        for (let k=0;k<2+Math.floor(level/2);k++){
+          const e = edges[Math.floor(rand(0,4))];
+          const a = Math.atan2(player.y - e.y, player.x - e.x);
+          spawnOrb(e.x, e.y, Math.cos(a)*s, Math.sin(a)*s, 7, 8);
+        }
+      }
+      // gentle steering
+      bullets.forEach(b=>{
+        if (b.kind==='orb') {
+          const a = Math.atan2(player.y - b.y, player.x - b.x);
+          b.vx = b.vx*0.97 + Math.cos(a)*0.06*(1+0.03*level);
+          b.vy = b.vy*0.97 + Math.sin(a)*0.06*(1+0.03*level);
+        }
+      });
+    }
+  };
+
+  // ========= BOSS DEFINITIONS =========
+  const Bosses = [
+    {
+      name: 'The Ashen Vow',
+      color: '#b6ffb3',
+      hp: 700,
+      phases: [
+        { name:'Awakening', dur: 14000, patterns:[
+          (t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,1),
+          (t,dt,a,l,p)=>Patterns.rain(t,dt,a,1)
+        ]},
+        { name:'Resolve', dur: 17000, patterns:[
+          (t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2),
+          (t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,2,p)
+        ]},
+        { name:'Oathbreaker', dur: 19000, patterns:[
+          (t,dt,a,l,p)=>Patterns.orbitKnives(t,dt,a,2,p),
+          (t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,2),
+          (t,dt,a,l,p)=>Patterns.rain(t,dt,a,2)
+        ]}
+      ]
+    },
+    {
+      name: 'Glass Monarch',
+      color: '#b3d1ff',
+      hp: 820,
+      phases: [
+        { name:'Shards', dur: 16000, patterns:[
+          (t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,2,p),
+          (t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2)
+        ]},
+        { name:'Crownfall', dur: 20000, patterns:[
+          (t,dt,a,l,p)=>Patterns.rain(t,dt,a,3),
+          (t,dt,a,l,p)=>Patterns.orbitKnives(t,dt,a,3,p)
+        ]},
+        { name:'Refraction', dur: 22000, patterns:[
+          (t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,3),
+          (t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,3),
+          (t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,3,p)
+        ]}
+      ]
+    }
+  ];
+
+  // ========= GAME LOOP =========
+  function resetGame() {
+    const bossDef = Bosses[Math.floor(rand(0, Bosses.length))];
+    game = {
+      player: makePlayer(),
+      boss: makeBoss(bossDef),
+      arena: { ...CONFIG.arena },
+      t: 0,
+      phaseElapsed: 0,
+      level: 1,
+      running: true,
+      won: false,
+      deathTime: 0
+    };
+    score = 0; shake = 0;
+    clearEntities();
+    updateUI();
+  }
+
+  function updateUI() {
+    const p = game.player, b = game.boss;
+    HPUI.textContent = `HP ${Math.max(0, Math.ceil(p.hp))} / ${CONFIG.player.maxHP}`;
+    PhaseUI.textContent = `Boss: ${b.name} • Phase ${b.phaseIndex+1}/${b.phases.length} (${b.phases[b.phaseIndex].name})`;
+    ScoreUI.textContent = `Score ${Math.floor(score)}`;
+  }
+
+  function damagePlayer(amount) {
+    const p = game.player;
+    if (p.iframes>0 || !p.alive) return;
+    p.hp -= amount;
+    p.iframes = CONFIG.player.iframes;
+    shake = Math.max(shake, CONFIG.player.dmgShake);
+    tone(120,0.08,'sawtooth');
+    if (p.hp <= 0) {
+      p.alive = false; p.hp = 0; game.deathTime = game.t;
+    }
+    updateUI();
+  }
+
+  function damageBoss(amount) {
+    const b = game.boss;
+    b.hp = Math.max(0, b.hp - amount);
+    if (!b.enrage && b.hp/b.maxHP <= CONFIG.boss.enrageHPpct) {
+      b.enrage = true; CONFIG.difficulty.globalSpeed *= CONFIG.boss.enrageSpeed;
+      tone(220,0.3,'square'); tone(330,0.3,'sawtooth');
+    }
+  }
+
+  function step(dt) {
+    if (!game.running || paused) return;
+    game.t += dt; game.phaseElapsed += dt;
+    const p = game.player, b = game.boss, ar = game.arena;
+
+    // Input
+    let sp = CONFIG.player.speed * (keys.ShiftLeft||keys.ShiftRight ? 1 : CONFIG.player.speedBoost);
+    let vx = (keys.ArrowRight||keys.KeyD?1:0) - (keys.ArrowLeft||keys.KeyA?1:0);
+    let vy = (keys.ArrowDown||keys.KeyS?1:0) - (keys.ArrowUp||keys.KeyW?1:0);
+    const len = Math.hypot(vx,vy) || 1; vx/=len; vy/=len;
+    p.x += vx*sp; p.y += vy*sp;
+    // Clamp inside arena
+    p.x = clamp(p.x, ar.x + p.r + 2, ar.x + ar.w - p.r - 2);
+    p.y = clamp(p.y, ar.y + p.r + 2, ar.y + ar.h - p.r - 2);
+
+    // Iframes decay
+    if (p.iframes>0) p.iframes -= dt;
+
+    // Boss phase logic
+    const phase = b.phases[b.phaseIndex];
+    const level = game.level * CONFIG.difficulty.globalSpeed * (b.enrage?1.15:1);
+    const patternState = step.patternState = step.patternState || {};
+    for (let i=0;i<phase.patterns.length;i++){
+      const key = `${b.phaseIndex}_${i}`;
+      patternState[key] = patternState[key] || {};
+      phase.patterns[i](patternState[key], dt, ar, level, p);
+    }
+
+    // Spawn minor boss contact hazard along arena edges occasionally
+    if (Math.random()<0.0006*level) {
+      tone(180,0.05,'triangle');
+      spawnBeam(ar.x-2, ar.y, 4, ar.h, 350, 300, CONFIG.boss.contactDamage);
+      spawnBeam(ar.x+ar.w-2, ar.y, 4, ar.h, 350, 300, CONFIG.boss.contactDamage);
+    }
+
+    // Update bullets
+    for (let i=bullets.length-1;i>=0;i--){
+      const blet = bullets[i];
+      blet.x += blet.vx * CONFIG.difficulty.globalSpeed;
+      blet.y += blet.vy * CONFIG.difficulty.globalSpeed;
+
+      // rotate knives for look
+      if (blet.kind==='knife') blet.angle += 0.2;
+
+      // remove off-screen
+      if (blet.x < -1000 || blet.x > canvas.width+1000 || blet.y < -1000 || blet.y > canvas.height+1000) {
+        bullets.splice(i,1); continue;
+      }
+
+      // collisions
+      let hit = false;
+      if (blet.kind==='rect') {
+        if (circleRectHit(p.x,p.y,p.r, blet.x,blet.y,blet.w,blet.h)) hit = true;
+      } else if (blet.kind==='knife') {
+        // approximate knife as rectangle
+        if (circleRectHit(p.x,p.y,p.r, blet.x-6, blet.y-8, 12,16)) hit = true;
+      } else if (blet.kind==='orb') {
+        if (dist2(p.x,p.y, blet.x,blet.y) <= (p.r)**2 + (blet.r)**2) hit = true;
+        // graze
+        const g2 = (CONFIG.player.grazeRadius + blet.r + p.r);
+        if (dist2(p.x,p.y, blet.x,blet.y) <= g2*g2 && !hit) {
+          score += CONFIG.player.grazeScore * dt/16;
+        }
+      }
+
+      if (hit) { damagePlayer(8); }
+    }
+
+    // Update hazards and telegraphs
+    for (let i=hazards.length-1;i>=0;i--){
+      const hz = hazards[i];
+      if (hz.kind==='beam') {
+        // activation is synced with its warn telegraph; we fake a delay by toggling active later
+        hz.t = (hz.t || 0) + dt;
+        // the telegraph sets active; see telegraphs update
+        if (hz.active) {
+          // damage if intersect rect
+          if (circleRectHit(p.x,p.y,p.r, hz.x, hz.y, hz.w, hz.h)) {
+            damagePlayer(hz.dmg);
+          }
+          // expire after hold
+          if (hz.t > hz.hold) hazards.splice(i,1);
+        }
+      } else if (hz.kind==='fall') {
+        if (hz.active) {
+          hz.y += hz.speed * CONFIG.difficulty.globalSpeed;
+          if (circleRectHit(p.x,p.y,p.r, hz.x - hz.w/2, hz.y, hz.w, hz.h)) {
+            damagePlayer(hz.dmg);
+          }
+          if (hz.y > canvas.height+40) hazards.splice(i,1);
+        }
+      }
+    }
+
+    for (let i=telegraphs.length-1;i>=0;i--){
+      const tg = telegraphs[i];
+      tg.t = (tg.t||0) + dt;
+      if (tg.kind==='beamWarn') {
+        if (tg.t >= tg.delay) {
+          // find corresponding beam
+          const b = hazards.find(h=>h.kind==='beam' && h.x===tg.x && h.y===tg.y && h.w===tg.w && h.h===tg.h && !h.active);
+          if (b) { b.active = true; b.t = 0; }
+          telegraphs.splice(i,1);
+          tone(700,0.05,'square');
+        }
+      } else if (tg.kind==='fallWarn') {
+        if (tg.t >= tg.delay) {
+          const f = hazards.find(h=>h.kind==='fall' && h.x===tg.x && !h.active);
+          if (f) { f.active = true; f.y = -30; }
+          telegraphs.splice(i,1);
+          tone(260,0.04,'sawtooth');
+        }
+      } else if (tg.kind==='ghost') {
+        // transient visual, short-lived
+        if (tg.t>60) telegraphs.splice(i,1);
+      }
+    }
+
+    // Phase/Win/Lose progress
+    // Deal chip damage to boss for survival to simulate pressure fight
+    damageBoss(dt * 0.02 * CONFIG.difficulty.patternRamp);
+
+    if (b.hp <= 0 && !game.won) {
+      game.won = true; game.running = false;
+      score += CONFIG.difficulty.survivalBonus;
+      tone(660,0.25,'triangle'); tone(880,0.25,'sine');
+    }
+
+    if (phase && game.phaseElapsed >= phase.dur) {
+      b.phaseIndex++;
+      if (b.phaseIndex >= b.phases.length) {
+        // Loop phases with ramp
+        b.phaseIndex = 0;
+        game.level *= CONFIG.difficulty.patternRamp;
+      }
+      game.phaseElapsed = 0;
+      // clear between phases for fairness
+      clearEntities();
+      for (const k in step.patternState) delete step.patternState[k];
+      tone(500,0.08,'square');
+    }
+
+    // Score over time
+    score += CONFIG.difficulty.scorePerSecond * (dt/1000) * (b.enrage?1.8:1) * game.level;
+
+    // Death
+    if (!p.alive && game.t - game.deathTime > 1600) {
+      game.running = false;
+    }
+
+    updateUI();
+  }
+
+  function draw() {
+    // background/trail
+    if (CONFIG.visual.trail) {
+      ctx.fillStyle = 'rgba(0,0,0,'+CONFIG.visual.trailAlpha+')';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    } else {
+      ctx.fillStyle = CONFIG.visual.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+
+    const ar = game.arena;
+
+    // screen shake
+    if (shake>0) shake -= 0.4;
+    const ox = rand(-shake, shake), oy = rand(-shake, shake);
+    ctx.save(); ctx.translate(ox, oy);
+
+    // arena
+    ctx.strokeStyle = CONFIG.arena.color;
+    ctx.lineWidth = CONFIG.arena.border;
+    ctx.strokeRect(ar.x, ar.y, ar.w, ar.h);
+
+    // telegraphs
+    telegraphs.forEach(tg=>{
+      if (tg.kind==='beamWarn') {
+        ctx.fillStyle = CONFIG.visual.warnColor;
+        ctx.globalAlpha = 0.25 + 0.25*Math.sin((tg.t||0)/70);
+        ctx.fillRect(tg.x, tg.y, tg.w, tg.h);
+        ctx.globalAlpha = 1;
+      } else if (tg.kind==='fallWarn') {
+        ctx.strokeStyle = CONFIG.visual.fallColor; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(tg.x-8, ar.y+4); ctx.lineTo(tg.x+8, ar.y+4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(tg.x, ar.y+4); ctx.lineTo(tg.x, ar.y+20); ctx.stroke();
+      } else if (tg.kind==='ghost') {
+        ctx.fillStyle = tg.color; ctx.globalAlpha = 0.5;
+        ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+      }
+    });
+
+    // hazards
+    hazards.forEach(hz=>{
+      if (hz.kind==='beam') {
+        ctx.fillStyle = hz.active ? CONFIG.visual.beamColor : CONFIG.visual.warnColor;
+        ctx.globalAlpha = hz.active ? 0.6 : 0.25;
+        ctx.fillRect(hz.x, hz.y, hz.w, hz.h);
+        ctx.globalAlpha = 1;
+      } else if (hz.kind==='fall') {
+        if (hz.active) {
+          ctx.fillStyle = hz.color;
+          ctx.fillRect(hz.x - hz.w/2, hz.y, hz.w, hz.h);
+        }
+      }
+    });
+
+    // bullets
+    bullets.forEach(b=>{
+      if (b.kind==='rect') {
+        ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, b.w, b.h);
+      } else if (b.kind==='knife') {
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle);
+        ctx.fillStyle = b.color; ctx.fillRect(-b.w/2, -b.h/2, b.w, b.h);
+        ctx.restore();
+      } else if (b.kind==='orb') {
+        ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+      }
+    });
+
+    // player
+    const p = game.player;
+    ctx.fillStyle = p.iframes>0 ? '#ffd6d9' : p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // overlays
+    ctx.fillStyle = '#9aa';
+    if (!game.player.alive) {
+      ctx.textAlign='center'; ctx.font='bold 28px system-ui';
+      ctx.fillText('You fell. R to retry.', canvas.width/2, 56);
+    } else if (game.won) {
+      ctx.textAlign='center'; ctx.font='bold 28px system-ui';
+      ctx.fillText('Victory. R to fight another.', canvas.width/2, 56);
+    } else if (paused) {
+      ctx.textAlign='center'; ctx.font='bold 28px system-ui';
+      ctx.fillText('Paused', canvas.width/2, 56);
+    }
+  }
+
+  function loop() {
+    const t = now();
+    let dt = t - lastT; lastT = t;
+    dt = clamp(dt, 0, 40);
+    step(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ========= INPUT =========
+  window.addEventListener('keydown', e=>{
+    keys[e.code] = true;
+    if (e.code==='KeyP') { paused=!paused; e.preventDefault(); }
+    if (e.code==='KeyM') { CONFIG.sfx.enabled=!CONFIG.sfx.enabled; e.preventDefault(); }
+    if (e.code==='KeyR') { resetGame(); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', e=>{ keys[e.code] = false; });
+
+  RestartBtn.onclick = ()=> resetGame();
+  PauseBtn.onclick = ()=> { paused=!paused; };
+  MuteBtn.onclick = ()=> { CONFIG.sfx.enabled=!CONFIG.sfx.enabled; };
+
+  // ========= START =========
+  resetGame();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
