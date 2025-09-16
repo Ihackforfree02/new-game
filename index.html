@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Bullet Heart Duel — 50 Level Run</title>
+<title>Bullet Heart Duel — 50 Level Run (TP Burst)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <style>
   html,body { margin:0; background:#0b0b0f; color:#e7e7ef; font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
@@ -38,7 +38,7 @@
       <span id="hpText"></span>
     </div>
     <div style="display:flex; gap:16px; align-items:center;">
-      <span>Burst</span>
+      <span>TP</span>
       <div class="bar blue"><div id="burstFill" class="fill" style="width:0%;"></div></div>
       <span id="burstText"></span>
     </div>
@@ -51,7 +51,7 @@
     </div>
   </div>
 
-  <div class="small">50-level run. Progress and HP save automatically. Bosses at 10/20/30/40/50.</div>
+  <div class="small">50-level run. 20s survive levels. TP charges by grazing and proximity. Anti-pause-abuse enabled.</div>
 </div>
 
 <script>
@@ -66,10 +66,23 @@
       iframes: 800, maxHP: 92,
       grazeRadius: 18, grazeScore: 3, dmgShake: 5
     },
-    cycle: { surviveSec: 60, attackSec: 10 },
+    // Survive phases last 20s now (boss and regular). Attack window unchanged.
+    cycle: { surviveSec: 20, attackSec: 10 },
     sfx: { enabled: true, vol: 0.18 },
     bullets: { playerSpeed: 6.7, playerCooldown: 130, playerDmg: 10 },
-    burst: { max: 100, gainPerGraze: 1.2, damage: 120, clearBullets: true, cooldown: 3000 },
+    // TP-like Burst: slower base, most gain from graze + proximity; anti-pause lockout.
+    burst: {
+      max: 100,
+      gainPerGraze: 0.45,      // base per close graze (slow)
+      proxRadius: 90,          // distance for proximity TP trickle
+      proxPerSec: 0.18,        // small per-second near-danger gain
+      passivePerSec: 0.04,     // tiny passive trickle
+      perSecondCap: 12,        // max TP per second (avoid spikes)
+      damage: 120,
+      clearBullets: true,
+      cooldown: 3000,
+      antiPauseLockMs: 900     // TP gain/use blocked after unpausing
+    },
     visual: {
       bg:'#000', trail:true, trailAlpha:0.07,
       warn:'#ffd166', beam:'#73c0ff',
@@ -77,7 +90,7 @@
       fall:'#ffcc88', hammer:'#ff9d6c', fire:'#ff6b3d'
     },
     MAX_LEVEL: 50,
-    saveKey: 'bhd_run_v3_50'
+    saveKey: 'bhd_run_v4_50_tp'
   };
 
   const SKINS = [
@@ -103,7 +116,7 @@
   const scoreText = document.getElementById('scoreText');
   const skinText = document.getElementById('skinText');
 
-  document.getElementById('pauseBtn').onclick = ()=> paused = !paused;
+  document.getElementById('pauseBtn').onclick = togglePause;
   document.getElementById('muteBtn').onclick = ()=> { CONFIG.sfx.enabled = !CONFIG.sfx.enabled; persist(); };
   document.getElementById('resetBtn').onclick = hardReset;
 
@@ -200,11 +213,10 @@
   function decade(level){ return Math.ceil(level/10); }
   function isBossLevel(level){ return level % 10 === 0; }
   function levelScale(level){
-    // base grows slightly per level, with a bump each decade
     const dec = decade(level);
-    const intra = (level - (dec-1)*10); // 1..10
-    const perLevel = 1 + 0.05*(intra-1);   // 1.00 → 1.45 within a decade
-    const perDecade = 1 + 0.18*(dec-1);    // 1.00, 1.18, 1.36, 1.54, 1.72
+    const intra = (level - (dec-1)*10);
+    const perLevel = 1 + 0.05*(intra-1);
+    const perDecade = 1 + 0.18*(dec-1);
     return perLevel * perDecade;
   }
 
@@ -269,7 +281,6 @@
       });
     },
     hammerAndFire: (t,dt,a,ls,player)=>{
-      // ls ~ levelScale
       t.acc=(t.acc||0)+dt; t.fire=(t.fire||0)+dt;
       const colDelay = Math.max(280, 560 - 18*ls);
       const arcDelay = Math.max(300, 540 - 16*ls);
@@ -320,13 +331,12 @@
     { name:'Caldera Monarch',  color:'#ffa86b', hp: 2500, style:5 }
   ];
   function pickBoss(level){
-    // 10→boss[0], 20→[1], 30→[2], 40→[3], 50→[4]
     const idx = Math.min(4, Math.floor(level/10)-1);
     return Bosses[idx];
   }
 
   // ======================= GAME STATE =======================
-  let game, paused=false, lastT=performance.now(), shake=0, score=0;
+  let game, paused=false, pauseLockUntil=0, lastT=performance.now(), shake=0, score=0;
 
   function makePlayer(){
     const skin = SKINS.find(s=>s.id===save.skin) || SKINS[0];
@@ -337,12 +347,12 @@
       baseColor: skin.color, trail: skin.trail,
       hp: clamp(save.hp, 1, CONFIG.player.maxHP),
       iframes: 0, alive: true,
-      burst: 0, burstCD: 0, shootCD: 0
+      burst: 0, burstCD: 0, shootCD: 0,
+      tpAcc: 0 // per-second cap accumulator
     };
   }
   function makeBoss(def, level){
     const ls = levelScale(level);
-    // HP scales with decade to keep pace
     const scaleHP = 1 + 0.15*(decade(level)-1);
     return { name:def.name, color:def.color, hp: Math.ceil(def.hp*scaleHP), maxHP: Math.ceil(def.hp*scaleHP), style:def.style, time:0 };
   }
@@ -356,7 +366,7 @@
       arena: { ...CONFIG.arena },
       level: save.level|0,
       state: isBossLevel(save.level) ? 'bossSurvive' : 'survive',
-      timer: (isBossLevel(save.level) ? CONFIG.cycle.surviveSec : CONFIG.cycle.surviveSec) * 1000,
+      timer: CONFIG.cycle.surviveSec * 1000,
       boss: isBossLevel(save.level) ? makeBoss(pickBoss(save.level), save.level) : null,
       won: false, deathTime:0, t:0
     };
@@ -384,7 +394,6 @@
     game.won = true;
     score += 2500;
     tone(660,0.25,'triangle'); tone(880,0.25,'sine');
-    // Unlock skin reward (if any locked remain)
     const locked = SKINS.map(s=>s.id).filter(id=>!save.unlocked.includes(id));
     if (locked.length){
       const award = locked[Math.floor(Math.random()*locked.length)];
@@ -392,17 +401,13 @@
       popup(canvas.width/2, 90, 'New Skin Unlocked!');
       popup(canvas.width/2, 110, SKINS.find(s=>s.id===award).name);
     }
-    setTimeout(()=>{
-      advanceLevel();
-    }, 900);
+    setTimeout(()=> advanceLevel(), 900);
   }
-
   function advanceLevel(){
     if (save.level >= CONFIG.MAX_LEVEL){
       save.completed = true;
       save.best = Math.max(save.best|0, Math.floor(score));
       persist();
-      // Show completion, then restart or stay
       popup(canvas.width/2, 70, 'Run Complete!');
       setTimeout(()=>{ startRun(); }, 1200);
       return;
@@ -413,14 +418,27 @@
     startRun();
   }
 
+  // ======================= PAUSE =======================
+  function togglePause(){
+    paused = !paused;
+    if (!paused){
+      // Anti-pause-abuse: block TP gain and Burst usage briefly after unpausing
+      pauseLockUntil = performance.now() + CONFIG.burst.antiPauseLockMs;
+    }
+  }
+
   // ======================= LOOP =======================
   const patternState = {};
   function step(dt){
-    if (paused || !game) return;
+    if (!game) return;
+    if (paused) return; // full freeze
+
     game.t += dt;
 
     const a = game.arena, p = game.player, lvl = game.level;
     const ls = levelScale(lvl);
+    const now = performance.now();
+    const antiPauseActive = now < pauseLockUntil;
 
     // input/move (WASD + Arrows)
     let sp = CONFIG.player.speed * (keys.ShiftLeft||keys.ShiftRight ? 1 : CONFIG.player.boost);
@@ -454,7 +472,6 @@
       b.x += b.vx; b.y += b.vy;
       if (b.kind==='knife') b.angle += b.spin;
       if (b.kind==='fire') b.flicker = 1 - Math.random()*0.4;
-
       if (b.x<-240 || b.x>canvas.width+240 || b.y<-240 || b.y>canvas.height+240){ bullets.splice(i,1); continue; }
 
       let hit=false;
@@ -462,11 +479,6 @@
       else if (b.kind==='knife'){ if (circleRectHit(p.x,p.y,p.r, b.x-6,b.y-8,12,16)) hit=true; }
       else if (b.kind==='orb' || b.kind==='fire'){
         const rr=(b.r||6)+p.r; if (dist2(p.x,p.y,b.x,b.y) <= rr*rr) hit=true;
-        const gR = (CONFIG.player.grazeRadius + (b.r||6) + p.r);
-        if (!hit && dist2(p.x,p.y,b.x,b.y) <= gR*gR){
-          score += CONFIG.player.grazeScore * dt/16;
-          p.burst = clamp(p.burst + (CONFIG.burst.gainPerGraze*(dt/16))*Math.min(1.5, 0.9+0.02*ls), 0, CONFIG.burst.max);
-        }
       }
       if (hit) damagePlayer(b.dmg||8);
     }
@@ -505,7 +517,7 @@
       }
     }
 
-    // telegraphs
+    // telegraphs activation
     for (let i=telegraphs.length-1;i>=0;i--){
       const tg=telegraphs[i]; tg.t=(tg.t||0)+dt;
       if (tg.kind==='beamWarn' && tg.t>=tg.delay){
@@ -541,13 +553,65 @@
       if (s.y<-20 || s.x<-20 || s.x>canvas.width+20) pshots.splice(i,1);
     }
 
-    // burst
+    // TP-style Burst charge
+    // Reset per-second cap accumulator every 1000ms
+    p.tpAcc = (p.tpAcc || 0);
+    if (!p.tpTickT) p.tpTickT = 0;
+    p.tpTickT += dt;
+    if (p.tpTickT >= 1000){ p.tpAcc = 0; p.tpTickT = 0; }
+
+    if (!antiPauseActive){ // no TP gain while in anti-pause lock
+      let tpGain = 0;
+
+      // Grazing: near-miss increments (primary source)
+      for (let b of bullets){
+        if (b.kind==='orb' || b.kind==='fire'){
+          const rr = CONFIG.player.grazeRadius + (b.r||6) + p.r;
+          const d2 = dist2(p.x,p.y,b.x,b.y);
+          if (d2 <= rr*rr){
+            tpGain += CONFIG.burst.gainPerGraze * (dt/16);
+          }
+        }
+      }
+
+      // Proximity trickle: if any hazard/beam/hammer column nearby, add small TP
+      let nearDanger = false;
+      const proxR2 = CONFIG.burst.proxRadius * CONFIG.burst.proxRadius;
+      for (let h of hazards){
+        if (h.active){
+          // sample center of hazard area
+          let hx, hy;
+          if (h.kind==='hammerCol' || h.kind==='fireCol' || h.kind==='beam'){
+            hx = clamp(p.x, h.x - (h.w||40)/2, h.x + (h.w||40)/2);
+            hy = game.arena.y + game.arena.h/2;
+          } else if (h.kind==='hammerArc'){
+            hx = h.cx; hy = h.cy;
+          }
+          if (hx!=null){
+            const d2 = dist2(p.x,p.y,hx,hy);
+            if (d2 <= proxR2){ nearDanger = true; break; }
+          }
+        }
+      }
+      if (nearDanger) tpGain += CONFIG.burst.proxPerSec * (dt/1000);
+
+      // Passive slow trickle
+      tpGain += CONFIG.burst.passivePerSec * (dt/1000);
+
+      // Cap per-second gain
+      const capLeft = Math.max(0, CONFIG.burst.perSecondCap - p.tpAcc);
+      const applied = Math.min(capLeft, tpGain);
+      p.tpAcc += applied;
+      p.burst = clamp(p.burst + applied, 0, CONFIG.burst.max);
+    }
+
+    // Burst use
     if (p.burstCD>0) p.burstCD -= dt;
-    if (keys.KeyE && p.burst>=CONFIG.burst.max && p.burstCD<=0){
+    if (!antiPauseActive && keys.KeyE && p.burst>=CONFIG.burst.max && p.burstCD<=0){
       p.burst=0; p.burstCD=CONFIG.burst.cooldown;
       bullets.length=0; hazards.length=0; telegraphs.length=0;
-      damageBoss(CONFIG.burst.damage);
-      popup(p.x, p.y-20, 'BURST!');
+      if (game.boss) damageBoss(CONFIG.burst.damage);
+      popup(p.x, p.y-20, 'TP BURST!');
       tone(280,0.08,'sawtooth'); tone(560,0.12,'square'); tone(840,0.14,'triangle');
     }
 
@@ -577,7 +641,6 @@
 
     // death
     if (!p.alive && game.t - game.deathTime > 1200){
-      // retry same level; HP resets to full on retry
       save.hp = CONFIG.player.maxHP; persist(); startRun();
     }
 
@@ -614,7 +677,7 @@
     const a = game.arena;
     ctx.strokeStyle=CONFIG.arena.color; ctx.lineWidth=CONFIG.arena.border; ctx.strokeRect(a.x,a.y,a.w,a.h);
 
-    // milestone boss core
+    // boss core
     if (isBossLevel(game.level)){
       const cx=canvas.width/2, cy=70, r=36;
       ctx.fillStyle = game.boss?.color || '#bbb'; ctx.globalAlpha=0.5;
@@ -656,7 +719,7 @@
     // player shots
     pshots.forEach(s=>{ ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); });
 
-    // player
+    // player + skin trail
     const p=game.player;
     const tint = p.iframes>0 ? '#ffd6d9' : (p.baseColor||'#ff4d6d');
     ctx.fillStyle=tint; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
@@ -668,12 +731,14 @@
 
     // overlays
     ctx.fillStyle='#a9b'; ctx.textAlign='center';
-    if (!p.alive){
+    if (paused){
+      ctx.font='bold 26px system-ui'; ctx.fillText('Paused', canvas.width/2, 56);
+      const left = Math.max(0, Math.ceil((pauseLockUntil - performance.now())/1000));
+      if (left>0){ ctx.font='bold 16px system-ui'; ctx.fillText(`TP locked for ${left}s after unpause`, canvas.width/2, 84); }
+    } else if (!p.alive){
       ctx.font='bold 26px system-ui'; ctx.fillText('You fell. Restarting level…', canvas.width/2, 56);
     } else if (game.won){
       ctx.font='bold 26px system-ui'; ctx.fillText('Boss Down! Advancing…', canvas.width/2, 56);
-    } else if (save.completed && save.level===CONFIG.MAX_LEVEL && !isBossLevel(save.level) && game.timer>0){
-      ctx.font='bold 24px system-ui'; ctx.fillText('Run Complete! Reset to start over.', canvas.width/2, 56);
     }
 
     ctx.restore();
@@ -683,7 +748,7 @@
   const keys={};
   window.addEventListener('keydown', e=>{
     keys[e.code]=true;
-    if (e.code==='KeyP'){ paused=!paused; e.preventDefault(); }
+    if (e.code==='KeyP'){ togglePause(); e.preventDefault(); }
     if (e.code==='KeyM'){ CONFIG.sfx.enabled = !CONFIG.sfx.enabled; persist(); e.preventDefault(); }
     if (e.code==='KeyK'){ cycleSkin(); e.preventDefault(); }
     if (e.code==='Space'){ e.preventDefault(); }
@@ -698,17 +763,16 @@
     save.skin = SKINS[unlocked[pos]].id;
     if (game && game.player){
       const skin = SKINS.find(s=>s.id===save.skin) || SKINS[0];
-      game.player.baseColor = skin.color; game.player.trail = skin.trail;
+      game.player.baseColor = skin.color; game.player.trail = skin.trail; // apply instantly
     }
     persist(); updateUI();
   }
 
   // ======================= MAIN LOOP =======================
-  let last = performance.now();
   function loop(){
     const t = performance.now();
-    const dt = clamp(t - last, 0, 40);
-    last = t;
+    const dt = clamp(t - lastT, 0, 40);
+    lastT = t;
     if (!game) startRun();
     step(dt);
     draw();
