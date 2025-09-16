@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Heart Horror: Undertale Edition</title>
+<title>Heart Horror: Yellow Mode - Dynamic Attacks</title>
 <style>
-body{margin:0;background:black;overflow:hidden;font-family:'Courier New',monospace;color:white;}
-canvas{display:block;margin:auto;background:#111;}
-#ui{position:absolute;top:10px;left:10px;width:100%;color:white;font-size:16px;}
+body{margin:0;background:#111;color:white;font-family:'Courier New',monospace;overflow:hidden;}
+canvas{display:block;margin:auto;background:#222;}
+#ui{position:absolute;top:10px;left:10px;color:white;font-size:16px;}
 .bar-container{background:#333;border:1px solid #fff;width:200px;height:20px;margin-bottom:5px;}
-.bar{height:100%;background:red;width:100%;}
-#burstBar{background:cyan;width:0%;transition:width 0.2s;}
-#messages{position:absolute;bottom:10px;left:10px;width:90%;font-size:18px;color:lime;white-space:pre-line;}
+.bar{height:100%;background:red;width:100%;transition:width 0.1s;}
+#burstBar{background:cyan;width:0%;transition:width 0.1s;}
+#messages{position:absolute;bottom:10px;left:10px;width:90%;font-size:18px;color:yellow;white-space:pre-line;}
 #keybindsMenu{position:absolute;top:50px;left:10px;background:#222;padding:10px;display:none;border:1px solid #fff;}
 #keybindsMenu input{width:40px;}
 button{margin-top:5px;}
@@ -19,7 +19,6 @@ button{margin-top:5px;}
 </head>
 <body>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
-
 <div id="ui">
   <div>HP: <span id="hpText">100</span></div>
   <div class="bar-container"><div id="hpBar" class="bar"></div></div>
@@ -30,29 +29,29 @@ button{margin-top:5px;}
 </div>
 
 <div id="keybindsMenu">
-  <div>Move Up: <input id="keyUp" maxlength="1"></div>
-  <div>Move Down: <input id="keyDown" maxlength="1"></div>
-  <div>Move Left: <input id="keyLeft" maxlength="1"></div>
-  <div>Move Right: <input id="keyRight" maxlength="1"></div>
+  <div>Up: <input id="keyUp" maxlength="1"></div>
+  <div>Down: <input id="keyDown" maxlength="1"></div>
+  <div>Left: <input id="keyLeft" maxlength="1"></div>
+  <div>Right: <input id="keyRight" maxlength="1"></div>
   <div>Burst: <input id="keyBurst" maxlength="1"></div>
   <button id="saveKeys">Save</button>
   <button id="closeKeys">Close</button>
 </div>
 
-<div id="messages">Welcome to Heart Horror: Undertale Edition...</div>
+<div id="messages">Welcome to Heart Horror: Dynamic Attacks!</div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
 let width=canvas.width,height=canvas.height;
 
-// --- Player ---
+// ---- Player ----
 let player={x:width/2,y:height-100,size:20,hp:100,speed:4,burstReady:true,burstTimer:0};
 let burstActive=false,BURST_DURATION=180,BURST_COOLDOWN=300;
 
-// --- Key Management ---
+// ---- Keybinds ----
 let keys={};
-let keybinds = JSON.parse(localStorage.getItem('keybinds'))||{up:'W',down:'S',left:'A',right:'D',burst:'Q'};
+let keybinds=JSON.parse(localStorage.getItem('keybinds'))||{up:'W',down:'S',left:'A',right:'D',burst:'Q'};
 document.getElementById('keyUp').value=keybinds.up;
 document.getElementById('keyDown').value=keybinds.down;
 document.getElementById('keyLeft').value=keybinds.left;
@@ -74,39 +73,30 @@ document.getElementById('saveKeys').addEventListener('click',()=>{
   document.getElementById('keybindsMenu').style.display='none';
 });
 
-// --- Night & Messages ---
+// ---- UI ----
 let night=1;
 let messages=[];
 function addMessage(msg){messages.push(msg);if(messages.length>5)messages.shift();}
 
-// --- Attack Box ---
+// ---- Attack Box ----
 let attackBox={x:width/2-100,y:height-200,width:200,height:150};
 
-// --- Enemies/Bosses ---
-let enemies=[];
-let bosses=[
-  {name:"Shadow Phantom",color:"purple",size:20,speed:1.5,pattern:"down",hp:20},
-  {name:"Bone Horror",color:"white",size:25,speed:2,pattern:"zigzag",hp:25},
-  {name:"Creeper Face",color:"green",size:30,speed:1.2,pattern:"circle",hp:30},
-  {name:"Night Terror",color:"red",size:35,speed:2.5,pattern:"fast",hp:35},
-  {name:"Ghost Howler",color:"blue",size:28,speed:1.8,pattern:"zigzag",hp:28},
-  {name:"Fright Maw",color:"orange",size:32,speed:2,pattern:"circle",hp:32},
-  {name:"Specter King",color:"gold",size:40,speed:2,pattern:"circle",hp:40},
-  {name:"The Wailer",color:"magenta",size:25,speed:3,pattern:"zigzag",hp:30},
-  {name:"Darkwing",color:"darkblue",size:30,speed:2.2,pattern:"fast",hp:35},
-  {name:"Soul Leech",color:"pink",size:28,speed:2,pattern:"zigzag",hp:32},
-  {name:"Hollow Shade",color:"grey",size:35,speed:2.5,pattern:"circle",hp:38},
-  {name:"Frightshade",color:"violet",size:25,speed:2.5,pattern:"down",hp:30},
-  {name:"Nightmare Eye",color:"lightblue",size:32,speed:3,pattern:"fast",hp:40},
-  {name:"Bone Fiend",color:"white",size:28,speed:2.5,pattern:"zigzag",hp:35},
-  {name:"Spirit Reaper",color:"cyan",size:30,speed:2.8,pattern:"circle",hp:38},
-  {name:"Void Howler",color:"black",size:35,speed:3,pattern:"fast",hp:40},
-  {name:"Phantom Knight",color:"silver",size:32,speed:2.5,pattern:"zigzag",hp:42},
-  {name:"Eclipse",color:"darkred",size:40,speed:2.8,pattern:"circle",hp:45},
-  {name:"Soul Eater",color:"darkgreen",size:38,speed:3,pattern:"fast",hp:48},
-  {name:"Radiant Horror",color:"gold",size:50,speed:2.5,pattern:"radiance",hp:100} // final boss
-];
+// ---- Bullets ----
+let bullets=[];
+function spawnBullet(x,y,type,color,target){
+  bullets.push({x,y,type,typePos:{angle:0,speed:0,timer:0},color,target});
+  if(type=="homing"){bullets[bullets.length-1].typePos.speed=2;}
+  if(type=="stop"){bullets[bullets.length-1].typePos.timer=60;bullets[bullets.length-1].typePos.speed=2;}
+}
 
+// ---- Enemies/Bosses ----
+let bosses=[
+  {name:"Shadow Phantom",color:"purple",size:20,speed:1.5,patterns:["down","homing","stop"],hp:20},
+  {name:"Bone Horror",color:"white",size:25,speed:2,patterns:["zigzag","homing","stop"],hp:25},
+  {name:"Creeper Face",color:"green",size:30,speed:1.2,patterns:["circle","homing","stop"],hp:30},
+  {name:"Radiant Horror",color:"gold",size:50,speed:2.5,patterns:["radiance","homing","stop"],hp:100} // final boss
+];
+let enemies=[];
 function spawnEnemies(n){
   enemies=[];
   for(let i=0;i<n;i++){
@@ -117,21 +107,18 @@ function spawnEnemies(n){
       size:boss.size,
       speed:boss.speed,
       color:boss.color,
-      pattern:boss.pattern,
+      patterns:boss.patterns.slice(),
       name:boss.name,
-      hp:boss.hp
+      hp:boss.hp,
+      attackCooldown:0
     });
   }
 }
 spawnEnemies(1);
 
-// --- Bullets ---
-let bullets=[];
-function spawnBullet(x,y,angle,speed,color){bullets.push({x,y,angle,speed,color});}
-
-// --- Update ---
+// ---- Update ----
 function update(){
-  // Movement
+  // Player movement
   if(keys[keybinds.up])player.y-=player.speed;
   if(keys[keybinds.down])player.y+=player.speed;
   if(keys[keybinds.left])player.x-=player.speed;
@@ -139,13 +126,13 @@ function update(){
   player.x=Math.max(attackBox.x,Math.min(attackBox.x+attackBox.width,player.x));
   player.y=Math.max(attackBox.y,Math.min(attackBox.y+attackBox.height,player.y));
 
-  // Burst
+  // Burst mechanic
   if(keys[keybinds.burst] && player.burstReady){
     burstActive=true;
     player.burstReady=false;
     player.burstTimer=BURST_DURATION;
     bullets=[];
-    addMessage("Burst activated! All attacks cleared!");
+    addMessage("Burst activated!");
   }
   if(burstActive){
     player.burstTimer--;
@@ -155,54 +142,82 @@ function update(){
     if(player.burstTimer>=BURST_COOLDOWN){player.burstReady=true;player.burstTimer=BURST_COOLDOWN;}
   }
 
-  // Enemy behavior
+  // Enemy actions
   enemies.forEach(e=>{
-    if(e.pattern=="down") e.y+=e.speed;
-    else if(e.pattern=="zigzag"){e.y+=e.speed;e.x+=Math.sin(e.y/20)*3;}
-    else if(e.pattern=="circle"){e.x+=Math.sin(e.y/30)*4;e.y+=e.speed;}
-    else if(e.pattern=="fast") e.y+=e.speed*1.5;
-    else if(e.pattern=="radiance"){
-      // Radiance style bullets
-      for(let i=0;i<6;i++){
-        spawnBullet(e.x,e.y,i*Math.PI/3+performance.now()/500,3,'gold');
-      }
-      e.y+=e.speed*0.2;
-    }
+    // Move
+    e.y+=e.speed;
 
-    // Collision with attack box
-    bullets.forEach((b,j)=>{
-      if(b.x>attackBox.x && b.x<attackBox.x+attackBox.width && b.y>attackBox.y && b.y<attackBox.y+attackBox.height && !burstActive){
-        player.hp-=0.5;
-        bullets.splice(j,1);
-        addMessage("Hit by attack!");
+    // Attack spawn cooldown
+    e.attackCooldown--;
+    if(e.attackCooldown<=0){
+      let pattern=e.patterns[Math.floor(Math.random()*e.patterns.length)];
+      if(pattern=="down") spawnBullet(e.x,e.y,"down","red");
+      if(pattern=="zigzag") spawnBullet(e.x,e.y,"zigzag","white");
+      if(pattern=="circle"){
+        for(let i=0;i<8;i++) spawnBullet(e.x,e.y,"circle","blue",{angle:i*Math.PI/4});
       }
-      b.x+=Math.cos(b.angle)*b.speed;
-      b.y+=Math.sin(b.angle)*b.speed;
-    });
+      if(pattern=="homing") spawnBullet(e.x,e.y,"homing","cyan",{x:player.x,y:player.y});
+      if(pattern=="stop") spawnBullet(e.x,e.y,"stop","magenta",{x:player.x,y:player.y});
+      if(pattern=="radiance"){
+        for(let i=0;i<8;i++) spawnBullet(e.x,e.y,"circle","gold",{angle:i*Math.PI/4});
+      }
+      e.attackCooldown=120; // cooldown between attacks
+    }
   });
 
-  // Remove off-screen bullets
+  // Update bullets
+  bullets.forEach((b,j)=>{
+    if(b.type=="down") b.y+=3;
+    if(b.type=="zigzag"){b.y+=2;b.x+=Math.sin(b.y/15)*5;}
+    if(b.type=="circle"){b.x+=Math.cos(b.typePos.angle)*3;b.y+=Math.sin(b.typePos.angle)*3;b.typePos.angle+=0.05;}
+    if(b.type=="homing"){
+      let dx=b.target.x-b.x;
+      let dy=b.target.y-b.y;
+      let dist=Math.sqrt(dx*dx+dy*dy);
+      b.x+=dx/dist*b.typePos.speed;
+      b.y+=dy/dist*b.typePos.speed;
+    }
+    if(b.type=="stop"){
+      if(b.typePos.timer>0){b.typePos.timer--;} 
+      else{
+        let dx=b.target.x-b.x;
+        let dy=b.target.y-b.y;
+        let dist=Math.sqrt(dx*dx+dy*dy);
+        b.x+=dx/dist*b.typePos.speed;
+        b.y+=dy/dist*b.typePos.speed;
+      }
+    }
+
+    // Collision
+    if(b.x>attackBox.x && b.x<attackBox.x+attackBox.width && b.y>attackBox.y && b.y<attackBox.y+attackBox.height && !burstActive){
+      player.hp-=0.5;
+      bullets.splice(j,1);
+      addMessage("Hit!");
+    }
+  });
+
   bullets=bullets.filter(b=>b.x>0 && b.x<width && b.y>0 && b.y<height);
 
   // Night progression
   if(enemies.length===0){night++;spawnEnemies(1);addMessage("Night "+night+" begins...");}
 
-  // UI updates
+  // UI update
   document.getElementById('hpText').innerText=Math.floor(player.hp);
   document.getElementById('hpBar').style.width=(player.hp/100*100)+'%';
   document.getElementById('burstText').innerText=player.burstReady?'Ready':'Charging';
   document.getElementById('burstBar').style.width=(burstActive?100:player.burstTimer/BURST_COOLDOWN*100)+'%';
   document.getElementById('nightText').innerText=night;
 
-  if(player.hp<=0){addMessage("You have been consumed...");alert("Game Over on Night "+night);window.location.reload();}
+  if(player.hp<=0){addMessage("You were consumed...");alert("Game Over!");window.location.reload();}
 }
 
-// --- Render ---
+// ---- Render ----
 function render(){
   ctx.clearRect(0,0,width,height);
+
   // Attack box
-  ctx.strokeStyle='white';
-  ctx.lineWidth=2;
+  ctx.strokeStyle='yellow';
+  ctx.lineWidth=4;
   ctx.strokeRect(attackBox.x,attackBox.y,attackBox.width,attackBox.height);
 
   // Player heart
@@ -210,9 +225,9 @@ function render(){
   ctx.beginPath();
   ctx.arc(player.x,player.y,player.size,0,Math.PI*2);
   ctx.fill();
-
   if(burstActive){
-    ctx.strokeStyle='cyan';ctx.lineWidth=4;
+    ctx.strokeStyle='cyan';
+    ctx.lineWidth=5;
     ctx.beginPath();
     ctx.arc(player.x,player.y,player.size+10,0,Math.PI*2);
     ctx.stroke();
@@ -237,7 +252,7 @@ function render(){
   document.getElementById('messages').innerText=messages.join('\n');
 }
 
-// --- Loop ---
+// ---- Game Loop ----
 function loop(){update();render();requestAnimationFrame(loop);}
 loop();
 </script>
