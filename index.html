@@ -2,645 +2,840 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Bullet Heart Duel</title>
+<title>Bullet Heart Duel +</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <style>
-  html,body { margin:0; background:#0b0b0f; color:#e7e7ef; font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  html,body { margin:0; background:#0b0b0f; color:#e7e7ef; font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
   #wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px; }
-  canvas { background:#000; border:2px solid #e7e7ef; image-rendering: pixelated; }
-  .hud { width:800px; max-width: 95vw; display:flex; justify-content:space-between; align-items:center; }
-  .hud span { opacity:.9; }
-  .btns { display:flex; gap:8px; }
+  canvas { background:#000; border:2px solid #e7e7ef; image-rendering: pixelated; touch-action:none; }
+  .hud, .menu { width: 900px; max-width: 96vw; display:flex; justify-content:space-between; align-items:center; }
+  .menu { gap:10px; flex-wrap:wrap; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; }
   button { background:#191924; color:#e7e7ef; border:1px solid #3a3a5d; padding:6px 10px; cursor:pointer; }
   button:hover { background:#20203a; }
   .small { font-size:12px; opacity:.8; }
+  .pill { padding:4px 8px; border-radius:999px; border:1px solid #3a3a5d; }
+  .skin { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #3a3a5d; background:#13131c; cursor:pointer; margin:2px; }
+  .skin.active { border-color:#8aa1ff; background:#1a1a2a; }
+  .swatch { width:16px; height:16px; border-radius:50%; border:1px solid #aab; }
+  .bar { height:10px; background:#26263b; border:1px solid #3a3a5d; position:relative; }
+  .fill { height:100%; background:#7affb7; }
+  .bar.red .fill { background:#ff657a; }
+  .bar.blue .fill { background:#6cb6ff; }
+  .bar.yellow .fill { background:#ffd35e; }
+  .section { width: 900px; max-width:96vw; display:flex; gap:10px; align-items:center; }
 </style>
 </head>
 <body>
 <div id="wrap">
-  <div class="hud">
-    <span id="status">Move: WASD/Arrows • R: Restart • P: Pause • M: Mute</span>
+  <div class="menu" id="menu">
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div style="font-weight:700; font-size:18px;">Bullet Heart Duel +</div>
+      <div class="small">Move: WASD/Arrows • Shoot: Space (Attack Phase) • Burst: E • R: Restart • P: Pause • M: Mute</div>
+      <div class="small">Survive 60s, then strike back. Graze bullets to charge Burst.</div>
+    </div>
+    <div class="btns">
+      <button id="startRun">Start run</button>
+      <button id="startTutorial">Tutorial</button>
+      <button id="continueBtn">Continue</button>
+      <button id="muteBtn">Mute</button>
+    </div>
+    <div style="flex:1 0 100%; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div style="min-width:150px;">Skins:</div>
+      <div id="skins"></div>
+    </div>
+    <div style="flex:1 0 100%; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div class="pill">Progress: <span id="progressText">—</span></div>
+      <div class="pill">Best score: <span id="bestText">0</span></div>
+    </div>
+  </div>
+
+  <div class="hud" id="hudTop" style="display:none;">
+    <span id="status">WASD to move • Space to shoot (Attack Phase) • E to Burst</span>
     <div class="btns">
       <button id="restartBtn">Restart</button>
       <button id="pauseBtn">Pause</button>
-      <button id="muteBtn">Mute</button>
+      <button id="muteBtn2">Mute</button>
     </div>
   </div>
-  <canvas id="game" width="800" height="600"></canvas>
-  <div class="hud">
-    <span id="hp" aria-live="polite"></span>
-    <span id="phase"></span>
-    <span id="score"></span>
+
+  <canvas id="game" width="900" height="640"></canvas>
+
+  <div class="section" id="hudBottom" style="display:none;">
+    <div style="flex:2;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>HP</span>
+        <div class="bar" style="width:220px;"><div id="hpFill" class="fill" style="width:100%;"></div></div>
+        <span id="hpText"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+        <span>Burst</span>
+        <div class="bar blue" style="width:220px;"><div id="burstFill" class="fill" style="width:0%;"></div></div>
+        <span id="burstText"></span>
+      </div>
+    </div>
+    <div style="flex:3; display:flex; gap:16px; justify-content:flex-end;">
+      <span id="phaseText"></span>
+      <span id="timerText"></span>
+      <span id="scoreText"></span>
+    </div>
   </div>
-  <div class="small">Original fangame-style engine. No assets required. Customize in CONFIG.</div>
+
+  <div class="small">Original fangame-style engine. No external assets.</div>
 </div>
 
 <script>
 (() => {
   'use strict';
 
-  // ========= CONFIG =========
+  // ========================== CONFIG ==========================
   const CONFIG = {
-    arena: { x: 150, y: 110, w: 500, h: 380, border: 3, color: '#c9c9ff' },
+    arena: { x: 160, y: 110, w: 580, h: 420, border: 3, color: '#c9c9ff' },
     player: {
-      r: 7, color: '#ff4d6d', speed: 3.1, speedBoost: 1.25, iframes: 900,
-      maxHP: 92, grazeRadius: 18, grazeScore: 3, dmgShake: 5
+      r: 7, speed: 3.05, boost: 1.25,
+      iframes: 800, maxHP: 92, healOnPhase: 10,
+      grazeRadius: 18, grazeScore: 3, dmgShake: 5
     },
-    boss: {
-      baseHP: 600, color: '#b6ffb3', enrageHPpct: 0.35, enrageSpeed: 1.12, contactDamage: 7
-    },
-    difficulty: {
-      globalSpeed: 1.0, patternRamp: 1.05, scorePerSecond: 5, survivalBonus: 750
-    },
-    sfx: { enabled: true, vol: 0.2 },
+    sfx: { enabled: true, vol: 0.18 },
     visual: {
-      bg: '#000', trail: true, trailAlpha: 0.07, warnColor: '#ffd166', beamColor: '#73c0ff',
-      boneColor: '#e5e5ff', knifeColor: '#ffaa99', orbColor: '#a1ffea', fallColor: '#ffcc88'
-    }
+      bg: '#000', trail: true, trailAlpha: 0.07,
+      warnColor: '#ffd166', beamColor: '#73c0ff',
+      boneColor: '#e5e5ff', knifeColor: '#ffaa99', orbColor: '#a1ffea',
+      fallColor: '#ffcc88', hammerColor: '#ff9d6c', healColor: '#7affb7'
+    },
+    cycle: { surviveSec: 60, attackSec: 10, chipDPS: 0.0 }, // survive -> attack
+    bullets: { playerSpeed: 6.5, playerCooldown: 140, playerDmg: 10 },
+    burst: { max: 100, gainPerGraze: 1.2, damage: 80, clearBullets: true, cooldown: 3000 },
+    saveKey: 'bhd_plus_save_v1'
   };
 
-  // ========= UTILITIES =========
-  const rand = (a,b) => a + Math.random()*(b-a);
-  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-  const now = () => performance.now();
-  const rectsOverlap = (a,b) => !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y);
-  const circleRectHit = (cx,cy,r, rx,ry,rw,rh) => {
-    const nx = clamp(cx, rx, rx+rw), ny = clamp(cy, ry, ry+rh);
-    const dx = cx - nx, dy = cy - ny; return (dx*dx + dy*dy) <= r*r;
-  };
-  const dist2 = (x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy;};
+  const SKINS = [
+    { id:'classic', name:'Classic', color:'#ff4d6d', trail:'#ffb3c1' },
+    { id:'emerald', name:'Emerald', color:'#5dff95', trail:'#b9ffd6' },
+    { id:'sapphire', name:'Sapphire', color:'#59b0ff', trail:'#b7daff' },
+    { id:'amber', name:'Amber', color:'#ffc04d', trail:'#ffe0a3' },
+    { id:'void', name:'Void', color:'#d5ccff', trail:'#a18aff' }
+  ];
 
-  // ========= AUDIO (beeps) =========
+  // ========================== STATE ==========================
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const menuEl = document.getElementById('menu');
+  const hudTop = document.getElementById('hudTop');
+  const hudBottom = document.getElementById('hudBottom');
+
+  const hpFill = document.getElementById('hpFill');
+  const hpText = document.getElementById('hpText');
+  const burstFill = document.getElementById('burstFill');
+  const burstText = document.getElementById('burstText');
+  const phaseText = document.getElementById('phaseText');
+  const timerText = document.getElementById('timerText');
+  const scoreText = document.getElementById('scoreText');
+  const progressText = document.getElementById('progressText');
+  const bestText = document.getElementById('bestText');
+
+  let keys = {};
+  let game;
+  let paused = false;
+  let lastT = performance.now();
+  let shake = 0;
+  let score = 0;
+  let save = loadSave();
+
+  // Menu init
+  const skinsDiv = document.getElementById('skins');
+  function renderSkins() {
+    skinsDiv.innerHTML = '';
+    SKINS.forEach(s=>{
+      const b = document.createElement('button');
+      b.className = 'skin'+(save.skin===s.id?' active':'');
+      b.onclick = ()=>{ save.skin = s.id; persist(); renderSkins(); };
+      const sw = document.createElement('span'); sw.className='swatch'; sw.style.background = s.color;
+      const label = document.createElement('span'); label.textContent = s.name;
+      b.appendChild(sw); b.appendChild(label);
+      skinsDiv.appendChild(b);
+    });
+  }
+  renderSkins();
+
+  // Buttons
+  document.getElementById('startRun').onclick = ()=> startRun(false);
+  document.getElementById('startTutorial').onclick = ()=> startRun(true);
+  document.getElementById('continueBtn').onclick = ()=> continueRun();
+  document.getElementById('muteBtn').onclick = toggleMute;
+  document.getElementById('muteBtn2').onclick = toggleMute;
+  document.getElementById('restartBtn').onclick = ()=> startRun(false);
+  document.getElementById('pauseBtn').onclick = ()=> { paused=!paused; };
+
+  // ========================== AUDIO ==========================
   let audioCtx;
   function tone(freq, dur=0.06, type='square', vol=CONFIG.sfx.vol) {
     if (!CONFIG.sfx.enabled) return;
     try {
       audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
+      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
       o.type = type; o.frequency.value = freq;
       g.gain.value = 0; g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime+0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-      o.connect(g).connect(audioCtx.destination);
-      o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
+      o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
     } catch(e){}
   }
+  function toggleMute(){ CONFIG.sfx.enabled = !CONFIG.sfx.enabled; persist(); }
 
-  // ========= CORE STATE =========
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const HPUI = document.getElementById('hp');
-  const PhaseUI = document.getElementById('phase');
-  const ScoreUI = document.getElementById('score');
-  const RestartBtn = document.getElementById('restartBtn');
-  const PauseBtn = document.getElementById('pauseBtn');
-  const MuteBtn = document.getElementById('muteBtn');
-
-  let keys = {};
-  let game;
-  let paused = false;
-  let lastT = now();
-  let shake = 0;
-  let score = 0;
-
-  // ========= PLAYER =========
-  function makePlayer() {
-    const ar = CONFIG.arena;
-    return {
-      x: ar.x + ar.w/2,
-      y: ar.y + ar.h/2,
-      r: CONFIG.player.r,
-      color: CONFIG.player.color,
-      vx:0, vy:0,
-      hp: CONFIG.player.maxHP,
-      iframes: 0,
-      alive: true,
-      grazeCount:0
-    };
+  // ========================== SAVE ==========================
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(CONFIG.saveKey);
+      if (!raw) return { skin:'classic', best:0, progressIndex:0, muted:false };
+      const obj = JSON.parse(raw);
+      if (obj.muted) CONFIG.sfx.enabled = false;
+      return Object.assign({ skin:'classic', best:0, progressIndex:0, muted:!CONFIG.sfx.enabled }, obj);
+    } catch(e){ return { skin:'classic', best:0, progressIndex:0, muted:false }; }
   }
-
-  // ========= BOSS & PATTERNS =========
-  function makeBoss(def) {
-    return {
-      name: def.name, color: def.color || CONFIG.boss.color,
-      hp: def.hp || CONFIG.boss.baseHP, maxHP: def.hp || CONFIG.boss.baseHP,
-      phases: def.phases, phaseIndex: 0, phaseTime: 0, enrage: false,
-      time: 0
-    };
+  function persist() {
+    try {
+      localStorage.setItem(CONFIG.saveKey, JSON.stringify({
+        skin: save.skin,
+        best: save.best,
+        progressIndex: save.progressIndex,
+        muted: !CONFIG.sfx.enabled
+      }));
+    } catch(e){}
+    updateMenuStats();
   }
+  function updateMenuStats() {
+    progressText.textContent = `${Math.min(save.progressIndex, Bosses.length)} / ${Bosses.length} bosses`;
+    bestText.textContent = save.best|0;
+  }
+  updateMenuStats();
 
-  // Attack entity lists
-  const bullets = [];  // generic moving circles or rects
-  const hazards = [];  // beams, fields
+  // ========================== UTIL ==========================
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand = (a,b)=>a + Math.random()*(b-a);
+  const dist2=(x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy;};
+  const circleRectHit=(cx,cy,r, rx,ry,rw,rh)=>{const nx=clamp(cx,rx,rx+rw),ny=clamp(cy,ry,ry+rh);const dx=cx-nx,dy=cy-ny;return dx*dx+dy*dy<=r*r;};
+
+  // ========================== ENTITIES ==========================
+  const bullets = [];   // enemy bullets/hurtboxes
+  const hazards = [];   // beams, slams, fields
   const telegraphs = [];
+  const pshots = [];    // player shots
+  const floatTexts = []; // popups
 
-  function clearEntities() {
-    bullets.length = 0;
-    hazards.length = 0;
-    telegraphs.length = 0;
+  function clearEntities(){ bullets.length=0; hazards.length=0; telegraphs.length=0; pshots.length=0; floatTexts.length=0; }
+
+  function popup(x,y,text,color='#7affb7'){ floatTexts.push({x,y,vy:-0.4,t:0,life:900,text,color}); }
+
+  // Enemy spawners
+  function spawnBone(x,y,w,h,vx,vy,dmg=8){ bullets.push({kind:'rect',x,y,w,h,vx,vy,dmg,color:CONFIG.visual.boneColor}); }
+  function spawnKnife(x,y,angle,speed,dmg=10){
+    bullets.push({kind:'knife',x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,w:6,h:16,angle,spin:0.18,dmg,color:CONFIG.visual.knifeColor});
+  }
+  function spawnOrb(x,y,vx,vy,r=6,dmg=7){ bullets.push({kind:'orb',x,y,vx,vy,r,dmg,color:CONFIG.visual.orbColor}); }
+  function spawnFaller(x, delay, speed=3.2, w=30, h=14, dmg=9){
+    telegraphs.push({kind:'fallWarn', x, y:-20, w, h, t:0, delay, color:CONFIG.visual.fallColor});
+    hazards.push({kind:'fall', x, y:-40, w, h, speed, active:false, dmg, color:CONFIG.visual.fallColor});
+  }
+  function spawnBeam(x,y,w,h,delay=500,hold=600,dmg=12){
+    telegraphs.push({kind:'beamWarn', x,y,w,h, t:0, delay, color:CONFIG.visual.warnColor});
+    hazards.push({kind:'beam', x,y,w,h, active:false, t:0, hold, dmg, color:CONFIG.visual.beamColor});
+  }
+  // Hammer slam: warn arcs and columns, then wide hurtbox
+  function spawnHammerColumn(x, delay=700, hold=500, dmg=14){
+    telegraphs.push({ kind:'hammerWarnCol', x, delay, t:0 });
+    hazards.push({ kind:'hammerCol', x, active:false, hold, t:0, w:60, dmg: dmg, color: CONFIG.visual.hammerColor });
+  }
+  function spawnHammerArc(cx,cy,radius,angleSpan,delay=700,hold=450,dmg=14){
+    telegraphs.push({ kind:'hammerWarnArc', cx,cy,radius,angleSpan,delay, t:0 });
+    hazards.push({ kind:'hammerArc', cx,cy,radius,angleSpan, active:false, hold, t:0, dmg, color: CONFIG.visual.hammerColor });
   }
 
-  function spawnBone(x,y,w,h, vx,vy, dmg=8) {
-    bullets.push({ kind:'rect', x,y,w,h, vx,vy, dmg, color: CONFIG.visual.boneColor, rot:0 });
-  }
-  function spawnKnife(x,y, angle, speed, dmg=10) {
-    const vx = Math.cos(angle)*speed, vy = Math.sin(angle)*speed;
-    bullets.push({ kind:'knife', x,y, vx,vy, w:6,h:16, dmg, angle, spin:0, color: CONFIG.visual.knifeColor });
-  }
-  function spawnOrb(x,y, vx,vy, r=6, dmg=7) {
-    bullets.push({ kind:'orb', x,y, vx,vy, r, dmg, color: CONFIG.visual.orbColor });
-  }
-  function spawnFaller(x, delay, speed=3.2, w=30, h=14, dmg=9) {
-    telegraphs.push({ kind:'fallWarn', x, y: -20, w, h, t:0, delay, color: CONFIG.visual.fallColor });
-    hazards.push({ kind:'fall', x, y:-40, w, h, speed, active:false, dmg, color: CONFIG.visual.fallColor });
-  }
-  function spawnBeam(x,y, w,h, delay=500, hold=600, dmg=12) {
-    telegraphs.push({ kind:'beamWarn', x,y,w,h, t:0, delay, color: CONFIG.visual.warnColor });
-    hazards.push({ kind:'beam', x,y,w,h, active:false, t:0, hold, dmg, color: CONFIG.visual.beamColor });
+  // Player shots
+  function spawnPShot(x,y,dx,dy){
+    const sp = CONFIG.bullets.playerSpeed;
+    const n = Math.hypot(dx,dy)||1;
+    pshots.push({x,y,vx:dx/n*sp,vy:dy/n*sp,r:3,color:'#c0ff7a',dmg:CONFIG.bullets.playerDmg});
   }
 
-  // ========= PATTERN LIBRARY =========
+  // ========================== PATTERNS ==========================
   const Patterns = {
-    bonesSweep: (t, dt, arena, level=1) => {
-      // Side-to-side bone walls sweeping vertically
-      const rate = 450 / level;
-      if (t.spawnTimer == null) t.spawnTimer = 0;
-      t.spawnTimer += dt;
-      if (t.spawnTimer >= rate) {
-        t.spawnTimer = 0;
-        const side = Math.random()<0.5 ? 'L' : 'R';
-        const rows = Math.floor(rand(3, 6+level));
+    bonesSweep: (t,dt,a,lvl=1)=>{
+      if (!t.rate) t.rate = 400;
+      t.acc = (t.acc||0)+dt;
+      if (t.acc>=t.rate){
+        t.acc=0;
+        const side = Math.random()<0.5?'L':'R';
+        const rows = Math.floor(rand(3,6+lvl));
         for (let i=0;i<rows;i++){
-          const y = arena.y + 20 + i*(arena.h-40)/rows;
+          const y = a.y + 20 + i*(a.h-40)/rows;
           const w = 22, h = 10;
-          const s = 2.2 + level*0.2;
-          const x = side==='L' ? arena.x - w - i*6 : arena.x + arena.w + i*6;
+          const s = 2.1 + lvl*0.22;
+          const x = side==='L' ? a.x - w - i*6 : a.x + a.w + i*6;
           const vx = side==='L' ? s : -s;
-          spawnBone(x,y,w,h, vx,0);
+          spawnBone(x,y,w,h,vx,0);
         }
-        tone(420, 0.03);
+        tone(420,0.03);
       }
     },
-    lasersBox: (t, dt, arena, level=1) => {
-      // Beams telegraph then fire, forcing micro-dodges
-      if (!t.init) {
-        t.init = true; t.stage = 0; t.timer = 0;
-      }
-      t.timer += dt;
-      if (t.stage === 0) {
-        // Warn at random columns/rows
-        if (t.timer > 300) {
-          t.timer = 0; t.stage = 1;
-          for (let i=0;i<3+level;i++){
-            const vertical = Math.random()<0.5;
-            if (vertical) {
-              const x = Math.floor(rand(arena.x+40, arena.x+arena.w-40));
-              spawnBeam(x, arena.y, 8, arena.h, 450-40*level, 500+80*level);
-            } else {
-              const y = Math.floor(rand(arena.y+40, arena.y+arena.h-40));
-              spawnBeam(arena.x, y, arena.w, 8, 450-40*level, 500+80*level);
-            }
+    lasersBox: (t,dt,a,lvl=1)=>{
+      t.timer=(t.timer||0)+dt;
+      if (!t.stage){ t.stage=0; }
+      if (t.stage===0 && t.timer>300){
+        t.timer=0; t.stage=1;
+        for (let i=0;i<3+lvl;i++){
+          const vertical = Math.random()<0.5;
+          if (vertical){
+            const x = Math.floor(rand(a.x+40, a.x+a.w-40));
+            spawnBeam(x,a.y,8,a.h, 450-40*lvl, 520+80*lvl);
+          } else {
+            const y = Math.floor(rand(a.y+40, a.y+a.h-40));
+            spawnBeam(a.x,y,a.w,8, 450-40*lvl, 520+80*lvl);
           }
-          tone(300,0.04,'sine');
         }
-      } else if (t.stage === 1) {
-        // Beams are managed by hazards update; repeat cycle
-        if (t.timer > 1000+200*level) {
-          t.timer = 0; t.stage = 0;
-        }
+        tone(300,0.04,'sine');
+      } else if (t.stage===1 && t.timer>1000+200*lvl){
+        t.timer=0; t.stage=0;
       }
     },
-    orbitKnives: (t, dt, arena, level=1, player) => {
-      // Knives orbit center then fling towards player
-      if (!t.init) {
-        t.init = true; t.timer = 0; t.ang = 0; t.group = [];
-        const cx = arena.x + arena.w/2, cy = arena.y + arena.h/2;
-        const count = 8 + level*2;
-        const R = 110 + level*10;
-        for (let i=0;i<count;i++){
-          const a = i*(Math.PI*2)/count;
-          t.group.push({ x: cx + Math.cos(a)*R, y: cy + Math.sin(a)*R, a });
-        }
+    orbitKnives: (t,dt,a,lvl=1,player)=>{
+      if (!t.init){
+        t.init=true; t.timer=0; t.group=[]; const cx=a.x+a.w/2, cy=a.y+a.h/2;
+        const count=8+lvl*2; const R=110+lvl*10;
+        for (let i=0;i<count;i++){ const ang=i*(Math.PI*2)/count; t.group.push({ang}); }
+        t.cx=cx; t.cy=cy; t.R=R;
       }
-      t.timer += dt; t.ang += dt*0.002*(1+0.1*level);
-      const cx = arena.x + arena.w/2, cy = arena.y + arena.h/2;
-      const R = 110 + level*10;
-      for (let k of t.group) {
-        k.a += dt*0.0015*(1+0.06*level);
-        k.x = cx + Math.cos(k.a)*R; k.y = cy + Math.sin(k.a)*R;
-        // Draw via telegraph list for fun glow (no collision yet)
-        telegraphs.push({kind:'ghost', x:k.x, y:k.y, r:4, color:CONFIG.visual.knifeColor});
+      t.timer+=dt;
+      const speed=0.0015*(1+0.06*lvl);
+      for (let k of t.group){
+        k.ang += dt*speed;
+        const x=t.cx + Math.cos(k.ang)*t.R, y=t.cy + Math.sin(k.ang)*t.R;
+        telegraphs.push({kind:'ghost', x,y,r:4, color:CONFIG.visual.knifeColor, t:0});
       }
-      if (t.timer > 900) {
-        t.timer = 0;
-        const speed = 3.3 + level*0.25;
-        for (let k of t.group) {
-          const a = Math.atan2(player.y - k.y, player.x - k.x);
-          spawnKnife(k.x, k.y, a, speed);
+      if (t.timer>900){
+        t.timer=0;
+        const s=3.3+lvl*0.25;
+        for (let k of t.group){
+          const x=t.cx + Math.cos(k.ang)*t.R, y=t.cy + Math.sin(k.ang)*t.R;
+          const ang=Math.atan2(player.y - y, player.x - x);
+          spawnKnife(x,y,ang,s);
         }
         tone(520,0.05,'square');
       }
     },
-    rain: (t, dt, arena, level=1) => {
-      // Falling bars with telegraphs
-      if (t.spawnTimer == null) t.spawnTimer = 0;
-      t.spawnTimer += dt;
-      const rate = 260 - level*20;
-      if (t.spawnTimer >= Math.max(120, rate)) {
-        t.spawnTimer = 0;
-        for (let i=0;i<Math.min(6, 3+Math.floor(level)); i++){
-          spawnFaller(Math.floor(rand(arena.x+20, arena.x+arena.w-20)), 300 - level*20, 3+level*0.2, 18, 14);
+    rain: (t,dt,a,lvl=1)=>{
+      t.acc=(t.acc||0)+dt; const rate = Math.max(120, 260 - lvl*20);
+      if (t.acc>=rate){
+        t.acc=0;
+        for (let i=0;i<Math.min(6,3+Math.floor(lvl));i++){
+          spawnFaller(Math.floor(rand(a.x+20, a.x+a.w-20)), 300 - lvl*20, 3+lvl*0.2, 18, 14);
         }
         tone(260,0.03,'triangle');
       }
     },
-    chaseOrbs: (t, dt, arena, level=1, player) => {
-      // Slow orbs that steer slightly toward player
-      if (t.spawnTimer == null) t.spawnTimer = 0;
-      t.spawnTimer += dt;
-      if (t.spawnTimer >= 500 - 30*level) {
-        t.spawnTimer = 0;
+    chaseOrbs: (t,dt,a,lvl=1,player)=>{
+      t.acc=(t.acc||0)+dt;
+      if (t.acc >= 500 - 30*lvl){
+        t.acc=0;
         const edges = [
-          {x: rand(arena.x, arena.x+arena.w), y: arena.y-10},
-          {x: rand(arena.x, arena.x+arena.w), y: arena.y+arena.h+10},
-          {x: arena.x-10, y: rand(arena.y, arena.y+arena.h)},
-          {x: arena.x+arena.w+10, y: rand(arena.y, arena.y+arena.h)}
+          {x: rand(a.x, a.x+a.w), y: a.y-10},
+          {x: rand(a.x, a.x+a.w), y: a.y+a.h+10},
+          {x: a.x-10, y: rand(a.y, a.y+a.h)},
+          {x: a.x+a.w+10, y: rand(a.y, a.y+a.h)}
         ];
-        const s = 1.8 + level*0.2;
-        for (let k=0;k<2+Math.floor(level/2);k++){
-          const e = edges[Math.floor(rand(0,4))];
-          const a = Math.atan2(player.y - e.y, player.x - e.x);
-          spawnOrb(e.x, e.y, Math.cos(a)*s, Math.sin(a)*s, 7, 8);
+        const s=1.8+lvl*0.2;
+        for (let k=0;k<2+Math.floor(lvl/2);k++){
+          const e=edges[Math.floor(rand(0,4))];
+          const ang=Math.atan2(player.y - e.y, player.x - e.x);
+          spawnOrb(e.x,e.y,Math.cos(ang)*s,Math.sin(ang)*s,7,8);
         }
       }
-      // gentle steering
       bullets.forEach(b=>{
-        if (b.kind==='orb') {
-          const a = Math.atan2(player.y - b.y, player.x - b.x);
-          b.vx = b.vx*0.97 + Math.cos(a)*0.06*(1+0.03*level);
-          b.vy = b.vy*0.97 + Math.sin(a)*0.06*(1+0.03*level);
+        if (b.kind==='orb'){
+          const ang=Math.atan2(game.player.y - b.y, game.player.x - b.x);
+          b.vx = b.vx*0.97 + Math.cos(ang)*0.06*(1+0.03*lvl);
+          b.vy = b.vy*0.97 + Math.sin(ang)*0.06*(1+0.03*lvl);
         }
       });
+    },
+    // New: hammer slams
+    hammerSlammer: (t,dt,a,lvl=1,player)=>{
+      t.acc=(t.acc||0)+dt;
+      if (!t.init){ t.init=true; t.pattern=0; t.timer=0; }
+      t.timer+=dt;
+      if (t.pattern===0){
+        if (t.timer>1200){
+          t.timer=0; t.pattern=1;
+          const cols = 2+Math.floor(lvl/2);
+          for (let i=0;i<cols;i++){
+            const x = Math.floor(rand(a.x+60, a.x+a.w-60));
+            spawnHammerColumn(x, 640-40*lvl, 520+40*lvl, 12+lvl);
+          }
+          tone(180,0.06,'triangle');
+        }
+      } else {
+        if (t.timer>1500){
+          t.timer=0; t.pattern=0;
+          const cx = a.x + a.w/2, cy = a.y + a.h/2;
+          const span = Math.PI/3 + lvl*0.2;
+          for (let i=0;i<2;i++){
+            const ang = Math.atan2(player.y-cy, player.x-cx) + (i?span:-span);
+            spawnHammerArc(cx,cy, 160+lvl*20, {a:ang-span/2, b:ang+span/2}, 600-40*lvl, 480+40*lvl, 12+lvl);
+          }
+          tone(220,0.06,'square');
+        }
+      }
     }
   };
 
-  // ========= BOSS DEFINITIONS =========
+  // ========================== BOSSES ==========================
   const Bosses = [
     {
-      name: 'The Ashen Vow',
-      color: '#b6ffb3',
-      hp: 700,
+      name:'The Ashen Vow',
+      color:'#b6ffb3',
+      hp: 800,
       phases: [
-        { name:'Awakening', dur: 14000, patterns:[
-          (t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,1),
-          (t,dt,a,l,p)=>Patterns.rain(t,dt,a,1)
-        ]},
-        { name:'Resolve', dur: 17000, patterns:[
-          (t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2),
-          (t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,2,p)
-        ]},
-        { name:'Oathbreaker', dur: 19000, patterns:[
-          (t,dt,a,l,p)=>Patterns.orbitKnives(t,dt,a,2,p),
-          (t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,2),
-          (t,dt,a,l,p)=>Patterns.rain(t,dt,a,2)
-        ]}
+        { name:'Awakening', dur: 14000, patterns:[(t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,1),(t,dt,a,l,p)=>Patterns.rain(t,dt,a,1)]},
+        { name:'Resolve', dur: 17000, patterns:[(t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2),(t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,2,p)]},
+        { name:'Oathbreaker', dur: 19000, patterns:[(t,dt,a,l,p)=>Patterns.orbitKnives(t,dt,a,2,p),(t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,2),(t,dt,a,l,p)=>Patterns.rain(t,dt,a,2)]}
       ]
     },
     {
-      name: 'Glass Monarch',
-      color: '#b3d1ff',
-      hp: 820,
+      name:'Hammer Saint',
+      color:'#ffd2ae',
+      hp: 900,
       phases: [
-        { name:'Shards', dur: 16000, patterns:[
-          (t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,2,p),
-          (t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2)
-        ]},
-        { name:'Crownfall', dur: 20000, patterns:[
-          (t,dt,a,l,p)=>Patterns.rain(t,dt,a,3),
-          (t,dt,a,l,p)=>Patterns.orbitKnives(t,dt,a,3,p)
-        ]},
-        { name:'Refraction', dur: 22000, patterns:[
-          (t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,3),
-          (t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,3),
-          (t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,3,p)
-        ]}
+        { name:'Bell', dur: 16000, patterns:[(t,dt,a,l,p)=>Patterns.hammerSlammer(t,dt,a,2,p)]},
+        { name:'Anvil', dur: 19000, patterns:[(t,dt,a,l,p)=>Patterns.hammerSlammer(t,dt,a,3,p),(t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2)]},
+        { name:'Forge', dur: 21000, patterns:[(t,dt,a,l,p)=>Patterns.hammerSlammer(t,dt,a,3,p),(t,dt,a,l,p)=>Patterns.rain(t,dt,a,3)]}
+      ]
+    },
+    {
+      name:'Glass Monarch',
+      color:'#b3d1ff',
+      hp: 920,
+      phases: [
+        { name:'Shards', dur: 16000, patterns:[(t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,2,p),(t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,2)]},
+        { name:'Crownfall', dur: 20000, patterns:[(t,dt,a,l,p)=>Patterns.rain(t,dt,a,3),(t,dt,a,l,p)=>Patterns.orbitKnives(t,dt,a,3,p)]},
+        { name:'Refraction', dur: 22000, patterns:[(t,dt,a,l,p)=>Patterns.lasersBox(t,dt,a,3),(t,dt,a,l,p)=>Patterns.bonesSweep(t,dt,a,3),(t,dt,a,l,p)=>Patterns.chaseOrbs(t,dt,a,3,p)]}
       ]
     }
   ];
 
-  // ========= GAME LOOP =========
-  function resetGame() {
-    const bossDef = Bosses[Math.floor(rand(0, Bosses.length))];
+  // ========================== GAME CORE ==========================
+  function makePlayer() {
+    const s = SKINS.find(k=>k.id===save.skin) || SKINS[0];
+    const ar = CONFIG.arena;
+    return {
+      x: ar.x + ar.w/2, y: ar.y + ar.h/2,
+      r: CONFIG.player.r, baseColor: s.color, trail: s.trail,
+      hp: CONFIG.player.maxHP, iframes: 0, alive: true,
+      burst: 0, burstCD: 0, shootCD: 0, grazeCount:0
+    };
+  }
+  function makeBoss(def) {
+    return { name:def.name, color:def.color, hp:def.hp, maxHP:def.hp, phases:def.phases, phaseIndex:0, phaseTime:0, enrage:false, time:0 };
+  }
+
+  function startRun(tutorial=false){
+    menuEl.style.display='none';
+    hudTop.style.display='flex';
+    hudBottom.style.display='flex';
+    resetGame(tutorial ? -1 : 0); // -1 tutorial index
+  }
+  function continueRun(){
+    if (save.progressIndex>=Bosses.length) save.progressIndex=0;
+    startRun(false);
+  }
+
+  function resetGame(indexOverride=null){
+    const bossIndex = indexOverride!==null ? indexOverride : save.progressIndex;
     game = {
+      tutorial: bossIndex===-1,
       player: makePlayer(),
-      boss: makeBoss(bossDef),
       arena: { ...CONFIG.arena },
-      t: 0,
-      phaseElapsed: 0,
+      bossIndex: bossIndex===-1 ? 0 : bossIndex,
+      currentBoss: makeBoss(Bosses[bossIndex===-1 ? 0 : bossIndex]),
       level: 1,
       running: true,
-      won: false,
-      deathTime: 0
+      state: 'survive', // survive -> attack
+      cycleTimer: CONFIG.cycle.surviveSec*1000,
+      t: 0, phaseElapsed: 0, won:false, deathTime:0
     };
-    score = 0; shake = 0;
+    score = 0; shake=0;
     clearEntities();
     updateUI();
   }
 
-  function updateUI() {
-    const p = game.player, b = game.boss;
-    HPUI.textContent = `HP ${Math.max(0, Math.ceil(p.hp))} / ${CONFIG.player.maxHP}`;
-    PhaseUI.textContent = `Boss: ${b.name} • Phase ${b.phaseIndex+1}/${b.phases.length} (${b.phases[b.phaseIndex].name})`;
-    ScoreUI.textContent = `Score ${Math.floor(score)}`;
+  function updateUI(){
+    const p=game.player, b=game.currentBoss;
+    const hpPct = Math.max(0,p.hp)/CONFIG.player.maxHP*100;
+    hpFill.style.width = hpPct.toFixed(1)+'%';
+    hpText.textContent = `${Math.max(0, Math.ceil(p.hp))} / ${CONFIG.player.maxHP}`;
+
+    const burstPct = clamp(p.burst/CONFIG.burst.max,0,1)*100;
+    burstFill.style.width = burstPct.toFixed(1)+'%';
+    burstText.textContent = p.burst>=CONFIG.burst.max ? 'Ready (E)' : `${Math.floor(burstPct)}%`;
+
+    const boss = b.name + ` (${Math.ceil(b.hp)}/${b.maxHP})`;
+    const phaseName = b.phases[b.phaseIndex]?.name || '—';
+    phaseText.textContent = `Boss: ${boss} • Phase ${b.phaseIndex+1}/${b.phases.length} (${phaseName})`;
+
+    const seconds = Math.max(0, Math.ceil(game.cycleTimer/1000));
+    timerText.textContent = `${game.state==='survive'?'Survive':'Attack'}: ${seconds}s`;
+
+    scoreText.textContent = `Score ${Math.floor(score)}`;
+    updateMenuStats();
   }
 
-  function damagePlayer(amount) {
-    const p = game.player;
-    if (p.iframes>0 || !p.alive) return;
-    p.hp -= amount;
-    p.iframes = CONFIG.player.iframes;
+  function healPlayer(amount){
+    const p=game.player; if (!p.alive) return;
+    const before=p.hp;
+    p.hp = clamp(p.hp + amount, 0, CONFIG.player.maxHP);
+    if (p.hp>before){ popup(p.x, p.y-12, `+${Math.ceil(p.hp-before)}`, CONFIG.visual.healColor); hpBarFlash(); tone(520,0.06,'triangle'); }
+    updateUI();
+  }
+  let hpFlashT=0;
+  function hpBarFlash(){ hpFlashT=300; }
+
+  function damagePlayer(amount){
+    const p=game.player; if (!p.alive) return;
+    if (p.iframes>0) return;
+    p.hp -= amount; p.iframes = CONFIG.player.iframes;
     shake = Math.max(shake, CONFIG.player.dmgShake);
     tone(120,0.08,'sawtooth');
-    if (p.hp <= 0) {
-      p.alive = false; p.hp = 0; game.deathTime = game.t;
-    }
+    if (p.hp<=0){ p.alive=false; p.hp=0; game.deathTime=game.t; }
     updateUI();
   }
 
-  function damageBoss(amount) {
-    const b = game.boss;
+  function damageBoss(amount){
+    const b=game.currentBoss;
     b.hp = Math.max(0, b.hp - amount);
-    if (!b.enrage && b.hp/b.maxHP <= CONFIG.boss.enrageHPpct) {
-      b.enrage = true; CONFIG.difficulty.globalSpeed *= CONFIG.boss.enrageSpeed;
-      tone(220,0.3,'square'); tone(330,0.3,'sawtooth');
+    if (b.hp<=0 && !game.won){ game.won=true; game.running=false; onBossDefeated(); }
+  }
+
+  function onBossDefeated(){
+    tone(660,0.25,'triangle'); tone(880,0.25,'sine');
+    score += 1500;
+    if (!game.tutorial){
+      save.progressIndex = Math.min(Bosses.length, save.progressIndex+1);
+      save.best = Math.max(save.best|0, Math.floor(score));
+      persist();
     }
   }
 
-  function step(dt) {
+  // ========================== LOOP ==========================
+  const patternState = {};
+  function step(dt){
     if (!game.running || paused) return;
     game.t += dt; game.phaseElapsed += dt;
-    const p = game.player, b = game.boss, ar = game.arena;
 
-    // Input
-    let sp = CONFIG.player.speed * (keys.ShiftLeft||keys.ShiftRight ? 1 : CONFIG.player.speedBoost);
+    const p=game.player, b=game.currentBoss, a=game.arena;
+
+    // Input & movement
+    let sp = CONFIG.player.speed * (keys.ShiftLeft||keys.ShiftRight ? 1 : CONFIG.player.boost);
     let vx = (keys.ArrowRight||keys.KeyD?1:0) - (keys.ArrowLeft||keys.KeyA?1:0);
     let vy = (keys.ArrowDown||keys.KeyS?1:0) - (keys.ArrowUp||keys.KeyW?1:0);
-    const len = Math.hypot(vx,vy) || 1; vx/=len; vy/=len;
+    const len = Math.hypot(vx,vy)||1; vx/=len; vy/=len;
     p.x += vx*sp; p.y += vy*sp;
-    // Clamp inside arena
-    p.x = clamp(p.x, ar.x + p.r + 2, ar.x + ar.w - p.r - 2);
-    p.y = clamp(p.y, ar.y + p.r + 2, ar.y + ar.h - p.r - 2);
-
-    // Iframes decay
+    p.x = clamp(p.x, a.x + p.r + 2, a.x + a.w - p.r - 2);
+    p.y = clamp(p.y, a.y + p.r + 2, a.y + a.h - p.r - 2);
     if (p.iframes>0) p.iframes -= dt;
 
-    // Boss phase logic
-    const phase = b.phases[b.phaseIndex];
-    const level = game.level * CONFIG.difficulty.globalSpeed * (b.enrage?1.15:1);
-    const patternState = step.patternState = step.patternState || {};
-    for (let i=0;i<phase.patterns.length;i++){
-      const key = `${b.phaseIndex}_${i}`;
-      patternState[key] = patternState[key] || {};
-      phase.patterns[i](patternState[key], dt, ar, level, p);
+    // Tutorial hints
+    if (game.tutorial){
+      // slow down damage and patterns by half
     }
 
-    // Spawn minor boss contact hazard along arena edges occasionally
-    if (Math.random()<0.0006*level) {
-      tone(180,0.05,'triangle');
-      spawnBeam(ar.x-2, ar.y, 4, ar.h, 350, 300, CONFIG.boss.contactDamage);
-      spawnBeam(ar.x+ar.w-2, ar.y, 4, ar.h, 350, 300, CONFIG.boss.contactDamage);
-    }
-
-    // Update bullets
-    for (let i=bullets.length-1;i>=0;i--){
-      const blet = bullets[i];
-      blet.x += blet.vx * CONFIG.difficulty.globalSpeed;
-      blet.y += blet.vy * CONFIG.difficulty.globalSpeed;
-
-      // rotate knives for look
-      if (blet.kind==='knife') blet.angle += 0.2;
-
-      // remove off-screen
-      if (blet.x < -1000 || blet.x > canvas.width+1000 || blet.y < -1000 || blet.y > canvas.height+1000) {
-        bullets.splice(i,1); continue;
+    // Phase logic (enemy patterns only during survive)
+    if (game.state==='survive'){
+      const phase = b.phases[b.phaseIndex];
+      for (let i=0;i<phase.patterns.length;i++){
+        const key = `${b.phaseIndex}_${i}`;
+        patternState[key]=patternState[key]||{};
+        const level = 1+(save.progressIndex*0.15);
+        phase.patterns[i](patternState[key], dt*(game.tutorial?0.6:1), a, level, p);
       }
+
+      // rotate phases while surviving to keep variety
+      if (game.phaseElapsed >= (b.phases[b.phaseIndex]?.dur || 12000)){
+        b.phaseIndex = (b.phaseIndex+1) % b.phases.length;
+        game.phaseElapsed = 0;
+        clearWave();
+      }
+    }
+
+    // Enemy bullets update and collisions
+    for (let i=bullets.length-1;i>=0;i--){
+      const o=bullets[i];
+      o.x += o.vx; o.y += o.vy;
+      if (o.kind==='knife') o.angle += o.spin;
+
+      // bounds
+      if (o.x < -1000 || o.x > canvas.width+1000 || o.y < -1000 || o.y > canvas.height+1000){ bullets.splice(i,1); continue; }
 
       // collisions
-      let hit = false;
-      if (blet.kind==='rect') {
-        if (circleRectHit(p.x,p.y,p.r, blet.x,blet.y,blet.w,blet.h)) hit = true;
-      } else if (blet.kind==='knife') {
-        // approximate knife as rectangle
-        if (circleRectHit(p.x,p.y,p.r, blet.x-6, blet.y-8, 12,16)) hit = true;
-      } else if (blet.kind==='orb') {
-        if (dist2(p.x,p.y, blet.x,blet.y) <= (p.r)**2 + (blet.r)**2) hit = true;
+      let hit=false;
+      if (o.kind==='rect'){
+        if (circleRectHit(p.x,p.y,p.r, o.x,o.y,o.w,o.h)) hit=true;
+      } else if (o.kind==='knife'){
+        if (circleRectHit(p.x,p.y,p.r, o.x-6,o.y-8, 12,16)) hit=true;
+      } else if (o.kind==='orb'){
+        if (dist2(p.x,p.y,o.x,o.y) <= (p.r+o.r)*(p.r+o.r)) hit=true;
         // graze
-        const g2 = (CONFIG.player.grazeRadius + blet.r + p.r);
-        if (dist2(p.x,p.y, blet.x,blet.y) <= g2*g2 && !hit) {
+        const gR = (CONFIG.player.grazeRadius + o.r + p.r);
+        if (!hit && dist2(p.x,p.y,o.x,o.y) <= gR*gR){
           score += CONFIG.player.grazeScore * dt/16;
+          p.burst = clamp(p.burst + CONFIG.burst.gainPerGraze*(dt/16), 0, CONFIG.burst.max);
         }
       }
-
-      if (hit) { damagePlayer(8); }
+      if (hit) damagePlayer(o.dmg||8);
     }
 
-    // Update hazards and telegraphs
+    // Hazards update
     for (let i=hazards.length-1;i>=0;i--){
-      const hz = hazards[i];
-      if (hz.kind==='beam') {
-        // activation is synced with its warn telegraph; we fake a delay by toggling active later
-        hz.t = (hz.t || 0) + dt;
-        // the telegraph sets active; see telegraphs update
-        if (hz.active) {
-          // damage if intersect rect
-          if (circleRectHit(p.x,p.y,p.r, hz.x, hz.y, hz.w, hz.h)) {
-            damagePlayer(hz.dmg);
-          }
-          // expire after hold
-          if (hz.t > hz.hold) hazards.splice(i,1);
+      const hz=hazards[i];
+      if (hz.kind==='beam'){
+        hz.t=(hz.t||0)+dt;
+        if (hz.active){
+          if (circleRectHit(p.x,p.y,p.r, hz.x,hz.y,hz.w,hz.h)) damagePlayer(hz.dmg);
+          if (hz.t>hz.hold) hazards.splice(i,1);
         }
-      } else if (hz.kind==='fall') {
-        if (hz.active) {
-          hz.y += hz.speed * CONFIG.difficulty.globalSpeed;
-          if (circleRectHit(p.x,p.y,p.r, hz.x - hz.w/2, hz.y, hz.w, hz.h)) {
-            damagePlayer(hz.dmg);
-          }
+      } else if (hz.kind==='fall'){
+        if (hz.active){
+          hz.y += hz.speed;
+          if (circleRectHit(p.x,p.y,p.r, hz.x-hz.w/2,hz.y, hz.w,hz.h)) damagePlayer(hz.dmg);
           if (hz.y > canvas.height+40) hazards.splice(i,1);
         }
+      } else if (hz.kind==='hammerCol'){
+        hz.t=(hz.t||0)+dt;
+        if (hz.active){
+          const rx = hz.x - hz.w/2, ry = game.arena.y, rw = hz.w, rh = game.arena.h;
+          if (circleRectHit(p.x,p.y,p.r, rx,ry,rw,rh)) damagePlayer(hz.dmg);
+          if (hz.t>hz.hold) hazards.splice(i,1);
+        }
+      } else if (hz.kind==='hammerArc'){
+        hz.t=(hz.t||0)+dt;
+        if (hz.active){
+          // Approximate arc as ring sector collision by rectangle strips
+          // Simpler: deal damage if within radius and within angle span window
+          const ang = Math.atan2(p.y-hz.cy, p.x-hz.cx);
+          const norm=(a)=>{while(a<-Math.PI)a+=2*Math.PI;while(a>Math.PI)a-=2*Math.PI;return a;};
+          const A=norm(hz.angleSpan.a), B=norm(hz.angleSpan.b), X=norm(ang);
+          const inSpan = Math.abs(norm(X - (A+B)/2)) <= Math.abs(norm(B-A))/2 + 0.2;
+          const r2 = dist2(p.x,p.y,hz.cx,hz.cy);
+          if (inSpan && r2 <= (hz.radius+22)*(hz.radius+22) && r2 >= (hz.radius-38)*(hz.radius-38)){
+            damagePlayer(hz.dmg);
+          }
+          if (hz.t>hz.hold) hazards.splice(i,1);
+        }
       }
     }
 
+    // Telegraphs (activate hazards)
     for (let i=telegraphs.length-1;i>=0;i--){
-      const tg = telegraphs[i];
-      tg.t = (tg.t||0) + dt;
-      if (tg.kind==='beamWarn') {
-        if (tg.t >= tg.delay) {
-          // find corresponding beam
-          const b = hazards.find(h=>h.kind==='beam' && h.x===tg.x && h.y===tg.y && h.w===tg.w && h.h===tg.h && !h.active);
-          if (b) { b.active = true; b.t = 0; }
+      const tg=telegraphs[i];
+      tg.t=(tg.t||0)+dt;
+      if (tg.kind==='beamWarn'){
+        if (tg.t>=tg.delay){
+          const b=hazards.find(h=>h.kind==='beam' && h.x===tg.x && h.y===tg.y && h.w===tg.w && h.h===tg.h && !h.active);
+          if (b){ b.active=true; b.t=0; tone(700,0.05,'square'); }
           telegraphs.splice(i,1);
-          tone(700,0.05,'square');
         }
-      } else if (tg.kind==='fallWarn') {
-        if (tg.t >= tg.delay) {
-          const f = hazards.find(h=>h.kind==='fall' && h.x===tg.x && !h.active);
-          if (f) { f.active = true; f.y = -30; }
+      } else if (tg.kind==='fallWarn'){
+        if (tg.t>=tg.delay){
+          const f=hazards.find(h=>h.kind==='fall' && h.x===tg.x && !h.active);
+          if (f){ f.active=true; f.y = game.arena.y-30; tone(260,0.04,'sawtooth'); }
           telegraphs.splice(i,1);
-          tone(260,0.04,'sawtooth');
         }
-      } else if (tg.kind==='ghost') {
-        // transient visual, short-lived
+      } else if (tg.kind==='hammerWarnCol'){
+        if (tg.t>=tg.delay){
+          const h=hazards.find(hz=>hz.kind==='hammerCol' && hz.x===tg.x && !hz.active);
+          if (h){ h.active=true; h.t=0; tone(200,0.06,'square'); }
+          telegraphs.splice(i,1);
+        }
+      } else if (tg.kind==='hammerWarnArc'){
+        if (tg.t>=tg.delay){
+          const h=hazards.find(hz=>hz.kind==='hammerArc' && hz.cx===tg.cx && hz.cy===tg.cy && !hz.active);
+          if (h){ h.active=true; h.t=0; tone(240,0.06,'square'); }
+          telegraphs.splice(i,1);
+        }
+      } else if (tg.kind==='ghost'){
         if (tg.t>60) telegraphs.splice(i,1);
       }
     }
 
-    // Phase/Win/Lose progress
-    // Deal chip damage to boss for survival to simulate pressure fight
-    damageBoss(dt * 0.02 * CONFIG.difficulty.patternRamp);
-
-    if (b.hp <= 0 && !game.won) {
-      game.won = true; game.running = false;
-      score += CONFIG.difficulty.survivalBonus;
-      tone(660,0.25,'triangle'); tone(880,0.25,'sine');
-    }
-
-    if (phase && game.phaseElapsed >= phase.dur) {
-      b.phaseIndex++;
-      if (b.phaseIndex >= b.phases.length) {
-        // Loop phases with ramp
-        b.phaseIndex = 0;
-        game.level *= CONFIG.difficulty.patternRamp;
+    // Player shooting (attack phase only)
+    if (game.state==='attack' && p.alive){
+      p.shootCD -= dt;
+      if ((keys.Space) && p.shootCD<=0){
+        p.shootCD = CONFIG.bullets.playerCooldown * (game.tutorial?1.2:1);
+        spawnPShot(p.x, p.y-2, 0, -1);
+        tone(500,0.03,'triangle');
       }
-      game.phaseElapsed = 0;
-      // clear between phases for fairness
-      clearEntities();
-      for (const k in step.patternState) delete step.patternState[k];
-      tone(500,0.08,'square');
     }
 
-    // Score over time
-    score += CONFIG.difficulty.scorePerSecond * (dt/1000) * (b.enrage?1.8:1) * game.level;
+    // Player shots update and boss hit
+    for (let i=pshots.length-1;i>=0;i--){
+      const s=pshots[i];
+      s.x += s.vx; s.y += s.vy;
+      if (s.y < 40){ // boss hurtbox located at top center bar
+        // Boss core region
+        const cx = canvas.width/2, cy = 60, r = 36;
+        if (dist2(s.x,s.y,cx,cy) <= (r+2)*(r+2)){
+          damageBoss(s.dmg);
+          popup(s.x, s.y, `-${s.dmg}`, '#ffd6a1');
+          pshots.splice(i,1); continue;
+        }
+      }
+      if (s.y < -20 || s.x< -20 || s.x>canvas.width+20) pshots.splice(i,1);
+    }
+
+    // Burst special
+    if (p.burstCD>0) p.burstCD -= dt;
+    if (keys.KeyE && p.burst>=CONFIG.burst.max && p.burstCD<=0){
+      p.burst = 0; p.burstCD = CONFIG.burst.cooldown;
+      if (CONFIG.burst.clearBullets){ bullets.length=0; hazards.length=0; telegraphs.length=0; }
+      damageBoss(CONFIG.burst.damage);
+      popup(p.x, p.y-20, 'BURST!', '#a6c8ff');
+      tone(280,0.08,'sawtooth'); tone(560,0.12,'square'); tone(840,0.14,'triangle');
+      updateUI();
+    }
+
+    // Cycle management
+    game.cycleTimer -= dt;
+    if (game.state==='survive'){
+      // optional chip DPS disabled by default
+      if (CONFIG.cycle.chipDPS>0) damageBoss(CONFIG.cycle.chipDPS*(dt/1000));
+      if (game.cycleTimer<=0){
+        // Heal a bit when entering attack window
+        healPlayer(CONFIG.player.healOnPhase);
+        toAttackPhase();
+      }
+    } else if (game.state==='attack'){
+      if (game.cycleTimer<=0){
+        toSurvivePhase();
+      }
+    }
+
+    // Score
+    score += (game.state==='survive'?6:10) * (dt/1000) * (1+(save.progressIndex*0.2));
 
     // Death
-    if (!p.alive && game.t - game.deathTime > 1600) {
-      game.running = false;
+    if (!p.alive && game.t - game.deathTime > 1400){
+      game.running=false;
+      // update best
+      save.best = Math.max(save.best|0, Math.floor(score));
+      persist();
+      hudDeathBanner();
     }
 
     updateUI();
   }
 
-  function draw() {
-    // background/trail
-    if (CONFIG.visual.trail) {
-      ctx.fillStyle = 'rgba(0,0,0,'+CONFIG.visual.trailAlpha+')';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-    } else {
-      ctx.fillStyle = CONFIG.visual.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
-    }
+  function toAttackPhase(){
+    game.state='attack';
+    game.cycleTimer = CONFIG.cycle.attackSec*1000;
+    clearWave();
+  }
+  function toSurvivePhase(){
+    game.state='survive';
+    game.cycleTimer = CONFIG.cycle.surviveSec*1000;
+    clearWave();
+  }
+  function clearWave(){
+    bullets.length=0; hazards.length=0; telegraphs.length=0; pshots.length=0;
+  }
 
-    const ar = game.arena;
+  function hudDeathBanner(){
+    tone(160,0.25,'sawtooth');
+  }
+
+  // ========================== DRAW ==========================
+  function draw(){
+    // background/trail
+    if (CONFIG.visual.trail){ ctx.fillStyle='rgba(0,0,0,'+CONFIG.visual.trailAlpha+')'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+    else { ctx.fillStyle=CONFIG.visual.bg; ctx.fillRect(0,0,canvas.width,canvas.height); }
 
     // screen shake
-    if (shake>0) shake -= 0.4;
-    const ox = rand(-shake, shake), oy = rand(-shake, shake);
-    ctx.save(); ctx.translate(ox, oy);
+    if (shake>0) shake-=0.4;
+    ctx.save(); ctx.translate(rand(-shake,shake), rand(-shake,shake));
 
     // arena
-    ctx.strokeStyle = CONFIG.arena.color;
-    ctx.lineWidth = CONFIG.arena.border;
-    ctx.strokeRect(ar.x, ar.y, ar.w, ar.h);
+    const ar=game.arena;
+    ctx.strokeStyle = CONFIG.arena.color; ctx.lineWidth = CONFIG.arena.border; ctx.strokeRect(ar.x,ar.y,ar.w,ar.h);
+
+    // boss core at top (attack target)
+    const coreX = canvas.width/2, coreY = 60, coreR = 36;
+    ctx.fillStyle = game.currentBoss.color; ctx.globalAlpha = 0.5;
+    ctx.beginPath(); ctx.arc(coreX, coreY, coreR, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.font='12px system-ui'; ctx.fillStyle='#cfe'; ctx.textAlign='center';
+    ctx.fillText(game.currentBoss.name, coreX, coreY+2);
 
     // telegraphs
     telegraphs.forEach(tg=>{
-      if (tg.kind==='beamWarn') {
-        ctx.fillStyle = CONFIG.visual.warnColor;
-        ctx.globalAlpha = 0.25 + 0.25*Math.sin((tg.t||0)/70);
-        ctx.fillRect(tg.x, tg.y, tg.w, tg.h);
-        ctx.globalAlpha = 1;
-      } else if (tg.kind==='fallWarn') {
-        ctx.strokeStyle = CONFIG.visual.fallColor; ctx.lineWidth = 2;
+      if (tg.kind==='beamWarn'){
+        ctx.fillStyle = CONFIG.visual.warnColor; ctx.globalAlpha=0.25 + 0.25*Math.sin((tg.t||0)/70); ctx.fillRect(tg.x,tg.y,tg.w,tg.h); ctx.globalAlpha=1;
+      } else if (tg.kind==='fallWarn'){
+        ctx.strokeStyle = CONFIG.visual.fallColor; ctx.lineWidth=2;
         ctx.beginPath(); ctx.moveTo(tg.x-8, ar.y+4); ctx.lineTo(tg.x+8, ar.y+4); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(tg.x, ar.y+4); ctx.lineTo(tg.x, ar.y+20); ctx.stroke();
-      } else if (tg.kind==='ghost') {
-        ctx.fillStyle = tg.color; ctx.globalAlpha = 0.5;
-        ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.moveTo(tg.x, ar.y+4); ctx.lineTo(tg.x, ar.y+22); ctx.stroke();
+      } else if (tg.kind==='hammerWarnCol'){
+        ctx.fillStyle = CONFIG.visual.hammerColor; ctx.globalAlpha=0.22;
+        ctx.fillRect(tg.x-30, ar.y, 60, ar.h); ctx.globalAlpha=1;
+      } else if (tg.kind==='hammerWarnArc'){
+        ctx.strokeStyle = CONFIG.visual.hammerColor; ctx.globalAlpha=0.7; ctx.lineWidth=6;
+        ctx.beginPath(); ctx.arc(tg.cx, tg.cy, tg.radius, tg.angleSpan.a, tg.angleSpan.b); ctx.stroke(); ctx.globalAlpha=1;
+      } else if (tg.kind==='ghost'){
+        ctx.fillStyle = tg.color; ctx.globalAlpha=0.5; ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
       }
     });
 
     // hazards
     hazards.forEach(hz=>{
-      if (hz.kind==='beam') {
-        ctx.fillStyle = hz.active ? CONFIG.visual.beamColor : CONFIG.visual.warnColor;
-        ctx.globalAlpha = hz.active ? 0.6 : 0.25;
-        ctx.fillRect(hz.x, hz.y, hz.w, hz.h);
-        ctx.globalAlpha = 1;
-      } else if (hz.kind==='fall') {
-        if (hz.active) {
-          ctx.fillStyle = hz.color;
-          ctx.fillRect(hz.x - hz.w/2, hz.y, hz.w, hz.h);
-        }
-      }
+      if (hz.kind==='beam'){ ctx.fillStyle = hz.active?CONFIG.visual.beamColor:CONFIG.visual.warnColor; ctx.globalAlpha = hz.active?0.6:0.25; ctx.fillRect(hz.x,hz.y,hz.w,hz.h); ctx.globalAlpha=1; }
+      else if (hz.kind==='fall'){ if (hz.active){ ctx.fillStyle = hz.color; ctx.fillRect(hz.x-hz.w/2, hz.y, hz.w, hz.h);} }
+      else if (hz.kind==='hammerCol'){ if (hz.active){ ctx.fillStyle = hz.color; ctx.globalAlpha=0.7; ctx.fillRect(hz.x-30, ar.y, 60, ar.h); ctx.globalAlpha=1; } }
+      else if (hz.kind==='hammerArc'){ if (hz.active){ ctx.strokeStyle = hz.color; ctx.lineWidth=10; ctx.globalAlpha=0.8; ctx.beginPath(); ctx.arc(hz.cx,hz.cy, hz.radius, hz.angleSpan.a, hz.angleSpan.b); ctx.stroke(); ctx.globalAlpha=1; } }
     });
 
     // bullets
     bullets.forEach(b=>{
-      if (b.kind==='rect') {
-        ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, b.w, b.h);
-      } else if (b.kind==='knife') {
-        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle);
-        ctx.fillStyle = b.color; ctx.fillRect(-b.w/2, -b.h/2, b.w, b.h);
-        ctx.restore();
-      } else if (b.kind==='orb') {
-        ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
-      }
+      if (b.kind==='rect'){ ctx.fillStyle=b.color; ctx.fillRect(b.x,b.y,b.w,b.h); }
+      else if (b.kind==='knife'){ ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle); ctx.fillStyle=b.color; ctx.fillRect(-b.w/2,-b.h/2,b.w,b.h); ctx.restore(); }
+      else if (b.kind==='orb'){ ctx.fillStyle=b.color; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); }
     });
 
+    // player shots
+    pshots.forEach(s=>{ ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); });
+
     // player
-    const p = game.player;
-    ctx.fillStyle = p.iframes>0 ? '#ffd6d9' : p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    const p=game.player;
+    const tint = p.iframes>0 ? '#ffd6d9' : (p.baseColor||'#ff4d6d');
+    ctx.fillStyle = tint; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    // trail sparkle
+    if (Math.random()<0.6){ ctx.fillStyle=(p.trail||'#ffb3c1'); ctx.globalAlpha=0.5; ctx.beginPath(); ctx.arc(p.x+rand(-3,3),p.y+rand(-3,3),2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+
+    // floating texts
+    floatTexts.forEach(ft=>{ ft.t+=16; ft.y += ft.vy; ctx.fillStyle=ft.color; ctx.globalAlpha = 1 - ft.t/ft.life; ctx.font='12px system-ui'; ctx.fillText(ft.text, ft.x, ft.y); ctx.globalAlpha=1; });
+    for (let i=floatTexts.length-1;i>=0;i--){ if (floatTexts[i].t>=floatTexts[i].life) floatTexts.splice(i,1); }
+
     ctx.restore();
 
     // overlays
-    ctx.fillStyle = '#9aa';
-    if (!game.player.alive) {
-      ctx.textAlign='center'; ctx.font='bold 28px system-ui';
+    ctx.fillStyle = '#a9b';
+    ctx.textAlign='center';
+    if (!game.player.alive){
+      ctx.font='bold 28px system-ui';
       ctx.fillText('You fell. R to retry.', canvas.width/2, 56);
-    } else if (game.won) {
-      ctx.textAlign='center'; ctx.font='bold 28px system-ui';
-      ctx.fillText('Victory. R to fight another.', canvas.width/2, 56);
-    } else if (paused) {
-      ctx.textAlign='center'; ctx.font='bold 28px system-ui';
+    } else if (game.won){
+      ctx.font='bold 28px system-ui';
+      if (!game.tutorial){
+        const done = save.progressIndex>=Bosses.length ? 'Run Complete!' : 'Boss Down!';
+        ctx.fillText(done+' R to continue.', canvas.width/2, 56);
+      } else {
+        ctx.fillText('Tutorial Clear! R to start run.', canvas.width/2, 56);
+      }
+    } else if (paused){
+      ctx.font='bold 28px system-ui';
       ctx.fillText('Paused', canvas.width/2, 56);
-    }
-  }
-
-  function loop() {
-    const t = now();
-    let dt = t - lastT; lastT = t;
-    dt = clamp(dt, 0, 40);
-    step(dt);
-    draw();
-    requestAnimationFrame(loop);
-  }
-
-  // ========= INPUT =========
-  window.addEventListener('keydown', e=>{
-    keys[e.code] = true;
-    if (e.code==='KeyP') { paused=!paused; e.preventDefault(); }
-    if (e.code==='KeyM') { CONFIG.sfx.enabled=!CONFIG.sfx.enabled; e.preventDefault(); }
-    if (e.code==='KeyR') { resetGame(); e.preventDefault(); }
-  });
-  window.addEventListener('keyup', e=>{ keys[e.code] = false; });
-
-  RestartBtn.onclick = ()=> resetGame();
-  PauseBtn.onclick = ()=> { paused=!paused; };
-  MuteBtn.onclick = ()=> { CONFIG.sfx.enabled=!CONFIG.sfx.enabled; };
-
-  // ========= START =========
-  resetGame();
-  requestAnimationFrame(loop);
-})();
-</script>
-</body>
-</html>
