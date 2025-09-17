@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Undertale Yellow — Boss Repository</title>
+<style>
+  body{background:#000;color:#fff;font-family:monospace;}
+</style>
+</head>
+<body>
+<h1>Boss Repository</h1>
+<p>This file contains all bosses. It is imported by battle.html.</p>
+
+<script>
+// =====================
+// Boss Definitions
+// =====================
+const bosses = [
+  // === FIRST BOSSES ===
+  {
+    key: "golden_mantis_1",
+    name: "Golden Mantis",
+    hpMax: 300,
+    intro:["A golden hall. A mantis descends.","It bows. The trial begins."],
+    acts:[
+      {name:"Check",func:()=>showBubble("Golden Mantis — ritual duelist. Spear and blade.")},
+      {name:"Bow",func:()=>showBubble("You bow. The crest inclines.")}
+    ],
+    attackText:"Golden Mantis attacks!",
+    bgColor:"#2b2b0b",
+    generateBullets:(player,arena)=>[{x:480,y:300,r:4,vx:0,vy:150,col:'#ffd166'}],
+    idolPose:(ctx,t)=>{const x=480,y=258+Math.sin(t*6)*3;ctx.save();ctx.fillStyle='#b8902f';ctx.fillRect(x-5,y-8,10,40);ctx.restore();},
+    cutscene:"first_boss_intro"
+  },
+  {
+    key:"golden_mantis_2",
+    name:"Golden Mantis II",
+    hpMax:320,
+    intro:["Another mantis joins.","They synchronize their blades."],
+    acts:[{name:"Check",func:()=>showBubble("Two mantises — duelists in golden armor.")}],
+    attackText:"Golden Mantis II attacks!",
+    bgColor:"#2b2b0b",
+    generateBullets:(player,arena)=>[
+      {x:460,y:300,r:4,vx:50,vy:120,col:'#ffd166'},
+      {x:500,y:300,r:4,vx:-50,vy:120,col:'#ffd166'}
+    ],
+    idolPose:(ctx,t)=>{const x=460,y=258+Math.sin(t*5)*3;ctx.save();ctx.fillStyle='#b8902f';ctx.fillRect(x-5,y-8,10,40);ctx.restore();},
+    cutscene:"first_boss_intro"
+  },
+  {
+    key:"golden_mantis_3",
+    name:"Golden Mantis III",
+    hpMax:350,
+    intro:["The final mantis descends.","They attack in perfect rhythm."],
+    acts:[{name:"Check",func:()=>showBubble("Three mantises — deadly formation.")}],
+    attackText:"Golden Mantis III attacks!",
+    bgColor:"#2b2b0b",
+    generateBullets:(player,arena)=>{let bullets=[];for(let i=0;i<3;i++){bullets.push({x:460+40*i,y:300,r:4,vx:0,vy:150,col:'#ffd166'});}return bullets;},
+    idolPose:(ctx,t)=>{const x=500,y=258+Math.sin(t*4)*3;ctx.save();ctx.fillStyle='#b8902f';ctx.fillRect(x-5,y-8,10,40);ctx.restore();},
+    cutscene:"first_boss_intro"
+  },
+
+  // === MID BOSSES ===
+  // Here you can expand all bosses up to boss 50 using same structure
+  { key:"pixel_knight", name:"Pixel Knight", hpMax:70, intro:["The Pixel Knight challenges you!"], acts:[{name:"Talk",func:()=>showBubble("Knight tips its helmet.")}], attackText:"Pixel Knight swings sword!", bgColor:"#0b0b2b", generateBullets:(p,a)=>[{x:480,y:420,r:5,vx:50,vy:50,col:'#00ff00'}], idolPose:(ctx,t)=>{}, cutscene:null },
+  { key:"glitch_blob", name:"Glitchy Blob", hpMax:50, intro:["A Glitchy Blob appears! It looks unstable..."], acts:[{name:"Check",func:()=>showBubble("It's soft and wobbly.")}], attackText:"Glitchy Blob attacks!", bgColor:"#0b1b1b", generateBullets:(p,a)=>[{x:500,y:430,r:5,vx:0,vy:80,col:'#ff0000'}], idolPose:(ctx,t)=>{}, cutscene:null },
+
+  // === FINAL BOSS ===
+  { key:"radiance", name:"The Radiance", hpMax:1000, intro:["A blinding light fills the hall.","The Radiance descends!"], acts:[{name:"Check",func:()=>showBubble("The Radiance — pure light incarnate.")}], attackText:"Radiance unleashes blinding rays!", bgColor:"#fff1b6", generateBullets:(player,arena)=>{let bullets=[];for(let i=0;i<12;i++){const angle=i*Math.PI/6; bullets.push({x:480,y:360,r:6,vx:Math.cos(angle)*120,vy:Math.sin(angle)*120,col:'#fff1b6'});}return bullets;}, idolPose:(ctx,t)=>{const x=480,y=360;ctx.save();ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,20+Math.sin(t*4)*5,0,Math.PI*2);ctx.fill();ctx.restore();}, cutscene:"last_boss_intro" },
+
+  // === SECRET BOSS ===
+  { key:"golden_specter", name:"Golden Specter", hpMax:900, intro:["A hidden aura appears.","You have awakened the Golden Specter!"], acts:[{name:"Check",func:()=>showBubble("A spectral warrior, shrouded in gold.")}], attackText:"Golden Specter attacks in shadows!", bgColor:"#ffd700", generateBullets:(player,arena)=>{let bullets=[];for(let i=0;i<8;i++){const angle=i*Math.PI/4; bullets.push({x:480,y:360,r:5,vx:Math.cos(angle)*140,vy:Math.sin(angle)*140,col:'#ffd700'});}return bullets;}, idolPose:(ctx,t)=>{const x=480,y=360;ctx.save();ctx.fillStyle='#ffd700';ctx.fillRect(x-8,y-20,16,40);ctx.restore();}, cutscene:"secret_boss_intro" }
+];
+
+// Make available globally for battle.html
+window.BOSS_LIST = bosses;
+</script>
+</body>
+</html>
