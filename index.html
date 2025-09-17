@@ -3,388 +3,522 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>UNDERTALE GOLD — Intro & Soul Selection</title>
+<title>UNDERTALE GOLD — Open World + Turn-Based Battles (prototype)</title>
 <style>
 :root{
---bg:#000; --accent:#ffd166; --fg:#f7f6fb; --muted:#a9a9b6;
---panel:#0f0f16;
+  --bg:#000; --ink:#0c0c12; --panel:#101018; --panel-2:#0b0b12;
+  --line:#151522; --line-2:#23233a; --accent:#ffd166; --fg:#f7f6fb; --muted:#a9a9b6;
+  --ok:#7affb7; --warn:#ff9f1c; --bad:#ff6b6b; --note:#c7f0ff;
 }
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:ui-monospace,monospace,monospace;}
-.center{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
-canvas{image-rendering:pixelated;background:#000;border:0;display:block;margin:0 auto;}
-#gameRoot{width:960px;margin:12px auto;display:flex;flex-direction:column;align-items:center;gap:10px}
+canvas{image-rendering:pixelated;display:block;margin:0 auto;background:#000}
+#gameRoot{width:960px;margin:12px auto;display:flex;flex-direction:column;gap:10px;align-items:center}
 .hud{width:960px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px}
 .pill{background:var(--panel);padding:6px 10px;border-radius:8px;border:1px solid #111}
-/* Title screen */
-#titleScreen{position:relative;width:960px;height:720px;background:#000;overflow:hidden;border:4px solid #07070a;box-shadow:0 6px 30px rgba(0,0,0,0.6)}
-.scanline {position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px);background-size:100% 4px;opacity:0.6}
-.titleLogo{position:absolute;top:120px;width:100%;text-align:center;font-family:monospace;font-weight:900;letter-spacing:2px;color:var(--accent);font-size:72px;text-shadow:0 6px 0 rgba(0,0,0,0.6)}
-.subtitle{position:absolute;top:200px;width:100%;text-align:center;color:var(--fg);opacity:0.88;font-family:monospace;font-size:14px}
-.prompt{position:absolute;bottom:80px;width:100%;text-align:center;color:var(--fg);opacity:0.95;font-family:monospace;font-size:18px}
-.flicker{animation:flick 1.8s infinite}
-@keyframes flick{ 0%{opacity:1} 4%{opacity:0.92} 7%{opacity:1} 20%{opacity:0.98} 28%{opacity:0.88} 100%{opacity:1} }
 
-/* crawl */
-#crawlWrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.crawlBox{width:720px;max-width:86%;padding:18px;border-radius:8px;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(12,12,20,0.75));border:1px solid rgba(255,255,255,0.03);font-family:monospace;font-size:16px;line-height:1.45;color:var(--fg);opacity:0.98}
+/* Title */
+#titleScreen{position:relative;width:960px;height:720px;background:#000;overflow:hidden;border:4px solid #07070a;box-shadow:0 6px 30px rgba(0,0,0,0.6)}
+.scanline{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px);background-size:100% 4px;opacity:.6}
+.titleLogo{position:absolute;top:108px;width:100%;text-align:center;font-weight:900;letter-spacing:2px;color:var(--accent);font-size:72px;text-shadow:0 6px 0 rgba(0,0,0,0.6)}
+.subtitle{position:absolute;top:185px;width:100%;text-align:center;color:var(--fg);opacity:.88;font-size:14px}
+.menu{position:absolute;bottom:150px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center}
+.menu .btn{width:240px}
+.prompt{position:absolute;bottom:80px;width:100%;text-align:center;color:var(--fg);opacity:.95;font-size:16px}
+.flicker{animation:flick 1.8s infinite}
+@keyframes flick{0%{opacity:1} 4%{opacity:.92} 7%{opacity:1} 20%{opacity:.98} 28%{opacity:.86} 100%{opacity:1}}
+
+/* Intro crawl */
+#crawlWrap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none}
+.crawlBox{width:720px;max-width:86%;padding:18px;border-radius:8px;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(12,12,20,0.75));border:1px solid rgba(255,255,255,0.03);font-size:16px;line-height:1.45;opacity:.98}
 .crawlText{max-height:360px;overflow:hidden}
 .crawlInner{transform:translateY(0);animation:crawl 16s linear forwards}
-@keyframes crawl{ 0%{transform:translateY(100%)} 100%{transform:translateY(-100%)} }
+@keyframes crawl{0%{transform:translateY(100%)} 100%{transform:translateY(-100%)}}
 
-/* soul selector */
+/* Soul selection */
 #soulScreen{display:none;position:relative;width:960px;height:720px;background:linear-gradient(180deg,#07070a,#0b0b12);border:4px solid #07070a}
 .soulCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.6);padding:18px;border-radius:10px;border:2px solid #111;width:740px;text-align:center}
 .colorRow{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:wrap}
 .colorSwatch{width:44px;height:44px;border-radius:6px;border:2px solid #222;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.6)}
-.swatchLabel{font-size:12px;color:var(--muted);margin-top:8px}
 .heartPreview{margin-top:12px}
-.startBtn{margin-top:14px;padding:10px 18px;background:var(--accent);color:#111;border-radius:10px;border:2px solid #111;cursor:pointer;font-weight:700}
-
-/* settings modal */
-#settingsModal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;background:#0c0c12;padding:14px;border-radius:10px;border:2px solid #111;color:var(--fg);z-index:40}
-#settingsModal label{display:block;margin:6px 0;font-size:13px;color:var(--muted)}
-#settingsModal input[type="text"]{padding:6px;border-radius:6px;border:1px solid #222;background:#0a0a0f;color:var(--fg);width:140px}
-
-/* small helpers */
+.btn{background:#11121a;color:#f7f6fb;border:1px solid #222;border-radius:8px;padding:10px 12px;font-family:monospace;cursor:pointer}
+.btnPrimary{background:var(--accent);color:#111;border-color:#111}
+.centerRow{display:flex;align-items:center;justify-content:center;gap:10px}
 .small{font-size:12px;color:var(--muted)}
 .muted{color:var(--muted)}
-.centerRow{display:flex;align-items:center;justify-content:center;gap:10px}
+
+/* Settings modal */
+#settingsModal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;background:#0c0c12;padding:14px;border-radius:10px;border:2px solid #111;color:var(--fg);z-index:40;min-width:280px;max-width:90vw}
+#settingsModal label{display:block;margin:6px 0;font-size:13px;color:var(--muted)}
+#settingsModal input[type="text"]{padding:6px;border-radius:6px;border:1px solid #222;background:#0a0a0f;color:var(--fg);width:140px}
+#assistRow{display:flex;align-items:center;gap:8px;margin-top:8px}
+
+/* Overlay */
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:50}
+.panel{background:#0c0c12;border:2px solid #111;border-radius:10px;padding:12px}
+.panelTitle{color:var(--accent);font-weight:700;margin-bottom:8px}
+.btnRow{display:flex;gap:10px;flex-wrap:wrap}
+
+/* Tooltip & toast */
+.tooltip{position:absolute;background:#0c0c12;color:#f7f6fb;border:1px solid #222;border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;pointer-events:none;opacity:0;transition:opacity .15s}
+.toast{position:absolute;left:50%;top:40px;transform:translateX(-50%);padding:8px 12px;background:#0c0c12;border:1px solid #222;border-radius:8px;color:var(--accent);font-size:14px;opacity:0;transition:opacity .2s}
+
+/* Battle footer UI (menu) */
+.battleHud{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:920px;height:120px;background:#0b0b12;border:2px solid #111;border-radius:10px;display:none}
+.bmenu{position:absolute;left:16px;right:16px;bottom:10px;display:flex;justify-content:space-between}
+.bbtn{background:#11121a;color:#f7f6fb;border:1px solid #222;border-radius:6px;padding:6px 14px;font-family:monospace;cursor:pointer}
+.bbtnPrimary{background:#ffd166;color:#111;border-color:#111}
+.binfo{position:absolute;left:16px;top:10px;color:#bdbdcf;font-size:12px;font-family:monospace}
+.bcenter{position:absolute;left:0;right:0;top:40px;text-align:center;color:#f7f6fb;font-family:monospace}
 </style>
 </head>
 <body>
-<div id="gameRoot">
-<div class="hud">
-<div class="pill small">UNDERTALE GOLD — Intro (prototype)</div>
-<div class="pill small">Save stored locally in browser</div>
-</div>
+<div id="gameRoot" aria-live="polite">
+  <div class="hud">
+    <div class="pill small">UNDERTALE GOLD — Open World + Turn-Based Battles</div>
+    <div class="pill small" id="saveStatus">Autosave enabled</div>
+  </div>
 
-<!-- Title Screen -->
-<div id="titleScreen" aria-hidden="false">
-<div class="scanline"></div>
-<div class="titleLogo flicker">UNDERTALE GOLD</div>
-<div class="subtitle">A fan-inspired prototype — original content</div>
-<div class="prompt flicker" id="titlePrompt">Press Z or Enter to start</div>
+  <!-- Title -->
+  <div id="titleScreen" aria-hidden="false">
+    <div class="scanline"></div>
+    <div class="titleLogo flicker">UNDERTALE GOLD</div>
+    <div class="subtitle">A fan-inspired prototype — original content</div>
 
-<!-- Intro crawl overlay (hidden until started) -->
-<div id="crawlWrap" style="display:none">
-<div class="crawlBox">
-<div style="text-align:center;font-weight:700;font-family:monospace;margin-bottom:10px">Long ago —</div>
-<div class="crawlText">
-<div class="crawlInner" id="crawlInner">
-In a world folded between light and shadow, two things were born: curiosity and conflict.
-<br><br>
-For centuries, the valley slept — a place of small wonders, odd creatures, and songs that curled like smoke.
-<br><br>
-Then a new heart awoke, a small, beating pixel of will. It sought to learn and to choose.
-<br><br>
-This is the beginning of that heart's journey. What will you do when you meet what stares back?
-<br><br>
-(Press Z / Enter to skip)
-</div>
-</div>
-</div>
-</div>
-</div>
+    <div class="menu" id="titleMenu" role="menu" aria-label="Main menu">
+      <button class="btn btnPrimary" id="btnContinue" role="menuitem">Continue</button>
+      <button class="btn" id="btnNewGame" role="menuitem">New Game</button>
+      <button class="btn" id="btnSettings" role="menuitem">Settings</button>
+    </div>
 
-<!-- Soul selection screen -->
-<div id="soulScreen" aria-hidden="true">
-<div class="soulCard">
-<div style="font-family:monospace;font-weight:800;font-size:28px">Choose your SOUL</div>
-<div class="small muted" style="margin-top:6px">Pick the color of your heart — this is purely visual now but will later influence some interactions.</div>
+    <div class="prompt flicker" id="titlePrompt">Press Z or Enter to start</div>
 
-<div class="heartPreview" id="heartPreview" aria-hidden="false" style="height:84px"></div>
+    <!-- Intro crawl overlay -->
+    <div id="crawlWrap">
+      <div class="crawlBox">
+        <div style="text-align:center;font-weight:700;margin-bottom:10px">Long ago —</div>
+        <div class="crawlText">
+          <div class="crawlInner" id="crawlInner">
+            In a world folded between light and shadow, two things were born: curiosity and conflict.
+            <br><br>
+            For centuries, the valley slept — a place of small wonders, odd creatures, and songs that curled like smoke.
+            <br><br>
+            Then a new heart awoke, a small, beating pixel of will. It sought to learn and to choose.
+            <br><br>
+            This is the beginning of that heart's journey. What will you do when you meet what stares back?
+            <br><br>
+            (Press Z / Enter to skip)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<div class="colorRow" id="colorRow" role="list">
-<!-- color swatches inserted by JS -->
-</div>
+  <!-- Soul selection -->
+  <div id="soulScreen" aria-hidden="true">
+    <div class="soulCard">
+      <div style="font-weight:800;font-size:28px">Choose your SOUL</div>
+      <div class="small muted" style="margin-top:6px">Pick the color of your heart — visual for now; later affects interactions.</div>
 
-<div style="margin-top:12px" class="centerRow">
-<button id="openSettingsBtn" class="small">Keybinds</button>
-<button id="randomBtn" class="small">Random</button>
-<button id="startGameBtn" class="startBtn">Start Game</button>
-</div>
+      <div class="heartPreview" id="heartPreview" aria-hidden="false" style="height:84px"></div>
+      <div class="colorRow" id="colorRow" role="list"></div>
 
-<div style="margin-top:10px" class="small muted">You can change color anytime in Settings.</div>
-</div>
+      <div class="centerRow" style="margin-top:12px">
+        <button id="openSettingsBtn" class="btn small">Keybinds</button>
+        <button id="randomBtn" class="btn small">Random</button>
+        <button id="startGameBtn" class="btn btnPrimary">Start Game</button>
+      </div>
+      <div class="small muted" style="margin-top:10px">Change color anytime in Settings.</div>
+    </div>
+  </div>
+
+  <!-- Main game canvas injected by JS -->
+
+  <!-- Battle footer UI -->
+  <div id="battleHud" class="battleHud" aria-hidden="true">
+    <div class="binfo" id="binfo"></div>
+    <div class="bcenter" id="bcenter"></div>
+    <div class="bmenu">
+      <button id="btnFight" class="bbtn">FIGHT</button>
+      <button id="btnAct" class="bbtn">ACT</button>
+      <button id="btnItem" class="bbtn">ITEM</button>
+      <button id="btnMercy" class="bbtn">MERCY</button>
+    </div>
+  </div>
 </div>
 
 <!-- Settings modal -->
 <div id="settingsModal" role="dialog" aria-modal="true" aria-hidden="true">
-<div style="font-weight:700;margin-bottom:8px">Controls — remap keys</div>
-<label>Up: <input id="kbUp" type="text" maxlength="2" /></label>
-<label>Down: <input id="kbDown" type="text" maxlength="2" /></label>
-<label>Left: <input id="kbLeft" type="text" maxlength="2" /></label>
-<label>Right: <input id="kbRight" type="text" maxlength="2" /></label>
-<label>Shoot: <input id="kbShoot" type="text" maxlength="6" /></label>
-<label>Burst: <input id="kbBurst" type="text" maxlength="2" /></label>
-<div style="margin-top:8px" class="centerRow">
-<button id="saveKb" class="small">Save</button>
-<button id="closeKb" class="small">Close</button>
-</div>
+  <div class="panelTitle">Controls & options</div>
+  <label>Up: <input id="kbUp" type="text" maxlength="2"/></label>
+  <label>Down: <input id="kbDown" type="text" maxlength="2"/></label>
+  <label>Left: <input id="kbLeft" type="text" maxlength="2"/></label>
+  <label>Right: <input id="kbRight" type="text" maxlength="2"/></label>
+  <label>Confirm/Select: <input id="kbShoot" type="text" maxlength="6"/></label>
+  <label>Back/Cancel: <input id="kbBurst" type="text" maxlength="2"/></label>
+  <div id="assistRow">
+    <input id="assistToggle" type="checkbox"/>
+    <label for="assistToggle">Assist mode (gentler bullet speed)</label>
+  </div>
+  <div class="centerRow" style="margin-top:8px">
+    <button id="saveKb" class="btn btnPrimary">Save</button>
+    <button id="closeKb" class="btn">Close</button>
+  </div>
 </div>
 
-</div>
+<!-- Tooltip and toast -->
+<div id="tooltip" class="tooltip"></div>
+<div id="toast" class="toast"></div>
 
 <script>
-/* ---------------------------
-Intro + Soul selection logic
---------------------------- */
+/* ===========================================================
+UNDERTALE GOLD — Single-file Open World + Turn-based Battles
+Part 1/2
+- Title + Intro + Soul selection
+- Save system, settings
+- World data, input, fast travel
+- Dialogue, Minimap
+- Overworld scene
+- Battle scene skeleton (completed in Part 2)
+=========================================================== */
 
-/* Simple storage helpers */
-const LS_KEY = 'utg_intro_save_v1';
-function loadSave(){
-try{
-const raw = localStorage.getItem(LS_KEY);
-if(!raw) return { soulColor:'#ff2b2b', keybinds: null, seenIntro:false };
-return JSON.parse(raw);
-}catch(e){
-return { soulColor:'#ff2b2b', keybinds:null, seenIntro:false };
-}
-}
-function saveState(s){ try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); }catch(e){} }
+/* --------------------------
+Save & state
+-------------------------- */
+const LS_KEY='utg_save_final_v1';
+const SAVE_VERSION=1;
+function defaultSave(){return{
+  version:SAVE_VERSION,
+  seenIntro:false,
+  soulColor:'#ff2b2b',
+  keybinds:{up:'w',down:'s',left:'a',right:'d',shoot:'z',burst:'x',menu:'Enter'},
+  progress:{defeated:[],checkpoints:[],lastCheckpoint:null,flags:{assistMode:false,met_guide:false}},
+  player:{pos:{x:480,y:360,region:'frontier'},hpMax:20,hp:20,items:[{id:'tonic_s',name:'Small Tonic',heal:8},{id:'tonic_m',name:'Medium Tonic',heal:14}]},
+  timePlayed:0
+};}
+function migrateSave(s){const base=defaultSave();return{...base,...s,version:SAVE_VERSION,progress:{...base.progress,...(s.progress||{})},player:{...base.player,...(s.player||{})},keybinds:{...base.keybinds,...(s.keybinds||{})}};}
+function loadSave(){try{const raw=localStorage.getItem(LS_KEY);if(!raw) return defaultSave();return migrateSave(JSON.parse(raw));}catch(e){return defaultSave();}}
+function saveState(s){try{localStorage.setItem(LS_KEY,JSON.stringify(s));setSaveStatus('Saved');}catch(e){setSaveStatus('Save error');}}
+function wipeSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
+let stateObj=loadSave();
+let autosaveTimer=0; function requestAutosave(){autosaveTimer=.35;setSaveStatus('Autosaving...');}
+function autosaveTick(dt){if(autosaveTimer>0){autosaveTimer-=dt;if(autosaveTimer<=0) saveState(stateObj);}}
+const saveStatusEl=document.getElementById('saveStatus');let saveStatusTimer=0;
+function setSaveStatus(msg){saveStatusEl.textContent=msg;saveStatusTimer=1.4;}
+function tickSaveStatus(dt){if(saveStatusTimer>0){saveStatusTimer-=dt;if(saveStatusTimer<=0) saveStatusEl.textContent='Autosave enabled';}}
 
-/* Elements */
-const titleScreen = document.getElementById('titleScreen');
-const titlePrompt = document.getElementById('titlePrompt');
-const crawlWrap = document.getElementById('crawlWrap');
-const crawlInner = document.getElementById('crawlInner');
-const soulScreen = document.getElementById('soulScreen');
-const heartPreview = document.getElementById('heartPreview');
-const colorRow = document.getElementById('colorRow');
-const settingsModal = document.getElementById('settingsModal');
-const kbUp = document.getElementById('kbUp'), kbDown = document.getElementById('kbDown'), kbLeft = document.getElementById('kbLeft'), kbRight = document.getElementById('kbRight'), kbShoot = document.getElementById('kbShoot'), kbBurst = document.getElementById('kbBurst');
+/* --------------------------
+Elements
+-------------------------- */
+const root=document.getElementById('gameRoot');
+const titleScreen=document.getElementById('titleScreen');
+const titleMenu=document.getElementById('titleMenu');
+const titlePrompt=document.getElementById('titlePrompt');
+const crawlWrap=document.getElementById('crawlWrap');
+const btnContinue=document.getElementById('btnContinue');
+const btnNewGame=document.getElementById('btnNewGame');
+const btnSettings=document.getElementById('btnSettings');
+const soulScreen=document.getElementById('soulScreen');
+const heartPreview=document.getElementById('heartPreview');
+const colorRow=document.getElementById('colorRow');
+const settingsModal=document.getElementById('settingsModal');
+const kbUp=document.getElementById('kbUp'),kbDown=document.getElementById('kbDown'),kbLeft=document.getElementById('kbLeft'),kbRight=document.getElementById('kbRight'),kbShoot=document.getElementById('kbShoot'),kbBurst=document.getElementById('kbBurst'),assistToggle=document.getElementById('assistToggle');
+const startBtn=document.getElementById('startGameBtn'),randomBtn=document.getElementById('randomBtn'),openSettingsBtn=document.getElementById('openSettingsBtn');
+const tooltip=document.getElementById('tooltip');const toastEl=document.getElementById('toast');
+const battleHud=document.getElementById('battleHud');const binfo=document.getElementById('binfo');const bcenter=document.getElementById('bcenter');
+const btnFight=document.getElementById('btnFight'),btnAct=document.getElementById('btnAct'),btnItem=document.getElementById('btnItem'),btnMercy=document.getElementById('btnMercy');
 
-const startBtn = document.getElementById('startGameBtn'), randomBtn = document.getElementById('randomBtn'), openSettingsBtn = document.getElementById('openSettingsBtn');
+/* --------------------------
+UI helpers
+-------------------------- */
+function showToast(msg,ms=1800){toastEl.textContent=msg;toastEl.style.opacity='1';clearTimeout(showToast._t);showToast._t=setTimeout(()=>toastEl.style.opacity='0',ms);}
+function showTooltip(e,text){tooltip.style.opacity=1;tooltip.textContent=text;const r=e.target.getBoundingClientRect();tooltip.style.left=(r.left+window.scrollX)+'px';tooltip.style.top=(r.top+window.scrollY-28)+'px';}
+function hideTooltip(){tooltip.style.opacity=0;}
 
-/* Default save */
-let stateObj = loadSave();
+/* --------------------------
+Palette & heart draw
+-------------------------- */
+const SOUL_COLORS=['#ff2b2b','#ffd700','#57ff9b','#6cb6ff','#ff6bcb','#b56ee0','#ffffff','#ffc4a3','#ff9f1c','#7affb7','#7aa1ff','#d9d9d9','#ffd2ae','#a6ffef','#c7f0ff','#ffa6b8'];
+function drawPixelHeart(ctx,color,scale=3){ctx.save();ctx.scale(scale,scale);const map=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const size=4;for(let r=0;r<map.length;r++){for(let c=0;c<map[r].length;c++){if(map[r][c]) ctx.fillRect((c-4)*size+40,(r-3)*size+20,size,size);}}ctx.restore();}
+function drawHeart(ctx,x,y,color,scale=2){ctx.save();ctx.translate(x,y);drawPixelHeart(ctx,color,scale);ctx.restore();}
 
-let keybinds = stateObj.keybinds || { up:'w', down:'s', left:'a', right:'d', shoot:' ', burst:'q', menu:'Enter' };
+/* --------------------------
+Soul selection
+-------------------------- */
+const pv=document.createElement('canvas');pv.width=120;pv.height=120;pv.style.width='120px';pv.style.height='120px';heartPreview.appendChild(pv);const pvctx=pv.getContext('2d');
+let selectedColor=stateObj.soulColor||SOUL_COLORS[0];
+function buildSwatches(){colorRow.innerHTML='';SOUL_COLORS.forEach(col=>{const d=document.createElement('div');d.className='colorSwatch';d.style.background=col;d.setAttribute('role','button');d.addEventListener('mouseenter',e=>showTooltip(e,col));d.addEventListener('mouseleave',hideTooltip);d.addEventListener('click',()=>{selectColor(col);highlightSwatch(col);});colorRow.appendChild(d);});}
+function selectColor(col){selectedColor=col;pvctx.clearRect(0,0,pv.width,pv.height);drawPixelHeart(pvctx,col,2.0);}
+function highlightSwatch(col){document.querySelectorAll('.colorSwatch').forEach(s=>{if(s.style.background===col){s.style.outline='2px solid var(--accent)';s.style.boxShadow='0 0 0 2px rgba(0,0,0,0.6), 0 0 12px rgba(255,209,102,0.4)';}else{s.style.outline='none';s.style.boxShadow='0 2px 8px rgba(0,0,0,0.6)';}});}
+function randomColor(){selectColor(SOUL_COLORS[Math.floor(Math.random()*SOUL_COLORS.length)]);highlightSwatch(selectedColor);}
+buildSwatches();selectColor(selectedColor);highlightSwatch(selectedColor);
 
-/* Colours for soul selection (pixel-accurate choices) */
-const SOUL_COLORS = [
-'#ff2b2b', '#ffd700', '#57ff9b', '#6cb6ff', '#ff6bcb', '#b56ee0', '#ffffff', '#ffc4a3',
-'#ff9f1c', '#7affb7', '#7aa1ff', '#d9d9d9', '#ffd2ae', '#a6ffef', '#c7f0ff', '#ffa6b8'
-];
+/* --------------------------
+Title + intro
+-------------------------- */
+function updateTitleMenu(){btnContinue.textContent=stateObj.seenIntro?'Continue':'Continue (no save)';}
+updateTitleMenu();
+btnContinue.addEventListener('click',()=>{if(!stateObj.seenIntro){showToast('No save found. Pick New Game.');return;}startFromSave();});
+btnNewGame.addEventListener('click',()=>{if(confirm('Start a new game? This erases previous progress.')){wipeSave();stateObj=defaultSave();saveState(stateObj);startIntro();}});
+btnSettings.addEventListener('click',openSettings);
+setInterval(()=>{titlePrompt.style.visibility='visible';},800);
+let waitingToStart=true;
+window.addEventListener('keydown',e=>{if(!waitingToStart) return; if(['z','Z','Enter',' '].includes(e.key)){ if(stateObj.seenIntro) startFromSave(); else startIntro(); }});
+function startIntro(){waitingToStart=false;crawlWrap.style.display='flex';function skip(e){if(['z','Z','Enter',' '].includes(e.key)) endIntro();}
+window.addEventListener('keydown',skip,{once:true});setTimeout(()=>{endIntro();},16500);}
+function endIntro(){crawlWrap.style.display='none';titleScreen.style.display='none';soulScreen.style.display='block';soulScreen.setAttribute('aria-hidden','false');selectColor(selectedColor);}
+titleScreen.addEventListener('click',()=>{if(waitingToStart){if(stateObj.seenIntro) startFromSave(); else startIntro();}});
 
-/* Pixel heart drawing — uses canvas small pixel grid */
-function drawPixelHeart(ctx, color, scale=3){
-ctx.clearRect(0,0,120,120);
-ctx.save();
-ctx.scale(scale,scale);
-const map = [
-[0,1,1,0,0,1,1,0],
-[1,1,1,1,1,1,1,1],
-[1,1,1,1,1,1,1,1],
-[0,1,1,1,1,1,1,0],
-[0,0,1,1,1,1,0,0],
-[0,0,0,1,1,0,0,0]
-];
-ctx.fillStyle = color;
-const size=4;
-for(let r=0;r<map.length;r++){
-for(let c=0;c<map[r].length;c++){
-if(map[r][c]) ctx.fillRect((c-4)*size + 40, (r-3)*size + 20, size, size);
-}
-}
-ctx.restore();
-}
+randomBtn.addEventListener('click',randomColor);
+openSettingsBtn.addEventListener('click',openSettings);
+startBtn.addEventListener('click',()=>{stateObj.soulColor=selectedColor;stateObj.seenIntro=true;stateObj.keybinds=stateObj.keybinds||defaultSave().keybinds;saveState(stateObj);startGame();});
 
-/* Build color swatches */
-function buildSwatches(){
-colorRow.innerHTML = '';
-SOUL_COLORS.forEach(col=>{
-const div = document.createElement('div');
-div.className = 'colorSwatch';
-div.style.background = col;
-div.setAttribute('role','button');
-div.setAttribute('aria-label', 'Choose ' + col);
-div.addEventListener('click', ()=>{ selectColor(col); });
-colorRow.appendChild(div);
-});
-}
+/* --------------------------
+Settings modal
+-------------------------- */
+function openSettings(){const kb=stateObj.keybinds;kbUp.value=(kb.up||'w').toUpperCase();kbDown.value=(kb.down||'s').toUpperCase();kbLeft.value=(kb.left||'a').toUpperCase();kbRight.value=(kb.right||'d').toUpperCase();kbShoot.value=(kb.shoot||'z').toUpperCase();kbBurst.value=(kb.burst||'x').toUpperCase();assistToggle.checked=!!stateObj.progress.flags.assistMode;settingsModal.style.display='block';settingsModal.setAttribute('aria-hidden','false');}
+function closeSettings(){settingsModal.style.display='none';settingsModal.setAttribute('aria-hidden','true');}
+document.getElementById('closeKb').addEventListener('click',closeSettings);
+document.getElementById('saveKb').addEventListener('click',()=>{const kb=stateObj.keybinds;kb.up=(kbUp.value||'W').toLowerCase();kb.down=(kbDown.value||'S').toLowerCase();kb.left=(kbLeft.value||'A').toLowerCase();kb.right=(kbRight.value||'D').toLowerCase();kb.shoot=(kbShoot.value||'Z').toLowerCase();kb.burst=(kbBurst.value||'X').toLowerCase();stateObj.progress.flags.assistMode=!!assistToggle.checked;requestAutosave();closeSettings();});
 
-/* preview canvas */
-const pv = document.createElement('canvas');
-pv.width = 120; pv.height = 120; pv.style.width='120px'; pv.style.height='120px';
-heartPreview.appendChild(pv);
-const pvctx = pv.getContext('2d');
-
-/* select color */
-let selectedColor = stateObj.soulColor || SOUL_COLORS[0];
-function selectColor(col){
-selectedColor = col;
-drawPixelHeart(pvctx, col, 2.0);
-}
-
-/* Random color */
-function randomColor(){
-selectedColor = SOUL_COLORS[Math.floor(Math.random()*SOUL_COLORS.length)];
-drawPixelHeart(pvctx, selectedColor, 2.0);
-}
-
-/* Initialize UI */
-buildSwatches();
-selectColor(selectedColor);
-
-/* Title logic: wait for Z/Enter */
-let waitingToStart = true;
-function onTitleKey(e){
-const k = e.key;
-if(!waitingToStart) return;
-if(k === 'z' || k === 'Z' || k === 'Enter' || k === ' '){
-startIntro(); // proceed to intro crawl
-}
-}
-window.addEventListener('keydown', onTitleKey);
-
-/* Intro crawl control */
-let introPlaying = false;
-function startIntro(){
-if(introPlaying) return;
-introPlaying = true;
-waitingToStart = false;
-window.removeEventListener('keydown', onTitleKey);
-// hide prompt, show crawl
-titlePrompt.style.display = 'none';
-crawlWrap.style.display = 'flex';
-// allow skipping with keys
-function skipHandler(e){
-if(!introPlaying) return;
-if(['z','Z','Enter',' '].includes(e.key)){ endIntro(); }
-}
-window.addEventListener('keydown', skipHandler);
-// auto end after duration
-const duration = 16000; // 16s (matches CSS)
-setTimeout(()=>{
-if(introPlaying) endIntro();
-window.removeEventListener('keydown', skipHandler);
-}, duration + 300);
-}
-
-/* End intro, show soul selection */
-function endIntro(){
-introPlaying = false;
-crawlWrap.style.display = 'none';
-titleScreen.style.display = 'none';
-soulScreen.style.display = 'block';
-soulScreen.setAttribute('aria-hidden','false');
-// show settings button and set preview color
-selectColor(selectedColor);
-}
-
-/* Settings modal logic */
-document.getElementById('openSettingsBtn').addEventListener('click', ()=>{ openSettings(); });
-document.getElementById('openSettings').addEventListener('click', ()=>{ openSettings(); });
-function openSettings(){
-// fill with current keybinds
-kbUp.value = keybinds.up.toUpperCase();
-kbDown.value = keybinds.down.toUpperCase();
-kbLeft.value = keybinds.left.toUpperCase();
-kbRight.value = keybinds.right.toUpperCase();
-kbShoot.value = keybinds.shoot === ' ' ? 'Space' : keybinds.shoot.toUpperCase();
-kbBurst.value = keybinds.burst.toUpperCase();
-settingsModal.style.display = 'block';
-settingsModal.setAttribute('aria-hidden','false');
-}
-document.getElementById('closeKb').addEventListener('click', ()=>{ settingsModal.style.display = 'none'; settingsModal.setAttribute('aria-hidden','true'); });
-document.getElementById('saveKb').addEventListener('click', ()=>{
-keybinds.up = (kbUp.value || 'W').toLowerCase();
-keybinds.down = (kbDown.value || 'S').toLowerCase();
-keybinds.left = (kbLeft.value || 'A').toLowerCase();
-keybinds.right = (kbRight.value || 'D').toLowerCase();
-const sh = kbShoot.value; keybinds.shoot = (sh === 'Space' || sh === '') ? ' ' : sh.toLowerCase();
-keybinds.burst = (kbBurst.value || 'Q').toLowerCase();
-// store
-stateObj.keybinds = keybinds;
-saveState(stateObj);
-settingsModal.style.display = 'none';
-settingsModal.setAttribute('aria-hidden','true');
-alert('Keybinds saved locally.');
-});
-
-/* Random and Start */
-randomBtn.addEventListener('click', ()=>{ randomColor(); });
-startBtn.addEventListener('click', ()=>{
-// persist color selection
-stateObj.soulColor = selectedColor;
-stateObj.seenIntro = true;
-stateObj.keybinds = keybinds;
-saveState(stateObj);
-// call the hook to start the main game
-startGame();
-});
-
-/* Hook: replace or extend this with the main game code later.
-For now it shows a small transition placeholder screen and logs save.
-*/
-function startGame(){
-// Fade-out effect from soulScreen to a simple "Game started" canvas.
-soulScreen.style.display = 'none';
-
-// small transition canvas
-const root = document.getElementById('gameRoot');
-const trans = document.createElement('div');
-trans.style.width='960px';
-trans.style.height='720px';
-trans.style.background = '#05050b';
-trans.style.border = '4px solid #07070a';
-trans.style.display='flex';
-trans.style.alignItems='center';
-trans.style.justifyContent='center';
-trans.style.flexDirection='column';
-root.appendChild(trans);
-
-const msg = document.createElement('div');
-msg.style.fontFamily='monospace';
-msg.style.fontSize='22px';
-msg.style.color='var(--fg)';
-msg.style.textAlign='center';
-msg.textContent = 'Preparing Undertale Gold...';
-trans.appendChild(msg);
-
-const sub = document.createElement('div');
-sub.style.marginTop='12px';
-sub.style.color='#bdbdcf';
-sub.textContent = 'Soul color saved: ' + selectedColor;
-trans.appendChild(sub);
-
-// visual pixel heart
-const cnv = document.createElement('canvas');
-cnv.width=120; cnv.height=120; cnv.style.marginTop='18px';
-trans.appendChild(cnv);
-drawPixelHeart(cnv.getContext('2d'), selectedColor, 2.0);
-
-// Placeholder: here is where the full engine should be invoked.
-// Expose a global stub so you can replace it later:
-window.UG_startGame = function(){
-console.log('UG_startGame called — attach full engine here.');
-alert('Attach the full game engine to window.UG_startGame() to continue.');
+/* --------------------------
+World data
+-------------------------- */
+const WORLD={
+  regions:{
+    frontier:{name:'Frontier Trail',bounds:{x:0,y:0,w:1920,h:1440},color:'#0b0b12'},
+    mines:{name:'Rusted Mines',bounds:{x:0,y:0,w:1920,h:1440},color:'#0a0a10'},
+    shore:{name:'Drywater Shore',bounds:{x:0,y:0,w:1920,h:1440},color:'#081016'}
+  },
+  portals:[
+    {region:'frontier',rect:{x:1820,y:700,w:80,h:60},target:{region:'mines',x:120,y:700}},
+    {region:'mines',rect:{x:40,y:700,w:80,h:60},target:{region:'frontier',x:1820,y:700}},
+    {region:'frontier',rect:{x:940,y:20,w:80,h:50},target:{region:'shore',x:940,y:1380}},
+    {region:'shore',rect:{x:920,y:1400,w:120,h:40},target:{region:'frontier',x:960,y:60}},
+  ],
+  checkpoints:{
+    'frontier:star_1':{x:480,y:360,region:'frontier',name:'Trail Star'},
+    'mines:star_1':{x:260,y:1120,region:'mines',name:'Mine Star'},
+    'shore:star_1':{x:1520,y:420,region:'shore',name:'Shore Star'}
+  },
+  npcs:[
+    { id:'guide', region:'frontier', x:520, y:380, talk:[
+      "Howdy. Trails here go where your will does.",
+      "Shining stars save your steps. Enter to use, Q to fast travel.",
+      "Fight if you must. Spare if you can."
+    ], onceFlag:'met_guide' }
+  ],
+  bosses:[]
 };
+function addBoss(id,name,region,x,y,r,create){WORLD.bosses.push({id,name,region,x,y,r,create});}
 
-// Small "Begin" button for testing that calls UG_startGame()
-const goBtn = document.createElement('button');
-goBtn.textContent = 'Begin (engine placeholder)';
-goBtn.style.marginTop='14px';
-goBtn.style.padding='8px 12px';
-goBtn.style.borderRadius='8px';
-goBtn.style.border='2px solid #111';
-goBtn.style.background='#ffd166';
-goBtn.onclick = ()=>{ if(window.UG_startGame) window.UG_startGame(); };
-trans.appendChild(goBtn);
+/* --------------------------
+Checkpoints
+-------------------------- */
+function activateCheckpoint(id,pos){if(!stateObj.progress.checkpoints.includes(id)) stateObj.progress.checkpoints.push(id);stateObj.progress.lastCheckpoint=id;if(pos) stateObj.player.pos={...pos};requestAutosave();showToast(`Checkpoint set: ${WORLD.checkpoints[id]?.name||id}`);}
+function respawnAtLastCheckpoint(){const id=stateObj.progress.lastCheckpoint;const cp=WORLD.checkpoints[id];if(cp){stateObj.player.hp=stateObj.player.hpMax;stateObj.player.pos={x:cp.x,y:cp.y,region:cp.region};}else{stateObj.player.hp=stateObj.player.hpMax;stateObj.player.pos={x:480,y:360,region:'frontier'};}requestAutosave();}
 
-console.log('Intro complete. Save state:', stateObj);
+/* --------------------------
+Difficulty
+-------------------------- */
+function difficultyMul(){const n=stateObj.progress.defeated.length;const assist=stateObj.progress.flags.assistMode?0.75:1.0;return Math.min(1+n*0.12,1.6)*assist;}
+
+/* --------------------------
+Engine basics
+-------------------------- */
+class Input{constructor(b){this.keys=new Set();this.binds=b;this._kd=e=>this.keys.add(e.key);this._ku=e=>this.keys.delete(e.key);window.addEventListener('keydown',this._kd);window.addEventListener('keyup',this._ku);}isDown(name){const k=this.binds[name];if(!k) return false;return this.keys.has(k)||this.keys.has(k.toUpperCase());}destroy(){window.removeEventListener('keydown',this._kd);window.removeEventListener('keyup',this._ku);}}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function lerp(a,b,t){return a+(b-a)*t;}
+function rand(a,b){return Math.random()*(b-a)+a;}
+function drawBox(ctx,x,y,w,h){ctx.strokeStyle='#ffd166';ctx.lineWidth=3;ctx.strokeRect(x,y,w,h);}
+
+/* --------------------------
+Fast travel
+-------------------------- */
+function openFastTravelPanel(onTravel){const opts=stateObj.progress.checkpoints.map(id=>({id,...WORLD.checkpoints[id]})).filter(Boolean);if(opts.length===0){showToast('No checkpoints yet');return;}const overlay=document.createElement('div');overlay.className='overlay';overlay.style.display='flex';const panel=document.createElement('div');panel.className='panel';panel.style.width='440px';panel.style.maxHeight='60vh';panel.style.overflow='auto';const title=document.createElement('div');title.className='panelTitle';title.textContent='Fast Travel — Stars';panel.appendChild(title);opts.forEach(opt=>{const row=document.createElement('button');row.className='btn';row.style.display='block';row.style.width='100%';row.style.textAlign='left';row.style.margin='6px 0';row.textContent=`${opt.name} (${opt.region})`;row.addEventListener('click',()=>{document.body.removeChild(overlay);onTravel(opt);});panel.appendChild(row);});const close=document.createElement('button');close.className='btn';close.textContent='Close';close.addEventListener('click',()=>document.body.removeChild(overlay));const actions=document.createElement('div');actions.className='btnRow';actions.style.marginTop='8px';actions.appendChild(close);panel.appendChild(actions);overlay.appendChild(panel);document.body.appendChild(overlay);}
+
+/* --------------------------
+Minimap
+-------------------------- */
+function renderMinimap(ctx,scene){const r=scene.region();const b=r.bounds;const mw=160,mh=120,x0=960-mw-12,y0=12;ctx.fillStyle='#0c0c12';ctx.fillRect(x0,y0,mw,mh);ctx.strokeStyle='#222';ctx.strokeRect(x0,y0,mw,mh);const sx=mw/b.w,sy=mh/b.h;for(const boss of WORLD.bosses){if(boss.region!==scene.pos.region) continue;ctx.fillStyle=stateObj.progress.defeated.includes(boss.id)?'#7affb7':'#ff6b6b';ctx.fillRect(x0+boss.x*sx-2,y0+boss.y*sy-2,4,4);}for(const [id,cp] of Object.entries(WORLD.checkpoints)){if(cp.region!==scene.pos.region) continue;const active=stateObj.progress.checkpoints.includes(id);ctx.fillStyle=active?'#ffd166':'#55505a';ctx.fillRect(x0+cp.x*sx-2,y0+cp.y*sy-2,4,4);}ctx.fillStyle='#c7f0ff';ctx.fillRect(x0+scene.pos.x*sx-2,y0+scene.pos.y*sy-2,4,4);}
+
+/* --------------------------
+Dialogue (simple)
+-------------------------- */
+function openDialogue(lines,onDone,onceFlag){const overlay=document.createElement('div');overlay.className='overlay';overlay.style.display='flex';const panel=document.createElement('div');panel.className='panel';panel.style.width='560px';const title=document.createElement('div');title.className='panelTitle';title.textContent='...';const text=document.createElement('div');text.style.minHeight='80px';text.style.lineHeight='1.4';const buttons=document.createElement('div');buttons.className='btnRow';buttons.style.marginTop='8px';const next=document.createElement('button');next.className='btn btnPrimary';next.textContent='Next';const close=document.createElement('button');close.className='btn';close.textContent='Close';buttons.appendChild(next);buttons.appendChild(close);panel.appendChild(title);panel.appendChild(text);panel.appendChild(buttons);overlay.appendChild(panel);document.body.appendChild(overlay);let i=0;function render(){text.textContent=lines[i];}function end(){document.body.removeChild(overlay);if(onceFlag){stateObj.progress.flags[onceFlag]=true;requestAutosave();}onDone?.();}next.addEventListener('click',()=>{i++;if(i>=lines.length) end(); else render();});close.addEventListener('click',end);render();}
+
+/* --------------------------
+Overworld scene
+-------------------------- */
+class OverworldScene{
+  constructor(game){this.g=game;this.pos={...stateObj.player.pos};this.speed=200;this.camera={x:0,y:0};this.prompt='';this.promptAlpha=0;this.hint=5;}
+  onEnter(){this.snap();}
+  snap(){const W=960,H=720,b=this.region().bounds;this.camera.x=clamp(this.pos.x-W/2,0,Math.max(0,b.w-W));this.camera.y=clamp(this.pos.y-H/2,0,Math.max(0,b.h-H));}
+  region(){return WORLD.regions[this.pos.region]||WORLD.regions.frontier;}
+  findNearby(){
+    for(const [id,cp] of Object.entries(WORLD.checkpoints)){if(cp.region!==this.pos.region) continue;const d=Math.hypot(this.pos.x-cp.x,this.pos.y-cp.y);if(d<40){const active=stateObj.progress.checkpoints.includes(id);return{prompt:active?'Star: Fast Travel (Enter)':'Star: Activate (Enter)',onUse:()=>{if(!active) activateCheckpoint(id,{x:cp.x,y:cp.y,region:cp.region});else openFastTravelPanel(dest=>{this.pos={x:dest.x,y:dest.y,region:dest.region};stateObj.player.pos={...this.pos};requestAutosave();this.snap();showToast(`Arrived: ${dest.name}`);});}};}}
+    for(const p of WORLD.portals){if(p.region!==this.pos.region) continue;const r=p.rect;if(this.pos.x>r.x&&this.pos.x<r.x+r.w&&this.pos.y>r.y&&this.pos.y<r.y+r.h){return{prompt:`Enter ${WORLD.regions[p.target.region].name} (Enter)`,onUse:()=>{this.pos={x:p.target.x,y:p.target.y,region:p.target.region};stateObj.player.pos={...this.pos};requestAutosave();this.snap();showToast(`Arrived: ${WORLD.regions[this.pos.region].name}`);}};}}
+    for(const n of (WORLD.npcs||[])){if(n.region!==this.pos.region) continue;const d=Math.hypot(this.pos.x-n.x,this.pos.y-n.y);if(d<46){return{prompt:'Talk (Enter)',onUse:()=>openDialogue(n.talk,()=>{},n.onceFlag)};}}
+    for(const b of WORLD.bosses){if(b.region!==this.pos.region) continue;const d=Math.hypot(this.pos.x-b.x,this.pos.y-b.y);const defeated=stateObj.progress.defeated.includes(b.id);if(d<b.r+10 && !defeated){return{prompt:`Challenge ${b.name} (Enter)`,onUse:()=>{this.g.setScene(new BattleScene(this.g,b.create(stateObj.soulColor),()=>{if(!stateObj.progress.defeated.includes(b.id)){stateObj.progress.defeated.push(b.id);requestAutosave();showToast(`${b.name} defeated!`);}},()=>{respawnAtLastCheckpoint();}))}};}}
+    return null;
+  }
+  update(dt){autosaveTick(dt);tickSaveStatus(dt);stateObj.timePlayed+=dt;const i=this.g.input;let dx=0,dy=0;if(i.isDown('left'))dx-=1;if(i.isDown('right'))dx+=1;if(i.isDown('up'))dy-=1;if(i.isDown('down'))dy+=1;const L=Math.hypot(dx,dy)||1;this.pos.x+=dx/L*this.speed*dt;this.pos.y+=dy/L*this.speed*dt;const b=this.region().bounds;this.pos.x=clamp(this.pos.x,0,b.w);this.pos.y=clamp(this.pos.y,0,b.h);this.snap();const near=this.findNearby();if(near){this.promptAlpha=lerp(this.promptAlpha,1,.2);this.prompt=near.prompt;if(i.isDown('menu')) near.onUse();}else this.promptAlpha=lerp(this.promptAlpha,0,.2);stateObj.player.pos={...this.pos};if(Math.random()<.01) requestAutosave();if(this.hint>0)this.hint-=dt;}
+  render(ctx){const W=960,H=720;const r=this.region();ctx.fillStyle=r.color;ctx.fillRect(0,0,W,H);ctx.fillStyle='#11141c';for(let i=0;i<120;i++){const x=(i*137%2000)-this.camera.x*.3;const y=(i*251%1500)-this.camera.y*.3;if(x>=-10&&x<=W+10&&y>=-10&&y<=H+10) ctx.fillRect(x|0,y|0,2,2);}
+    for(const [id,cp] of Object.entries(WORLD.checkpoints)){if(cp.region!==this.pos.region) continue;const x=cp.x-this.camera.x,y=cp.y-this.camera.y;const active=stateObj.progress.checkpoints.includes(id);ctx.fillStyle=active?'#ffd166':'#55505a';ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#bdbdcf';ctx.font='12px monospace';ctx.fillText(cp.name,x+10,y-10);}
+    for(const n of (WORLD.npcs||[])){if(n.region!==this.pos.region) continue;const x=n.x-this.camera.x,y=n.y-this.camera.y;ctx.fillStyle='#c7f0ff';ctx.fillRect(x-4,y-10,8,10);ctx.fillStyle='#a9a9b6';ctx.font='12px monospace';ctx.fillText('NPC',x-12,y-14);}
+    for(const b of WORLD.bosses){if(b.region!==this.pos.region) continue;const d=stateObj.progress.defeated.includes(b.id);const x=b.x-this.camera.x,y=b.y-this.camera.y;ctx.strokeStyle=d?'#2c5133':'#7a2f2f';ctx.beginPath();ctx.arc(x,y,b.r,0,Math.PI*2);ctx.stroke();ctx.fillStyle=d?'#7affb7':'#ff6b6b';ctx.font='12px monospace';ctx.fillText(b.name,x-30,y-b.r-8);}
+    drawHeart(ctx,this.pos.x-this.camera.x-20,this.pos.y-this.camera.y-24,stateObj.soulColor,1.2);
+    if(this.promptAlpha>0.02){ctx.globalAlpha=this.promptAlpha;ctx.fillStyle='#f7f6fb';ctx.font='14px monospace';ctx.fillText(this.prompt,20,H-28);ctx.globalAlpha=1;}
+    if(this.hint>0){ctx.globalAlpha=Math.min(1,this.hint/2);ctx.fillStyle='#f7f6fb';ctx.font='14px monospace';ctx.fillText('Enter: interact  •  Q: fast travel  •  Stars save progress',20,H-52);ctx.globalAlpha=1;}
+    ctx.fillStyle='#bdbdcf';ctx.font='12px monospace';ctx.fillText(`${r.name}`,20,24);ctx.fillText(`Checkpoint: ${stateObj.progress.lastCheckpoint||'none'}`,20,42);ctx.fillText(`Difficulty: ${stateObj.progress.flags.assistMode?'Assist':('x'+difficultyMul().toFixed(2))}`,20,60);
+    renderMinimap(ctx,this);
+  }
 }
 
-/* Draw heart in preview initially */
-drawPixelHeart(pvctx, selectedColor, 2.0);
+/* --------------------------
+Boss backgrounds (used in Part 2)
+-------------------------- */
+function drawBossBG_Default(ctx,scene){ctx.fillStyle='#000';ctx.fillRect(0,0,960,720);}
+function drawBossBG_Star(ctx,scene){ctx.fillStyle='#030311';ctx.fillRect(0,0,960,720);ctx.fillStyle='#0b0b22';for(let i=0;i<80;i++){ctx.fillRect((i*97)%960,(i*53)%720,2,2);} }
+function drawBossBG_Mantis(ctx,scene){ctx.fillStyle='#0f0b08';ctx.fillRect(0,0,960,720);ctx.fillStyle='#1d140c';for(let i=0;i<22;i++){ctx.fillRect(i*44,600,22,120);} }
+function drawBossBG_Prism(ctx,scene){ctx.fillStyle='#081014';ctx.fillRect(0,0,960,720);ctx.strokeStyle='#113344';for(let i=0;i<12;i++){ctx.beginPath();ctx.arc(480,360,40+i*24,0,Math.PI*2);ctx.stroke();}}
 
-/* Accessibility: clicking the title area starts too */
-document.getElementById('titleScreen').addEventListener('click', ()=>{ if(waitingToStart) startIntro(); });
+/* --------------------------
+Battle scene (skeleton) — completed in Part 2
+-------------------------- */
+class BattleScene{
+  constructor(game,bossFactory,onWin,onLose){
+    this.g=game;
+    this.boss = bossFactory();
+    this.onWin=onWin; this.onLose=onLose;
 
-/* Minor cosmetic: animate title prompt blink */
-setInterval(()=>{ titlePrompt.style.visibility = (titlePrompt.style.visibility === 'hidden') ? 'visible' : 'hidden'; }, 700);
+    // Arena and heart
+    this.box={x:240,y:420,w:480,h:180};
+    const hpMax=stateObj.player.hpMax;
+    this.heart={x:this.box.x+this.box.w/2,y:this.box.y+this.box.h/2,sp:220,r:6,iFrames:0,hp:stateObj.player.hp,hpMax};
 
+    // Battle state (player/enemy turns)
+    this.turn='player';
+    this.menuState='root';
+    this.time=0; this.phaseTime=0;
+    this.bullets=[];
+    this.items=stateObj.player.items.map(i=>({...i}));
+
+    // Fight timing bar config
+    this.fightActive=false; this.fightCursor=0; this.fightSpeed=460;
+    this.fightCritZone=[0.46,0.54];
+
+    // Enemy attacks
+    this.attackIndex=0;
+    this.attack=this.boss.attacks[0];
+
+    // Hook HUD
+    this.bindHud();
+
+    // Optional pre-battle cutscene
+    this.cutsceneQueue=(this.boss.cutscene||[]).slice(0);
+    this.showCutscene();
+  }
+  bindHud(){
+    battleHud.style.display='block';battleHud.setAttribute('aria-hidden','false');
+    btnFight.onclick=()=>this.onFight();
+    btnAct.onclick=()=>this.onAct();
+    btnItem.onclick=()=>this.onItem();
+    btnMercy.onclick=()=>this.onMercy();
+  }
+  unbindHud(){
+    battleHud.style.display='none';battleHud.setAttribute('aria-hidden','true');
+    btnFight.onclick=btnAct.onclick=btnItem.onclick=btnMercy.onclick=null;
+  }
+  showCutscene(){
+    if(this.cutsceneQueue.length===0) return;
+    const lines=this.cutsceneQueue.shift();
+    openDialogue(lines,()=>this.showCutscene());
+  }
+
+  onEnter(){}
+  onExit(){this.unbindHud();stateObj.player.hp=this.heart.hp;requestAutosave();}
+
+  onFight(){ if(this.turn!=='player') return; this.menuState='fight'; this.fightActive=true; this.fightCursor=this.box.x+20; bcenter.textContent='Tap Z/Enter in the center!'; }
+  onAct(){ if(this.turn!=='player') return; this.menuState='act'; bcenter.textContent=this.boss.actTitle||'Choose an action'; binfo.textContent='ACT: ' + (this.boss.acts||[]).map((a,i)=>`${i+1}. ${a.name}`).join('  '); }
+  onItem(){ if(this.turn!=='player') return; this.menuState='item'; if(this.items.length===0){bcenter.textContent='No items.';return;} binfo.textContent='ITEMS: ' + this.items.map((it,i)=>`${i+1}. ${it.name}`).join('  '); bcenter.textContent='Press number to use item.'; }
+  onMercy(){ if(this.turn!=='player') return; this.menuState='mercy'; const canSpare=this.canSpare(); bcenter.textContent=canSpare?'SPARE available — press Z/Enter':'SPARE not ready'; binfo.textContent='(X) to back'; }
+
+  canSpare(){ return (this.boss.spareProgress||0) >= (this.boss.spareReq||100) || (this.boss.canSpare && this.boss.canSpare(this)); }
+
+  endPlayerTurn(delay=0.2){ setTimeout(()=>{ this.turn='enemy'; this.menuState='root'; bcenter.textContent=''; binfo.textContent=''; this.attackStart(); }, delay*1000); }
+  attackStart(){ this.bullets=[]; this.phaseTime=0; if(this.attack?.enter) this.attack.enter(this); }
+  attackDone(){ this.attackIndex=(this.attackIndex+1)%this.boss.attacks.length; this.attack=this.boss.attacks[this.attackIndex]; this.turn='player'; bcenter.textContent='Your turn.'; }
+
+  update(dt){
+    autosaveTick(dt); tickSaveStatus(dt);
+    this.time+=dt; this.phaseTime+=dt;
+    // Completed in Part 2...
+  }
+
+  render(ctx){
+    // Background
+    const bg = this.boss.background || drawBossBG_Default;
+    bg(ctx,this);
+
+    // Arena
+    drawBox(ctx,this.box.x,this.box.y,this.box.w,this.box.h);
+
+    // Bullets
+    for(const b of this.bullets){ctx.fillStyle=b.color||'#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2);ctx.fill();}
+
+    // Heart
+    ctx.save(); if(this.heart.iFrames>0){const p=(Math.sin(this.time*20)+1)/2;ctx.globalAlpha=0.5+0.4*p;} drawHeart(ctx,this.heart.x-20,this.heart.y-24,stateObj.soulColor,1.2); ctx.restore();
+
+    // Fight bar (if active)
+    if(this.menuState==='fight'){
+      const left=this.box.x+20,right=this.box.x+this.box.w-20,y=this.box.y-30;
+      ctx.strokeStyle='#bdbdcf';ctx.strokeRect(left,y,right-left,8);
+      const cz0=left+(right-left)*this.fightCritZone[0], cz1=left+(right-left)*this.fightCritZone[1];
+      ctx.fillStyle='rgba(255,209,102,0.35)';ctx.fillRect(cz0,y,cz1-cz0,8);
+      ctx.fillStyle='#ffd166';ctx.fillRect(this.fightCursor,y-2,2,12);
+    }
+
+    // HUD labels
+    ctx.fillStyle='#f7f6fb';ctx.font='14px monospace';
+    ctx.fillText(`${this.boss.name}`,20,36);
+    // Boss HP bar
+    const bw=360,bh=10,bx=20,by=52;ctx.fillStyle='#222';ctx.fillRect(bx,by,bw,bh);
+    const frac=clamp((this.boss.hp||0)/(this.boss.hpMax||1),0,1);ctx.fillStyle='#ff6b6b';ctx.fillRect(bx,by,Math.floor(bw*frac),bh);ctx.strokeStyle='#444';ctx.strokeRect(bx,by,bw,bh);
+    ctx.fillStyle='#bdbdcf';ctx.fillText(`HP: ${this.heart.hp}/${this.heart.hpMax}`,20,690);
+    ctx.fillText(`SPARE: ${Math.floor(this.boss.spareProgress||0)}/${this.boss.spareReq||100}`,120,690);
+  }
+}
+
+/* --------------------------
+Touch controls
+-------------------------- */
+function createTouchControls(){if(document.getElementById('ug_touch_controls')) return;const wrap=document.createElement('div');wrap.id='ug_touch_controls';wrap.style.position='fixed';wrap.style.left=0;wrap.style.right=0;wrap.style.bottom=0;wrap.style.pointerEvents='none';wrap.style.zIndex=60;document.body.appendChild(wrap);function mk(label,x,y,key){const b=document.createElement('div');b.textContent=label;b.style.position='absolute';b.style.left=x;b.style.bottom=y;b.style.width='60px';b.style.height='60px';b.style.borderRadius='10px';b.style.background='rgba(15,15,22,0.8)';b.style.border='1px solid #222';b.style.color='#f7f6fb';b.style.display='flex';b.style.alignItems='center';b.style.justifyContent='center';b.style.pointerEvents='auto';b.style.userSelect='none';b.style.touchAction='none';b.style.fontFamily='monospace';b.addEventListener('touchstart',e=>{e.preventDefault();window.dispatchEvent(new KeyboardEvent('keydown',{key}))},{passive:false});b.addEventListener('touchend',e=>{e.preventDefault();window.dispatchEvent(new KeyboardEvent('keyup',{key}))},{passive:false});wrap.appendChild(b);}const kb=stateObj.keybinds;mk('◀','12px','92px',kb.left||'a');mk('▶','132px','92px',kb.right||'d');mk('▲','72px','152px',kb.up||'w');mk('▼','72px','32px',kb.down||'s');mk('Enter','calc(100% - 84px)','60px','Enter');mk('Z','calc(100% - 84px)','140px',(kb.shoot||'z').toUpperCase());mk('X','calc(100% - 164px)','140px',(kb.burst||'x').toUpperCase());}
+
+/* --------------------------
+Game loop plumbing
+-------------------------- */
+function startFromSave(){waitingToStart=false;titleScreen.style.display='none';startGame();}
+function startGame(){
+  soulScreen.style.display='none';
+  let canvas=root.querySelector('canvas[data-game="main"]');if(!canvas){canvas=document.createElement('canvas');canvas.width=960;canvas.height=720;canvas.style.border='4px solid #07070a';canvas.style.imageRendering='pixelated';canvas.setAttribute('data-game','main');root.appendChild(canvas);}
+  const ctx=canvas.getContext('2d');
+  const game={canvas,ctx,input:new Input(stateObj.keybinds),scene:null,setScene(s){this.scene?.onExit?.();this.scene=s;s.onEnter?.();},update(dt){try{this.scene?.update?.(dt);}catch(e){console.error(e);fallbackRecover(this);}},render(){try{this.scene?.render?.(ctx);}catch(e){console.error(e);}}};
+  function fallbackRecover(g){respawnAtLastCheckpoint();g.setScene(new OverworldScene(g));showToast('Recovered from error — back to overworld.');}
+  game.setScene(new OverworldScene(game));
+  let last=performance.now();function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;game.update(dt);ctx.clearRect(0,0,960,720);game.render();requestAnimationFrame(loop);}requestAnimationFrame(loop);
+  window.addEventListener('keydown',e=>{if(e.key==='Escape') game.setScene(new OverworldScene(game));});
+  createTouchControls();
+}
+
+/* --------------------------
+Initialize (Part 1)
+-------------------------- */
+drawPixelHeart(pvctx,selectedColor,2.0);
+
+/* ====== PART SPLIT MARKER ======
+Append Part 2/2 code directly below this comment, right before </script></body></html>.
+Do not remove this marker.
+====== */
 </script>
 </body>
 </html>
