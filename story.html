@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UNDERTALE GOLD — Story</title>
+<style>
+:root{--bg:#000;--fg:#f7f6fb;--muted:#a9a9b6;--panel:#0d0c12;--line:#1b1a22;--gold:#ffd166}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:ui-monospace,monospace}
+#wrap{width:960px;margin:12px auto;position:relative}
+#hud{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:920px;height:36px;background:#0c0c12;border:1px solid #1b1a22;border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#bdbdcf;font-size:12px;z-index:2}
+canvas{display:block;margin:0 auto;border:4px solid #0a0a0f;background:#0a090c;image-rendering:pixelated}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:5}
+.panel{background:#0c0c12;border:1px solid #1b1a22;border-radius:10px;padding:12px;width:520px}
+.btn{background:#11121a;color:#f7f6fb;border:1px solid #1b1a22;border-radius:8px;padding:8px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud"><div id="hudL">The Emberwild</div><div id="hudC">LV: 1 • Dust: 0</div><div id="hudR">WASD move • Enter interact • Q fast travel</div></div>
+  <canvas id="game" width="960" height="720"></canvas>
+</div>
+
+<div id="dialog" class="overlay">
+  <div class="panel">
+    <div style="color:var(--gold);font-weight:700;margin-bottom:6px">...</div>
+    <div id="dialogText" style="min-height:80px;line-height:1.4"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+      <button id="dialogNext" class="btn">Next</button>
+      <button id="dialogClose" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Shared profile */
+const LS='utg_shared_profile_v1';
+function prof(){try{return JSON.parse(localStorage.getItem(LS))||{name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}catch{return {name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}}
+const P=prof();
+
+/* Save for story (position, checkpoints, dust, LV) */
+const LSS='utg_story_v1';
+function defSave(){return{LV:1,dust:0,checkpoints:[],lastCP:null,pos:{x:480,y:360,region:'wild'},metKeeper:false};}
+function load(){try{const r=localStorage.getItem(LSS);return r?JSON.parse(r):defSave();}catch{return defSave();}}
+function save(){try{localStorage.setItem(LSS,JSON.stringify(S));setHUD();}catch{}}
+let S=load();
+
+/* Setup */
+const cv=document.getElementById('game'), ctx=cv.getContext('2d');
+const hudL=document.getElementById('hudL'), hudC=document.getElementById('hudC');
+function setHUD(){hudL.textContent=regions[S.pos.region].name;hudC.textContent=`LV: ${S.LV} • Dust: ${S.dust}`;}
+setHUD();
+
+/* World */
+const regions={
+  wild:{name:'The Emberwild',bounds:{w:1920,h:1440},bg:'#120d10'},
+  kiln:{name:'Silent Kiln',bounds:{w:1920,h:1440},bg:'#0f0a08'}
+};
+const embers={
+  'wild:ember':{x:480,y:360,region:'wild',name:'Wild Ember'},
+  'kiln:ember':{x:260,y:1120,region:'kiln',name:'Kiln Ember'}
+};
+const portals=[
+  {region:'wild',rect:{x:1820,y:700,w:80,h:60},to:{region:'kiln',x:120,y:700}},
+  {region:'kiln',rect:{x:40,y:700,w:80,h:60},to:{region:'wild',x:1820,y:700}}
+];
+const npcs=[
+  {id:'keeper',region:'wild',x:520,y:380,lines:[
+    `Trailkeeper: Hello, ${P.name}.`,
+    `Your glow looks brave today.`,
+    'Embers save your steps. Enter to use, Q to travel.',
+    'If the road feels heavy, breathe. The fire will answer.'
+  ], flag:'metKeeper'}
+];
+
+/* Input */
+class Input{constructor(){this.k=new Set();addEventListener('keydown',e=>this.k.add(e.key));addEventListener('keyup',e=>this.k.delete(e.key));}
+is(d){return this.k.has(d)||this.k.has(String(d).toUpperCase());}}
+const input=new Input();
+
+/* Player (human with heart) */
+const player={x:S.pos.x,y:S.pos.y,region:S.pos.region,speed:200};
+function drawHeart(ctx,x,y,color){ctx.save();ctx.translate(x,y);ctx.scale(1.5,1.5);const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const s=3;for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s+40,(r-3)*s+20,s,s);ctx.restore();}
+function drawHuman(ctx,x,y){ // simple sprite
+  ctx.fillStyle='#f0e4d7';ctx.fillRect(x-6,y-18,12,18); // body
+  ctx.fillStyle='#2b2330';ctx.fillRect(x-4,y-24,8,6); // head
+  ctx.fillStyle='#333';ctx.fillRect(x-6,y,12,4); // feet
+  drawHeart(ctx,x-24,y-24,P.glow);
+}
+
+/* Camera */
+const cam={x:0,y:0};
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+/* Dialogue */
+const dlg=document.getElementById('dialog'), dlgTxt=document.getElementById('dialogText');
+let dlgLines=null, dlgIdx=0, dlgCB=null;
+function openDialog(lines,cb){dlgLines=lines.slice(0);dlgIdx=0;dlg.style.display='flex';dlgTxt.textContent=dlgLines[0];dlgCB=cb;}
+function closeDialog(){dlg.style.display='none';dlgLines=null;dlgCB&&dlgCB();}
+document.getElementById('dialogNext').onclick=()=>{if(!dlgLines)return;dlgIdx++;if(dlgIdx>=dlgLines.length){closeDialog();}else dlgTxt.textContent=dlgLines[dlgIdx];};
+document.getElementById('dialogClose').onclick=closeDialog;
+
+/* Fast travel */
+function fastTravel(){
+  const opts=S.checkpoints.map(id=>({id,...embers[id]})).filter(Boolean);
+  if(!opts.length){openDialog(['No embers yet.']);return;}
+  const list=opts.map(o=>`- ${o.name} (${o.region})`).join('\n');
+  openDialog(['Choose a destination by pressing number 1..9 in the world (simple demo):',list],()=>{});
+  // For simplicity, immediate travel to first
+  const dest=opts[0]; if(dest){player.x=dest.x;player.y=dest.y;player.region=dest.region;S.pos={x:player.x,y:player.y,region:player.region};save();}
+}
+
+/* Helpers */
+function near(a,b,dist){return Math.hypot(a.x-b.x,a.y-b.y)<dist;}
+
+/* Loop */
+let last=performance.now();
+function tick(now){
+  const dt=Math.min(0.033,(now-last)/1000);last=now;
+  // movement
+  let dx=0,dy=0;
+  if(input.is('a')) dx-=1; if(input.is('d')) dx+=1; if(input.is('w')) dy-=1; if(input.is('s')) dy+=1;
+  const L=Math.hypot(dx,dy)||1;
+  player.x+=dx/L*player.speed*dt; player.y+=dy/L*player.speed*dt;
+  // bounds
+  const b=regions[player.region].bounds; player.x=clamp(player.x,0,b.w); player.y=clamp(player.y,0,b.h);
+  // interactions
+  let prompt='';
+  // embers
+  for(const [id,cp] of Object.entries(embers)){
+    if(cp.region!==player.region) continue;
+    if(near(player,cp,36)){
+      const has=S.checkpoints.includes(id);
+      prompt=has?'Ember: fast travel (Enter)':'Ember: save (Enter)';
+      if(input.is('Enter')){ if(!has){S.checkpoints.push(id);S.lastCP=id;S.pos={x:cp.x,y:cp.y,region:cp.region};save();openDialog([`Saved at ${cp.name}.`]);} else fastTravel(); }
+    }
+  }
+  // portals
+  for(const p of portals){
+    if(p.region!==player.region) continue;
+    const r=p.rect;
+    if(player.x>r.x && player.x<r.x+r.w && player.y>r.y && player.y<r.y+r.h){
+      prompt=`Enter ${regions[p.to.region].name} (Enter)`;
+      if(input.is('Enter')){player.region=p.to.region;player.x=p.to.x;player.y=p.to.y;S.pos={x:player.x,y:player.y,region:player.region};save();}
+    }
+  }
+  // npcs
+  for(const n of npcs){
+    if(n.region!==player.region) continue;
+    if(near(player,n,40)){
+      prompt='Talk (Enter)';
+      if(input.is('Enter')) openDialog(n.lines,()=>{});
+    }
+  }
+  if(input.is('q')) fastTravel();
+
+  // camera
+  cam.x=clamp(player.x-480,0,Math.max(0,b.w-960));
+  cam.y=clamp(player.y-360,0,Math.max(0,b.h-720));
+
+  // render
+  ctx.fillStyle=regions[player.region].bg; ctx.fillRect(0,0,960,720);
+  // parallax
+  ctx.fillStyle='#19121a'; for(let i=0;i<120;i++){const x=(i*137%2000)-cam.x*.3;const y=(i*251%1500)-cam.y*.3;if(x>=-10&&x<=970&&y>=-10&&y<=730) ctx.fillRect(x|0,y|0,2,2);}
+  // embers
+  for(const [id,cp] of Object.entries(embers)){
+    if(cp.region!==player.region) continue;
+    ctx.fillStyle=S.checkpoints.includes(id)?'#ffd166':'#55505a';
+    ctx.beginPath();ctx.arc(cp.x-cam.x,cp.y-cam.y,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#bdbdcf';ctx.font='12px monospace';ctx.fillText(cp.name,cp.x-cam.x+10,cp.y-cam.y-10);
+  }
+  // npcs
+  ctx.fillStyle='#c7f0ff';
+  for(const n of npcs){if(n.region!==player.region) continue;ctx.fillRect(n.x-cam.x-4,n.y-cam.y-10,8,10);ctx.fillStyle='#a9a9b6';ctx.font='12px monospace';ctx.fillText('NPC',n.x-cam.x-12,n.y-cam.y-14);ctx.fillStyle='#c7f0ff';}
+  // human w/ heart
+  drawHuman(ctx,player.x-cam.x,player.y-cam.y);
+  // prompt
+  if(prompt){ctx.fillStyle='#f7f6fb';ctx.font='14px monospace';ctx.fillText(prompt,20,700);}
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
