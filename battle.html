@@ -1,17 +1,55 @@
-<script src="boss.html"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Undertale Yellow Battle</title>
+<style>
+body{margin:0;overflow:hidden;background:#000;}
+canvas{display:block;margin:auto;background:#070606;border:2px solid #fff;}
+#hpBar{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:300px;height:20px;background:#222;border:2px solid #fff;}
+#hpFill{height:100%;width:100%;background:#ff6b6b;}
+#bubble{position:absolute;left:50%;bottom:10%;transform:translateX(-50%);background:#111;border:2px solid #fff;padding:10px;color:#fff;white-space:pre-line;}
+</style>
+</head>
+<body>
+<canvas id="cv" width="960" height="720"></canvas>
+<div id="hpBar"><div id="hpFill"></div></div>
+<div id="bubble"></div>
+
 <script>
+// ----------------- Canvas -----------------
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const bubble = document.getElementById('bubble');
+const hpFill = document.getElementById('hpFill');
+
+// ----------------- Player -----------------
+let HEART = {x:480,y:540,r:8,sp:200,hp:20,hpMax:20};
+
+// ----------------- Boss -----------------
 let currentBoss = null;
+let bullets = [];
+let time = 0;
+let turn = 'player';
+let arena = {w:960,h:720};
+
+// ----------------- Input -----------------
+let keysDown = new Set();
+document.addEventListener('keydown', e=>keysDown.add(e.key.toLowerCase()));
+document.addEventListener('keyup', e=>keysDown.delete(e.key.toLowerCase()));
+
+// ----------------- Functions -----------------
+function showBubble(txt){ bubble.style.display='block'; bubble.textContent=txt; }
+function hideBubble(){ bubble.style.display='none'; }
+
 function startBattle(bossKey){
-  currentBoss = window.BOSS_LIST.find(b => b.key===bossKey);
-  if(!currentBoss){console.error("Boss not found");return;}
-  // Set arena background
-  document.body.style.background = currentBoss.bgColor || "#000";
-  // Initialize player heart and HP
-  HEART.hp = HEART.hpMax = 20;
-  // Show cutscene if available
-  if(currentBoss.cutscene) playCutscene(currentBoss.cutscene);
-  // Show intro dialogue
-  showBubble(currentBoss.intro.join("\n"));
-  bossBar();
-}
-</script>
+  if(!window.BOSS_LIST){console.error('BOSS_LIST missing'); return;}
+  currentBoss = window.BOSS_LIST.find(b=>b.key===bossKey);
+  if(!currentBoss){console.error('Boss not found'); return;}
+  HEART.hp=HEART.hpMax=20;
+  bullets=[];
+  turn='player';
+  document.body.style.background = currentBoss.bgColor || '#000';
+  showBubble(currentBoss.intro.join('\n'));
+  if(current
