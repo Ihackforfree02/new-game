@@ -6,490 +6,400 @@
 <title>UNDERTALE GOLD — Battle</title>
 <style>
 :root{
-  --bg:#000; --fg:#f7f6fb; --muted:#a9a9b6; --panel:#0d0c12; --line:#1b1a22;
-  --gold:#ffd166; --ember:#ff9f1c; --rose:#ff6b6b; --mint:#7affb7; --sky:#a6c7ff;
+  --bg:#000; --fg:#f7f6fb; --muted:#a9a9b6;
+  --gold:#ffd166; --gold2:#ffbd3a; --accent:#ff9f1c; --hp:#ff6b6b;
 }
-html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:ui-monospace,monospace}
+html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace}
 #wrap{width:960px;margin:12px auto;position:relative}
-#hud{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:920px;height:36px;background:#0c0c12;border:1px solid #1b1a22;border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#bdbdcf;font-size:12px;z-index:3}
-#hud b{color:#f7f6fb}
-#tpPanel{position:absolute;left:0;top:60px;width:100px;height:600px;display:flex;align-items:center;justify-content:center;z-index:2}
-.tpBar{width:18px;height:520px;background:#0c0c12;border:1px solid #1b1a22;border-radius:9px;position:relative}
-.tpFill{position:absolute;left:2px;right:2px;bottom:2px;background:linear-gradient(#ffd166,#ff9f1c);border-radius:7px;height:0}
-.tpLabel{position:absolute;left:0;right:0;top:-20px;text-align:center;font-size:12px;color:#bdbdcf}
 canvas{display:block;margin:0 auto;border:4px solid #0a0a0f;background:#000;image-rendering:pixelated}
-#foot{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:118px;background:#0b0b12;border:1px solid #1b1a22;border-radius:10px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:2}
-.btn{background:#11121a;color:#f7f6fb;border:1px solid #1b1a22;border-radius:8px;padding:8px 12px;cursor:pointer}
-.menu{display:flex;gap:10px}
-.small{font-size:12px;color:#a9a9b6}
-.notice{position:absolute;left:50%;top:52px;transform:translateX(-50%);padding:6px 10px;background:#0c0c12;border:1px solid #1b1a22;border-radius:8px;color:#ffd166;font-size:12px;z-index:2}
-#dialog{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:5}
-.panel{background:#0c0c12;border:1px solid #1b1a22;border-radius:10px;padding:12px;width:560px}
-.title{color:#ffd166;font-weight:700;margin-bottom:6px}
-.line{height:1px;background:#1b1a22;margin:8px 0}
-#actList{font-size:13px;color:#bdbdcf}
+#hudTop{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:920px;height:36px;display:flex;align-items:center;justify-content:space-between;color:#bdbdcf;font-size:12px}
+#bossBar{position:absolute;left:20px;top:44px;color:#f7f6fb;font-size:14px}
+#bossHP{height:10px;width:360px;background:#222;border:1px solid #444;margin-top:4px;position:relative}
+#bossHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--hp);width:100%}
+#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:#0b0b0b;border:2px solid #202020;display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+.uiMenu{display:flex;gap:28px}
+.uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer}
+.uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.uiLabel{font-size:20px;color:#fff}
+.uiBtn.sel .uiKey, .uiBtn:hover .uiKey{border-color:var(--gold)}
+.uiBtn.sel .uiLabel, .uiBtn:hover .uiLabel{color:var(--gold)}
+.uiFight .uiKey{border-color:var(--gold)}
+.uiFight .uiLabel{color:var(--gold)}
+#uiCenter{font-size:14px;color:#bdbdcf}
+#uiRight{display:flex;align-items:center;gap:14px;font-size:12px;color:#bdbdcf}
+#dialog{position:absolute;left:50%;bottom:132px;transform:translateX(-50%);width:880px;min-height:84px;background:#0b0b0b;border:2px solid #202020;padding:10px 14px;display:none}
+#dialogText{white-space:pre-line;line-height:1.45}
+#actList{display:none;margin-top:6px;color:#bdbdcf;font-size:13px}
+#itemList{display:none;margin-top:6px;color:#bdbdcf;font-size:13px}
+#box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none}
+.tip{position:absolute;left:50%;top:56px;transform:translateX(-50%);color:var(--gold);background:#0c0c12;border:1px solid #202020;border-radius:8px;padding:6px 10px;font-size:12px;opacity:.95}
 </style>
 </head>
 <body>
 <div id="wrap">
-  <div id="hud">
-    <div id="hudL">A golden hush</div>
-    <div id="hudC">Turn: <b id="hudTurn">Player</b> • Boss: <b id="hudBoss">The Ember Crown</b></div>
-    <div id="hudR">WASD move • Z/Enter confirm • X back • Esc retry</div>
+  <div id="hudTop">
+    <div id="hudL">Use arrows/WASD to move during enemy turn.</div>
+    <div id="hudR">Z/Enter: confirm • X: back • Esc: retry</div>
   </div>
 
-  <div id="tpPanel" aria-hidden="false">
-    <div class="tpBar">
-      <div class="tpLabel">TP</div>
-      <div id="tpFill" class="tpFill"></div>
-    </div>
+  <div id="bossBar">
+    <div id="bossName">The Ember Crown</div>
+    <div id="bossHP"><div id="bossHPFill"></div></div>
   </div>
 
-  <div id="note" class="notice">Graze bullets to gain TP. TP empowers your FIGHT and can unlock SPARE.</div>
-  <canvas id="battle" width="960" height="720" aria-label="Battlefield"></canvas>
+  <canvas id="cv" width="960" height="720" aria-label="Battlefield"></canvas>
 
-  <div id="foot" role="group" aria-label="Battle menu">
-    <div class="menu">
-      <button id="btnFight" class="btn">FIGHT</button>
-      <button id="btnAct" class="btn">ACT</button>
-      <button id="btnItem" class="btn">ITEM</button>
-      <button id="btnMercy" class="btn">MERCY</button>
-    </div>
-    <div id="footCenter" class="small">Your turn.</div>
-    <div class="menu">
-      <button id="btnRetry" class="btn">Retry</button>
-      <button id="btnQuit" class="btn">Quit</button>
-    </div>
+  <div id="box"></div>
+
+  <div class="tip" id="tip">ACT to learn. Spare when they soften.</div>
+
+  <div id="dialog" role="dialog" aria-modal="true">
+    <div id="dialogText"></div>
+    <div id="actList"></div>
+    <div id="itemList"></div>
   </div>
-</div>
 
-<div id="dialog" role="dialog" aria-modal="true">
-  <div class="panel">
-    <div class="title" id="dlgTitle">...</div>
-    <div id="dlgText" style="min-height:80px;line-height:1.4"></div>
-    <div id="actList" style="display:none;margin-top:6px"></div>
-    <div class="line"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button id="dlgNext" class="btn">Next</button>
-      <button id="dlgClose" class="btn">Close</button>
+  <div id="uiBar" role="group" aria-label="Battle menu">
+    <div class="uiMenu" id="uiMenu">
+      <div class="uiBtn uiFight sel" data-action="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
+      <div class="uiBtn" data-action="ACT"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
+      <div class="uiBtn" data-action="ITEM"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
+      <div class="uiBtn" data-action="MERCY"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
     </div>
+    <div id="uiCenter">Your turn.</div>
+    <div id="uiRight"><span id="playerName">Traveler</span> • HP <span id="hpText">20/20</span></div>
   </div>
 </div>
 
 <script>
-/* ============================
-UNDERTALE GOLD — Battle homage
-- Turn-based: FIGHT / ACT / ITEM / MERCY
-- No visible box; implied arena with soft bounds
-- Undertale-style heart (pixel sprite), flicker on i-frames
-- TP meter (grazing bullets and ACT increase TP)
-- Golden Eye charge overlay during FIGHT
-- Boss dialogue before and mid-fight
-============================ */
-
-/* Profile from index.html */
+/* Profile (from index.html) */
 const PROF_LS='utg_shared_profile_v1';
-function getProfile(){try{return JSON.parse(localStorage.getItem(PROF_LS))||{name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}catch{return {name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}}
-const PRO=getProfile();
+function prof(){try{return JSON.parse(localStorage.getItem(PROF_LS))||{name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}catch{return {name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}}
+const PRO=prof();
 
-/* Canvas and UI */
-const cv=document.getElementById('battle'), ctx=cv.getContext('2d');
-const hudTurn=document.getElementById('hudTurn'), hudBoss=document.getElementById('hudBoss');
-const footCenter=document.getElementById('footCenter');
-const tpFill=document.getElementById('tpFill');
-const dlg=document.getElementById('dialog'), dlgTitle=document.getElementById('dlgTitle'), dlgText=document.getElementById('dlgText'), dlgNext=document.getElementById('dlgNext'), dlgClose=document.getElementById('dlgClose'), actList=document.getElementById('actList');
-
-document.getElementById('btnQuit').onclick=()=>location.href='index.html';
+/* Elements */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const boxEl=document.getElementById('box');
+const bossNameEl=document.getElementById('bossName');
+const bossHPFill=document.getElementById('bossHPFill');
+const uiMenu=document.getElementById('uiMenu');
+const uiCenter=document.getElementById('uiCenter');
+const playerNameEl=document.getElementById('playerName');
+const hpText=document.getElementById('hpText');
+const dialogEl=document.getElementById('dialog');
+const dialogText=document.getElementById('dialogText');
+const actListEl=document.getElementById('actList');
+const itemListEl=document.getElementById('itemList');
+playerNameEl.textContent=PRO.name;
 
 /* Input */
 class Input{
   constructor(){this.k=new Set();this.down=new Set();
-    addEventListener('keydown',(e)=>{this.k.add(e.key);this.down.add(e.key);});
-    addEventListener('keyup',(e)=>{this.k.delete(e.key);});
+    addEventListener('keydown',e=>{this.k.add(e.key);this.down.add(e.key);});
+    addEventListener('keyup',e=>{this.k.delete(e.key);});
   }
   is(k){return this.k.has(k)||this.k.has(String(k).toUpperCase());}
-  consume(k){const up=this.down.has(k)||this.down.has(String(k).toUpperCase());this.down.delete(k);this.down.delete(String(k).toUpperCase());return up;}
+  consume(k){const had=this.down.has(k)||this.down.has(String(k).toUpperCase());this.down.delete(k);this.down.delete(String(k).toUpperCase());return had;}
   tick(){this.down.clear();}
 }
 const input=new Input();
 
 /* Helpers */
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function lerp(a,b,t){return a+(b-a)*t;}
 function rand(a,b){return Math.random()*(b-a)+a;}
 
-/* Arena bounds (invisible) */
-const ARENA={x:200,y:420,w:560,h:200}; // softer, wider than usual; no box drawn
-
-/* Heart sprite */
-const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:220,i:0,hp:20,hpMax:20};
+/* Undertale-style heart */
 function drawHeart(ctx,x,y,color,scale=1.2){
   ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
   const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
   ctx.fillStyle=color;const s=3;
-  for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s+40,(r-3)*s+20,s,s);
+  for(let r=0;r<m.length;r++) for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s+40,(r-3)*s+20,s,s);
   ctx.restore();
 }
 
-/* Boss definition (example) */
+/* Battle state */
+const ARENA={x:240,y:420,w:480,h:180}; // visible box shown in enemy turn
+const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:220,i:0,hp:20,hpMax:20};
+hpText.textContent=`${HEART.hp}/${HEART.hpMax}`;
+
+/* Boss — a character sprite and dialog */
 const BOSS={
   name:'The Ember Crown',
-  core:'#ffd166',
-  ring:'#ffffff',
-  bg:'#0f0a08',
-  hpMax:360, hp:360,
-  spare:0, spareNeed:100,
+  hpMax:360, hp:360, spare:0, spareNeed:100,
   intro:[
-    "You walk like you’ve seen fire before.",
-    "Let’s see if you remember how it burns."
+    "A crowned flame watches.",
+    "“You dare step into the hush?”"
   ],
   mid:[
-    "Your glow doesn’t flinch.",
-    "Alright. Brighter then."
+    "“Your glow doesn’t fade.”",
+    "“Fine. Brighter, then.”"
   ],
   acts:[
-    {name:'Check', run:()=>({text:'The Ember Crown — proud and patient.', sparePlus:6})},
-    {name:'Breathe', run:()=>({text:'You breathe slow. Sparks relax.', sparePlus:16})},
-    {name:'Compliment', run:()=>({text:'You praise its steady heat. It wavers.', sparePlus:14})}
+    {name:'Check', run:()=>({text:'Ember Crown — proud and patient.', sparePlus:6})},
+    {name:'Compliment', run:()=>({text:'You praise its steady heat. It wavers.', sparePlus:14})},
+    {name:'Breathe', run:()=>({text:'You breathe slow. Sparks relax.', sparePlus:16})}
   ],
-  onHit:(scene,dmg,crit)=>{ if(crit) scene.boss.spare=Math.min(scene.boss.spareNeed,scene.boss.spare+8); },
-  canSpare:(scene)=> (scene.boss.spare>=scene.boss.spareNeed) || (scene.boss.hp<=scene.boss.hpMax*0.18),
-  // Attacks (golden-eye sweep + radial + echo trail)
-  attacks:[
-    // Golden Eye sweep (signature)
-    { enter(s){s.t=0;}, update(s,dt){
-        s.t+=dt;
-        // spawn golden "eye" beams that sweep up/down
-        if(Math.floor(s.t*4)%2===0 && Math.random()<0.25){
-          const y=rand(ARENA.y+20,ARENA.y+ARENA.h-20);
-          const dir=Math.random()<0.5?1:-1;
-          spawn({x:ARENA.x-20,y, vx:dir*260, vy:0, r:3, col:'#ffd166', type:'laser'});
-        }
-        // periodic aim dart
-        if(Math.random()<0.05){
-          const side=Math.random()<0.5?'L':'R';
-          const x=side==='L'?ARENA.x-12:ARENA.x+ARENA.w+12;
-          const y=rand(ARENA.y,ARENA.y+ARENA.h);
-          const dx=HEART.x-x, dy=HEART.y-y, L=Math.hypot(dx,dy)||1;
-          spawn({x,y,vx:dx/L*200,vy:dy/L*200,r:4,col:'#ffc4a3'});
-        }
-      }, done(s){return phaseT>7;}
-    },
-    // Radial embers
-    { enter(s){s.t=0;}, update(s,dt){
-        s.t+=dt; if(s.t>0.6){s.t=0;
-          const N=14; for(let i=0;i<N;i++){
-            const a=i*(Math.PI*2)/N + time*0.4;
-            spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2, vx:Math.cos(a)*120, vy:Math.sin(a)*120, r:3, col:'#ff9f1c'});
-          }
-        }
-      }, done(s){return phaseT>6;}
-    },
-    // Echo trail
-    { enter(s){s.t=0; s.last={x:HEART.x,y:HEART.y};},
-      update(s,dt){
-        s.t+=dt; if(s.t>0.52){s.t=0;
-          const dx=HEART.x-s.last.x, dy=HEART.y-s.last.y;
-          spawn({x:s.last.x,y:s.last.y,vx:dx*3,vy:dy*3,r:4,col:'#a6c7ff'});
-          s.last={x:HEART.x,y:HEART.y};
-        }
-      }, done(s){return phaseT>8;}
-    }
-  ]
+  canSpare:(s)=> (s.boss.spare>=s.boss.spareNeed) || (s.boss.hp<=s.boss.hpMax*0.18),
+  onHit:(s,dmg,crit)=>{ if(crit) s.boss.spare=Math.min(s.boss.spareNeed,(s.boss.spare||0)+8); },
+  attacks:[] // filled below
 };
+bossNameEl.textContent=BOSS.name;
 
-/* State */
-let boss=null; let turn='player'; let menu='root';
-let bullets=[]; let time=0, phaseT=0; let attackIndex=0; let attack=null;
+/* Undertale-style patterns */
+let bullets=[];
+function spawn(b){b.t=0;bullets.push(b);return b;}
+const P={
+  radial:(speed=120, dur=6, col='#ff9f1c')=>({
+    enter(){this.t=0;},
+    update(dt){this.t+=dt;if(this.t>0.6){this.t=0;const N=16;for(let i=0;i<N;i++){const a=i*(Math.PI*2)/N + time*0.4;spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:3,col});}}},
+    done(){return phaseT>dur;}
+  }),
+  aimed:(rate=0.05,speed=190,col='#ffd2ae',dur=7)=>({
+    enter(){},
+    update(dt){ if(Math.random()<rate){const side=Math.random()<0.5?'L':'R';const x=side==='L'?ARENA.x-12:ARENA.x+ARENA.w+12;const y=rand(ARENA.y,ARENA.y+ARENA.h);const dx=HEART.x-x,dy=HEART.y-y,L=Math.hypot(dx,dy)||1;spawn({x,y,vx:dx/L*speed,vy:dy/L*speed,r:4,col});} },
+    done(){return phaseT>dur;}
+  }),
+  bouncers:(n=4,speed=140,col='#ffd166',dur=8)=>({
+    enter(){for(let i=0;i<n;i++){spawn({x:ARENA.x+rand(40,ARENA.w-40),y:ARENA.y+rand(20,ARENA.h-20),vx:rand(-speed,speed),vy:rand(-speed,speed),r:6,col,type:'bounce'})}},
+    update(dt){},
+    done(){return phaseT>dur;}
+  }),
+  serpent:(step=0.22,headV=90,shardV=220,dur=8,cHead='#fff',cShard='#ffd166')=>({
+    enter(){this.t=0;this.a=-Math.PI/3;this.dir=1;},
+    update(dt){this.t+=dt;this.a+=dt*0.6*this.dir; if(this.a>Math.PI/3)this.dir=-1; if(this.a<-Math.PI/3)this.dir=1;
+      if(this.t>step){this.t=0;const vx=Math.cos(this.a)*headV,vy=Math.sin(this.a)*headV;const head=spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx,vy,r:5,col:cHead});head.life=0;head.onTick=(S,b,dt)=>{b.life+=dt;if(Math.floor(b.life*10)%4===0 && b.life<1.6){for(let k=-1;k<=1;k+=2){const ang=Math.atan2(b.vy,b.vx)+k*0.42;spawn({x:b.x,y:b.y,vx:Math.cos(ang)*shardV,vy:Math.sin(ang)*shardV,r:3,col:cShard});}} if(b.life>2.2) b.dead=true;};}},
+    done(){return phaseT>dur;}
+  }),
+  echo:(step=0.55,shotMul=3,dur=8,col='#a6c7ff')=>({
+    enter(){this.t=0;this.last={x:HEART.x,y:HEART.y};},
+    update(dt){this.t+=dt;if(this.t>step){this.t=0;const dx=HEART.x-this.last.x,dy=HEART.y-this.last.y;spawn({x:this.last.x,y:this.last.y,vx:dx*shotMul,vy:dy*shotMul,r:4,col});this.last={x:HEART.x,y:HEART.y};}},
+    done(){return phaseT>dur;}
+  }),
+  scan:(dur=7,col='#ff6b6b')=>({
+    enter(){this.t=0;},
+    update(dt){this.t+=dt;if(this.t>0.9){this.t=0;const y=rand(ARENA.y+14,ARENA.y+ARENA.h-14);for(let x=ARENA.x+20;x<ARENA.x+ARENA.w-20;x+=40){spawn({x,y,vx:0,vy:0,r:4,col,type:'pulse'})}}},
+    done(){return phaseT>dur;}
+  }),
+  eyeSweep:(dur=7)=>({
+    enter(){this.t=0;},
+    update(dt){this.t+=dt; if(Math.random()<0.25){const y=rand(ARENA.y+20,ARENA.y+ARENA.h-20);const dir=Math.random()<0.5?1:-1;spawn({x:ARENA.x-20,y, vx:dir*260, vy:0, r:3, col:'#ffd166', type:'laser'});} },
+    done(){return phaseT>dur;}
+  })
+};
+BOSS.attacks=[ P.eyeSweep(7), P.radial(120,6,'#ff9f1c'), P.echo(0.55,3,8,'#a6c7ff'), P.serpent(0.22,90,220,8,'#fff','#ffd166'), P.scan(7,'#ff6b6b') ];
+
+/* Flow */
+let time=0, phaseT=0;
+let turn='player', menu='root';
 let fightActive=false, fightX=0, fightSpd=520;
-let TP=0; // 0..100
-let cutQueue=[];
+let attack=null, attackIndex=0;
 
-/* Player damage (TP empowers) */
-function playerDamageBase(){
-  // Base 28, + TP bonus up to +20
-  return 28 + Math.round(20 * (TP/100));
+function updateHP(){hpText.textContent=`${HEART.hp}/${HEART.hpMax}`;}
+function bossBar(){bossHPFill.style.width=(360*Math.max(0,BOSS.hp/BOSS.hpMax))+'px';}
+
+/* Dialog */
+function openDialog(lines){dialogText.textContent=lines.join('\n'); dialogEl.style.display='block';}
+function closeDialog(){dialogEl.style.display='none'; actListEl.style.display='none'; itemListEl.style.display='none';}
+
+/* Menus */
+function setSelection(ix){
+  [...uiMenu.children].forEach((c,i)=>c.classList.toggle('sel',i===ix));
+  selIx=ix;
 }
-
-/* TP UI */
-function setTP(v){TP=clamp(v,0,100); const h= Math.round( (TP/100)* (520-4) ); tpFill.style.height=h+'px';}
-
-/* Dialog helpers */
-function openDialog(lines,title='...'){cutQueue=lines.slice(0);dlgTitle.textContent=title;dlgText.textContent=cutQueue.shift()||'';dlg.style.display='flex';actList.style.display='none';}
-function closeDialog(){dlg.style.display='none';}
-dlgNext.onclick=()=>{if(!cutQueue.length){closeDialog();return;} dlgText.textContent=cutQueue.shift();};
-dlgClose.onclick=closeDialog;
-
-/* Menu buttons */
-document.getElementById('btnFight').onclick=onFight;
-document.getElementById('btnAct').onclick=onAct;
-document.getElementById('btnItem').onclick=onItem;
-document.getElementById('btnMercy').onclick=onMercy;
-document.getElementById('btnRetry').onclick=()=>beginBattle();
-
-function onFight(){
+let selIx=0;
+function choose(){const map=['FIGHT','ACT','ITEM','MERCY'];doAction(map[selIx]);}
+function doAction(name){
   if(turn!=='player') return;
-  menu='fight'; fightActive=true; fightX=ARENA.x+40; footCenter.textContent='Charge the eye, then strike (Z/Enter)!';
-}
-function onAct(){
-  if(turn!=='player') return;
-  menu='act';
-  // show ACT list in the dialog overlay
-  actList.innerHTML = BOSS.acts.map((a,i)=>`${i+1}. ${a.name}`).join('<br/>');
-  actList.style.display='block';
-  dlgTitle.textContent='ACT';
-  dlgText.textContent='Press 1..3 to choose.';
-  dlg.style.display='flex';
-}
-function onItem(){
-  if(turn!=='player') return;
-  menu='item';
-  dlgTitle.textContent='ITEM';
-  dlgText.textContent='1. Warm Sip (+8 HP)  2. Ember Flask (+14 HP)  3. Radiant Draught (+24 HP)';
-  actList.style.display='none';
-  dlg.style.display='flex';
-}
-function onMercy(){
-  if(turn!=='player') return;
-  menu='mercy';
-  if(canSpare()){
-    dlgTitle.textContent='MERCY';
-    dlgText.textContent='SPARE is available — press Z/Enter to spare.';
-  }else{
-    dlgTitle.textContent='MERCY';
-    dlgText.textContent='They are not ready.';
+  if(name==='FIGHT'){
+    menu='fight'; fightActive=true; fightX=ARENA.x+40;
+    uiCenter.textContent='Time it in the center!';
+  }else if(name==='ACT'){
+    menu='act'; actListEl.innerHTML=BOSS.acts.map((a,i)=>`${i+1}. ${a.name}`).join('<br>'); actListEl.style.display='block';
+    dialogText.textContent='Choose an action (1–3).'; dialogEl.style.display='block';
+  }else if(name==='ITEM'){
+    menu='item'; itemListEl.innerHTML='1. Warm Sip (+8 HP)<br>2. Ember Flask (+14 HP)<br>3. Radiant Draught (+24 HP)';
+    itemListEl.style.display='block'; dialogText.textContent='Use an item (1–3).'; dialogEl.style.display='block';
+  }else if(name==='MERCY'){
+    menu='mercy'; dialogText.textContent = canSpare() ? 'SPARE is available — press Z/Enter.' : 'They are not ready.'; dialogEl.style.display='block';
   }
-  actList.style.display='none';
-  dlg.style.display='flex';
 }
+function endPlayerTurn(d=0.2){ setTimeout(()=>{ turn='enemy'; menu='root'; uiCenter.textContent='Enemy turn'; boxEl.style.display='block'; startAttack(); }, d*1000); }
+function canSpare(){return BOSS.canSpare({boss:BOSS});}
 
-function endPlayerTurn(d=0.2){ setTimeout(()=>{ turn='enemy'; menu='root'; footCenter.textContent='Survive.'; startAttack(); },d*1000); }
-
-/* Items use */
-function useItem(ix){
-  const items=[{n:'Warm Sip',heal:8},{n:'Ember Flask',heal:14},{n:'Radiant Draught',heal:24}];
-  const it=items[ix]; if(!it) return;
-  HEART.hp=Math.min(HEART.hpMax,HEART.hp+it.heal);
-  footCenter.textContent=`Used ${it.n} (+${it.heal} HP)`;
-  closeDialog(); endPlayerTurn(0.3);
-}
-
-/* Perform ACT */
-function doAct(ix){
-  const act=BOSS.acts[ix]; if(!act) return;
-  const res=act.run({boss:BOSS});
-  // ACT gives TP and spare progress
-  setTP(TP + 12);
-  if(res.sparePlus) BOSS.spare=Math.min(BOSS.spareNeed,(BOSS.spare||0)+res.sparePlus);
-  dlgTitle.textContent=act.name;
-  dlgText.textContent=res.text||'...';
-  actList.style.display='none';
-  // Close on next and end turn
-  dlgNext.onclick=()=>{closeDialog(); endPlayerTurn(0.2); dlgNext.onclick=defaultDlgNext; };
-}
-const defaultDlgNext=dlgNext.onclick;
-
-/* Mercy spare */
-function canSpare(){return BOSS.canSpare?.({boss:BOSS}) || (BOSS.spare>=BOSS.spareNeed) || TP>=100;}
-function doSpare(){
-  // End the fight with a spare
-  openDialog(["You offered mercy.","The fire bows."],"MERCY");
-  setTimeout(()=>beginBattle(),1000);
-}
-
-/* FIGHT resolve */
+/* Fight resolve */
 function resolveFight(){
   fightActive=false;
-  // position of cursor maps to charge; golden eye pulses near center for crit
-  const L=ARENA.x+40, R=ARENA.x+ARENA.w-40;
+  const L=ARENA.x+40,R=ARENA.x+ARENA.w-40;
   const pos=(fightX-L)/((R-L)||1);
-  const inCrit = pos>=0.46 && pos<=0.54;
-  // TP empowers base damage
-  const dmg = Math.round((playerDamageBase() + (inCrit?18:0)) * (0.9 + Math.random()*0.2));
-  BOSS.hp=Math.max(0,BOSS.hp-dmg);
-  BOSS.onHit?.({boss:BOSS},dmg,inCrit);
-  if(inCrit) setTP(TP+6);
-  footCenter.textContent = inCrit ? 'CRITICAL!' : 'Hit!';
+  const crit = pos>=0.46 && pos<=0.54;
+  const dmg = Math.round((28 + (crit?18:0)) * (0.9+Math.random()*0.2));
+  BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar();
+  BOSS.onHit?.({boss:BOSS},dmg,crit);
+  uiCenter.textContent = crit ? 'CRITICAL!' : 'Hit!';
   endPlayerTurn(0.35);
 }
 
-/* Enemy phase control */
-function startAttack(){ bullets.length=0; phaseT=0; attack=BOSS.attacks[attackIndex]; attack?.enter?.({}); }
-function finishAttack(){ attackIndex=(attackIndex+1)%BOSS.attacks.length; turn='player'; footCenter.textContent='Your turn.'; if(BOSS.hp<BOSS.hpMax*0.5 && !BOSS._midShown){openDialog(BOSS.mid,'...');BOSS._midShown=true;} }
-
-/* Bullets */
-function spawn(b){b.t=0; bullets.push(b); return b;}
-
-/* Golden Eye overlay (visual on FIGHT charging) */
-function drawGoldenEye(ctx,cx,cy,t){
-  const pulse=0.5+0.5*Math.sin(t*6);
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(Math.sin(t*1.2)*0.1);
-  // outer glow
-  ctx.globalAlpha=0.25+0.35*pulse;
-  ctx.fillStyle='#ffd166';
-  ctx.beginPath(); ctx.ellipse(0,0,68,28,0,0,Math.PI*2); ctx.fill();
-  // iris
-  ctx.globalAlpha=0.85;
-  ctx.fillStyle='#ff9f1c';
-  ctx.beginPath(); ctx.ellipse(0,0,38,18,0,0,Math.PI*2); ctx.fill();
-  // pupil slit
-  ctx.fillStyle='#0b0b12';
-  ctx.fillRect(-3,-12,6,24);
-  ctx.restore();
+/* ACT & ITEM handlers */
+function useItem(ix){
+  const items=[{n:'Warm Sip',h:8},{n:'Ember Flask',h:14},{n:'Radiant Draught',h:24}];
+  const it=items[ix]; if(!it) return;
+  HEART.hp=Math.min(HEART.hpMax,HEART.hp+it.h); updateHP();
+  dialogText.textContent=`Used ${it.n} (+${it.h} HP).`; setTimeout(()=>{closeDialog(); endPlayerTurn(0.3);},350);
+}
+function doAct(ix){
+  const act=BOSS.acts[ix]; if(!act) return;
+  const res=act.run({boss:BOSS}); if(res.sparePlus) BOSS.spare=Math.min(BOSS.spareNeed,(BOSS.spare||0)+res.sparePlus);
+  dialogText.textContent=res.text; actListEl.style.display='none';
+  setTimeout(()=>{closeDialog(); endPlayerTurn(0.3);},450);
 }
 
-/* Begin battle */
-function beginBattle(){
-  // reset state
-  boss=BOSS;
-  boss.hp=boss.hpMax; boss.spare=0; boss._midShown=false;
-  HEART.hp=HEART.hpMax; HEART.i=0; HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2;
-  turn='player'; menu='root'; attackIndex=0; attack=null; bullets.length=0; phaseT=0; time=0; setTP(0);
-  hudTurn.textContent='Player'; hudBoss.textContent=boss.name;
-  openDialog(boss.intro,boss.name);
+/* Enemy phase */
+function startAttack(){bullets.length=0; phaseT=0; attack=BOSS.attacks[attackIndex]; attackIndex=(attackIndex+1)%BOSS.attacks.length; attack?.enter?.();}
+function finishAttack(){turn='player'; uiCenter.textContent='Your turn'; boxEl.style.display='none'; if(BOSS.hp<BOSS.hpMax*0.5 && !BOSS._mid){openDialog(BOSS.mid);BOSS._mid=true;}}
+
+/* Boss sprite draw */
+function drawBoss(ctx,t){
+  const x=480,y=260,r=28+Math.sin(t*3)*3;
+  // crown
+  ctx.fillStyle='#ffc94a'; ctx.beginPath(); ctx.moveTo(x-20,y-28); ctx.lineTo(x-10,y-8); ctx.lineTo(x,y-28); ctx.lineTo(x+10,y-8); ctx.lineTo(x+20,y-28); ctx.closePath(); ctx.fill();
+  // face
+  ctx.save(); ctx.shadowColor='#ffd166'; ctx.shadowBlur=10;
+  ctx.fillStyle='#ffb347'; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  // eyes
+  ctx.fillStyle='#0c0c12'; ctx.fillRect(x-8,y-6,6,6); ctx.fillRect(x+2,y-6,6,6);
+  // ring
+  ctx.strokeStyle='#ffd166'; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(x,y,r+10,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
 }
-beginBattle();
 
-/* Buttons inside dialog (items/act numbers) via keyboard */
-addEventListener('keydown',(e)=>{
-  if(menu==='act' && ['1','2','3'].includes(e.key)){ doAct(parseInt(e.key)-1); }
-  if(menu==='item' && ['1','2','3'].includes(e.key)){ useItem(parseInt(e.key)-1); }
-  if(menu==='mercy' && (e.key==='z'||e.key==='Z'||e.key==='Enter')){ if(canSpare()){ closeDialog(); doSpare(); } }
-});
+/* Intro */
+function startBattle(){
+  BOSS.hp=BOSS.hpMax; BOSS.spare=0; BOSS._mid=false; bossBar();
+  HEART.hp=20; updateHP(); HEART.i=0; HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2;
+  turn='player'; menu='root'; uiCenter.textContent='Your turn'; boxEl.style.display='none';
+  openDialog(BOSS.intro);
+}
+startBattle();
 
-/* Retry */
-document.getElementById('btnRetry').onclick=()=>beginBattle();
-
-/* Main loop */
+/* Loop */
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.033,(now-last)/1000); last=now; time+=dt; input.tick();
+  // background
+  ctx.fillStyle='#0f0a08'; ctx.fillRect(0,0,960,720);
 
-  if(input.consume('Escape')) beginBattle();
+  // boss
+  drawBoss(ctx,time);
 
-  // Render background
-  ctx.fillStyle=boss.bg; ctx.fillRect(0,0,960,720);
-
-  // Boss sprite above (detailed glow)
-  const bx=480, by=260, br=28+Math.sin(time*3)*3;
-  ctx.save(); ctx.shadowColor=boss.ring; ctx.shadowBlur=10;
-  ctx.fillStyle=boss.core; ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
-  ctx.shadowBlur=0; ctx.fillStyle='#0b0b12'; ctx.fillRect(bx-6,by-4,4,4); ctx.fillRect(bx+2,by-4,4,4);
-  ctx.strokeStyle=boss.ring; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(bx,by,br+10,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; ctx.restore();
-
-  // Boss name + HP + SPARE
-  ctx.fillStyle='#f7f6fb'; ctx.font='14px monospace'; ctx.fillText(`${boss.name}`,20,36);
-  const bw=360,bh=10,bx0=20,by0=52;
-  ctx.fillStyle='#222'; ctx.fillRect(bx0,by0,bw,bh);
-  ctx.fillStyle= '#ff6b6b'; ctx.fillRect(bx0,by0,bw*Math.max(0,boss.hp/boss.hpMax),bh);
-  ctx.strokeStyle='#444'; ctx.strokeRect(bx0,by0,bw,bh);
-  ctx.fillStyle='#bdbdcf'; ctx.fillText(`SPARE: ${Math.floor(boss.spare)}/${boss.spareNeed}`,400,60);
-
-  // Player turn: menus
-  if(turn==='player'){
-    hudTurn.textContent='Player';
-    if(menu==='fight' && fightActive){
-      // Golden eye charge overlay centered over arena
-      drawGoldenEye(ctx, ARENA.x+ARENA.w/2, ARENA.y-30, time);
-      // timing cursor (invisible track, we draw a small shard marker)
-      const L=ARENA.x+40, R=ARENA.x+ARENA.w-40, Y=ARENA.y-30;
-      fightX+=fightSpd*dt;
-      // crit window indicator (two small ticks)
-      ctx.fillStyle='#ffd166';
-      const a=L+(R-L)*0.46, b=L+(R-L)*0.54;
-      ctx.fillRect(a, Y-10, 2, 20);
-      ctx.fillRect(b, Y-10, 2, 20);
-      // cursor shard
-      ctx.fillStyle='#fff1b6';
-      ctx.fillRect(fightX, Y-6, 3, 12);
-      if(input.consume('z')||input.consume('Z')||input.consume('Enter')) resolveFight();
-      if(fightX>R) resolveFight();
-    }
-    // ACT choices shown in dialog; handled by key 1..3
-    // ITEM handled by key 1..3
-    // MERCY handled by Z/Enter
-  } else {
-    // Enemy turn
-    hudTurn.textContent='Enemy';
+  // box: bullets and heart during enemy turn
+  if(turn==='enemy'){
     phaseT+=dt;
-    // Heart movement inside invisible arena
-    if(input.is('a')) HEART.x-=HEART.sp*dt;
-    if(input.is('d')) HEART.x+=HEART.sp*dt;
-    if(input.is('w')) HEART.y-=HEART.sp*dt;
-    if(input.is('s')) HEART.y+=HEART.sp*dt;
+    // heart movement
+    if(input.is('ArrowLeft')||input.is('a')) HEART.x-=HEART.sp*dt;
+    if(input.is('ArrowRight')||input.is('d')) HEART.x+=HEART.sp*dt;
+    if(input.is('ArrowUp')||input.is('w')) HEART.y-=HEART.sp*dt;
+    if(input.is('ArrowDown')||input.is('s')) HEART.y+=HEART.sp*dt;
     HEART.x=clamp(HEART.x,ARENA.x+HEART.r,ARENA.x+ARENA.w-HEART.r);
     HEART.y=clamp(HEART.y,ARENA.y+HEART.r,ARENA.y+ARENA.h-HEART.r);
     HEART.i=Math.max(0,HEART.i-dt);
 
-    // Update attack
-    attack?.update?.({},dt);
+    // attack update
+    attack?.update?.(dt);
 
-    // Bullets update + graze/collision
+    // bullets
     for(const b of bullets){
       b.t+=dt;
-      if(b.type==='laser'){
-        b.x+=b.vx*dt; // horizontal sweep
+      if(b.type==='bounce'){
+        b.x+=b.vx*dt; b.y+=b.vy*dt;
+        if(b.x-b.r<ARENA.x||b.x+b.r>ARENA.x+ARENA.w) b.vx*=-1;
+        if(b.y-b.r<ARENA.y||b.y+b.r>ARENA.y+ARENA.h) b.vy*=-1;
       }else if(b.type==='pulse'){
         b.r=3+Math.sin(time*6 + b.x*0.02)*2;
+      }else if(b.type==='laser'){
+        b.x+=b.vx*dt;
       }else{
         b.x+=b.vx*dt; b.y+=b.vy*dt;
       }
-      // Graze: near-miss gives TP (once per bullet per short period)
-      const dx=b.x-HEART.x, dy=b.y-HEART.y, d2=dx*dx+dy*dy, gr=(b.r||4)+HEART.r+6;
-      if(d2 < gr*gr && d2 > ((b.r||4)+HEART.r)*((b.r||4)+HEART.r) && !b._g){
-        setTP(TP+1.8); b._g=true;
-      }
-      // Collision
-      const rr=(b.r||4)+HEART.r;
-      if(d2 <= rr*rr && HEART.i<=0){
-        HEART.hp--; HEART.i=0.9;
+      // onTick
+      if(b.onTick) b.onTick(null,b,dt);
+    }
+    bullets=bullets.filter(b=>!b.dead && b.x>ARENA.x-80 && b.x<ARENA.x+ARENA.w+80 && b.y>ARENA.y-80 && b.y<ARENA.y+ARENA.h+80);
+
+    // collision
+    for(const b of bullets){
+      const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
+      if(dx*dx+dy*dy<=rr*rr && HEART.i<=0){
+        HEART.hp--; updateHP(); HEART.i=0.9;
       }
     }
-    // Cull bullets (soft bounds)
-    bullets = bullets.filter(b=>!b.dead && b.x>ARENA.x-80 && b.x<ARENA.x+ARENA.w+80 && b.y>ARENA.y-80 && b.y<ARENA.y+ARENA.h+80);
 
-    // End of attack phase?
-    if(attack?.done && attack.done({})){ finishAttack(); }
+    // end phase
+    if(attack?.done && attack.done()){ finishAttack(); }
 
-    // Death check
+    // defeat
     if(HEART.hp<=0){
-      openDialog(["You fall. The glow flickers, then steadies again."],"...");
-      setTimeout(()=>beginBattle(),800);
+      openDialog(["You fall. The crown dims. Then waits."]);
+      setTimeout(()=>startBattle(),900);
     }
   }
 
-  // Draw heart
-  ctx.save();
-  if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
+  // draw bullets
+  for(const b of bullets){ctx.fillStyle=b.col||'#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2);ctx.fill();}
+
+  // fight bar when FIGHT active
+  if(turn==='player' && menu==='fight' && fightActive){
+    const L=ARENA.x+40,R=ARENA.x+ARENA.w-40,Y=ARENA.y-30;
+    // crit markers
+    ctx.fillStyle=varColor('--gold'); ctx.fillRect(L+(R-L)*0.46, Y-10, 2, 20); ctx.fillRect(L+(R-L)*0.54, Y-10, 2, 20);
+    // cursor
+    fightX+=fightSpd* (Math.min(0.033,(performance.now()-last)/1000) || 0.016);
+    ctx.fillStyle='#fff1b6'; ctx.fillRect(fightX, Y-6, 3, 12);
+    // golden flash behind (subtle)
+    ctx.globalAlpha=0.25; ctx.fillStyle='#ffd166'; ctx.fillRect(L, Y-14, R-L, 28); ctx.globalAlpha=1;
+    if(input.consume('z')||input.consume('Z')||input.consume('Enter')) resolveFight();
+    if(fightX>R) resolveFight();
+  }
+
+  // heart
+  ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
   drawHeart(ctx,HEART.x-20,HEART.y-24,PRO.glow);
   ctx.restore();
-
-  // Player stats
-  ctx.fillStyle='#f7f6fb'; ctx.font='14px monospace';
-  ctx.fillText(`${PRO.name}`,780,36);
-  ctx.fillText(`HP: ${HEART.hp}/${HEART.hpMax}`,780,54);
-  ctx.fillText(`DMG: ${playerDamageBase()}`,780,72);
 
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-/* Keyboard for menu quick actions */
-addEventListener('keydown',(e)=>{
-  if(turn!=='player') return;
+/* Color helper from CSS var */
+function varColor(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+
+/* UI interactions */
+uiMenu.addEventListener('mousemove',e=>{
+  const item=e.target.closest('.uiBtn'); if(!item) return;
+  const ix=[...uiMenu.children].indexOf(item); if(ix>=0) setSelection(ix);
+});
+uiMenu.addEventListener('click',()=>choose());
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){startBattle(); return;}
+  if(turn!=='player'){
+    // allow no input during enemy except Esc
+    return;
+  }
   if(menu==='root'){
-    if(e.key==='z'||e.key==='Z'||e.key==='Enter') onFight();
-    if(e.key==='x'||e.key==='X') onAct(); // quick open ACT (x as back otherwise)
+    if(e.key==='ArrowLeft') setSelection(Math.max(0,selIx-1));
+    if(e.key==='ArrowRight') setSelection(Math.min(3,selIx+1));
+    if(e.key==='z'||e.key==='Z'||e.key==='Enter') choose();
+    if(e.key==='x'||e.key==='X'){ /* back: noop on root */ }
   }else if(menu==='fight'){
-    if(e.key==='x'||e.key==='X'){fightActive=false;menu='root';}
+    if(e.key==='x'||e.key==='X'){ fightActive=false; menu='root'; uiCenter.textContent='Your turn'; }
   }else if(menu==='act'){
-    if(e.key==='x'||e.key==='X'){closeDialog();menu='root';}
+    if(['1','2','3'].includes(e.key)) doAct(parseInt(e.key)-1);
+    if(e.key==='x'||e.key==='X'){ closeDialog(); menu='root'; uiCenter.textContent='Your turn'; }
   }else if(menu==='item'){
-    if(e.key==='x'||e.key==='X'){closeDialog();menu='root';}
+    if(['1','2','3'].includes(e.key)) useItem(parseInt(e.key)-1);
+    if(e.key==='x'||e.key==='X'){ closeDialog(); menu='root'; uiCenter.textContent='Your turn'; }
   }else if(menu==='mercy'){
-    if(e.key==='x'||e.key==='X'){closeDialog();menu='root';}
+    if(e.key==='z'||e.key==='Z'||e.key==='Enter'){ if(canSpare()){ closeDialog(); openDialog(["You offered mercy.","The flame bows."]); setTimeout(()=>startBattle(),800);} else { dialogText.textContent='They are not ready.'; } }
+    if(e.key==='x'||e.key==='X'){ closeDialog(); menu='root'; uiCenter.textContent='Your turn'; }
   }
 });
 </script>
