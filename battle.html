@@ -6,23 +6,24 @@
 <title>UNDERTALE GOLD — Trial of the Golden Lord</title>
 <style>
 :root{
-  --bg:#000; --fg:#ffd166; --muted:#caa95a;
-  --hp:#ff6b6b; --line:#262626; --ui:#0b0b0b; --white:#ffffff; --emerald:#7affb7; --slash:#fff1b6;
+  --bg:#000; --fg:#ffd166; --hp:#ff6b6b; --ui:#0b0b0b; --line:#262626; --white:#ffffff; --emerald:#7affb7; --slash:#fff1b6;
 }
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
 #stage{position:fixed;left:50%;top:50%;transform-origin:top left}
 #wrap{position:relative;width:960px;height:720px}
-canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#080708}
+canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
 
 /* HUD */
-#bossHUD{position:absolute;left:20px;top:44px;display:flex;align-items:center;gap:8px}
+#bossHUD{position:absolute;left:20px;top:28px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+#bossName{font-size:13px;color:var(--fg)}
 #bossHP{height:10px;width:360px;background:#141414;border:1px solid #383838;position:relative}
 #bossHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--hp);width:100%}
-#bossHPVal{color:var(--fg);font-size:12px;min-width:120px}
-#playerHUD{position:absolute;right:20px;top:44px;display:flex;align-items:center;gap:8px}
-#pHP{height:10px;width:180px;background:#141414;border:1px solid #383838;position:relative}
+#bossHPVal{color:var(--fg);font-size:12px;margin-top:2px}
+#playerHUD{position:absolute;right:20px;top:28px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+#playerNameLabel{font-size:13px;color:#9be7c0}
+#pHP{height:10px;width:200px;background:#141414;border:1px solid #383838;position:relative}
 #pHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--emerald);width:100%}
-#pHPVal{color:var(--fg);font-size:12px;min-width:86px;text-align:right}
+#pHPVal{color:var(--fg);font-size:12px;margin-top:2px}
 
 /* Bottom UI */
 #uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px}
@@ -36,10 +37,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #uiCenter{font-size:14px;color:var(--fg)}
 #uiRight{font-size:12px;color:var(--fg)}
 
-/* Arena box (only visible during enemy turn) */
+/* Arena box (visible only during enemy turn) */
 #box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid var(--white);display:none}
 
-/* Dialogue bubble (hidden during enemy turns) */
+/* Bubble (hidden during enemy turns) */
 #bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;color:var(--fg);display:none;z-index:10}
 .bub{position:relative;background:var(--ui);border:2px solid var(--white);padding:10px 14px;filter:contrast(140%) saturate(120%)}
 .bub::before,.bub::after{content:"";position:absolute;bottom:-12px;left:40px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent}
@@ -61,12 +62,17 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 <body>
 <div id="stage">
   <div id="wrap">
+
+    <!-- Boss HUD -->
     <div id="bossHUD">
+      <div id="bossName">Golden Lord</div>
       <div id="bossHP"><div id="bossHPFill"></div></div>
       <div id="bossHPVal">000/000</div>
     </div>
 
+    <!-- Player HUD -->
     <div id="playerHUD">
+      <div id="playerNameLabel">Traveler</div>
       <div id="pHP"><div id="pHPFill"></div></div>
       <div id="pHPVal">20/20</div>
     </div>
@@ -74,13 +80,16 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <canvas id="cv" width="960" height="720" aria-label="Battlefield"></canvas>
     <div id="box" aria-hidden="true"></div>
 
+    <!-- Dialogue bubble -->
     <div id="bubble"><div class="bub"><div id="bubbleText"></div></div></div>
 
+    <!-- Inventory -->
     <div id="inv">
       <div id="invHead">Inventory</div>
       <div id="invList"></div>
     </div>
 
+    <!-- Bottom UI -->
     <div id="uiBar" role="group" aria-label="Battle menu">
       <div class="uiMenu" id="uiMenu">
         <div class="uiBtn sel" data-action="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
@@ -89,9 +98,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
         <div class="uiBtn" data-action="MERCY"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
       </div>
       <div id="uiCenter">Your turn.</div>
-      <div id="uiRight"><span id="playerName">Traveler</span></div>
+      <div id="uiRight"></div>
     </div>
 
+    <!-- Pause -->
     <div id="pause">
       <div id="pausePanel">
         <div style="margin-bottom:8px;text-align:center">Paused</div>
@@ -107,7 +117,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 /* Profile */
 const PROF='utg_shared_profile_v1';
 const PRO=(()=>{try{return JSON.parse(localStorage.getItem(PROF))||{name:'Traveler'}}catch{return {name:'Traveler'}}})();
-document.getElementById('playerName').textContent=PRO.name||'Traveler';
+document.getElementById('playerNameLabel').textContent=PRO.name||'Traveler';
 
 /* Responsive scaling */
 const stage=document.getElementById('stage');
@@ -118,6 +128,7 @@ addEventListener('resize',resizeStage); resizeStage();
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const boxEl=document.getElementById('box');
 const uiMenu=document.getElementById('uiMenu'), uiCenter=document.getElementById('uiCenter');
+const bossNameEl=document.getElementById('bossName');
 const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getElementById('bossHPVal');
 const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
@@ -128,11 +139,30 @@ document.getElementById('btnRestart').onclick=()=>restartBattle();
 document.getElementById('btnResume').onclick=()=>togglePause(false);
 
 /* Input */
-class Input{constructor(){this.k=new Set();this.down=new Set();addEventListener('keydown',e=>{this.k.add(e.key);this.down.add(e.key);});addEventListener('keyup',e=>{this.k.delete(e.key);});}
-is(k){return this.k.has(k)||this.k.has(String(k).toUpperCase());}
-consume(k){const had=this.down.has(k)||this.down.has(String(k).toUpperCase());this.down.delete(k);this.down.delete(String(k).toUpperCase());return had;}
-tick(){this.down.clear();}}
+class Input{
+  constructor(){this.k=new Set();this.down=new Set();
+    addEventListener('keydown',e=>{this.k.add(e.key);this.down.add(e.key); handleSecret(e.key);});
+    addEventListener('keyup',e=>{this.k.delete(e.key);});
+  }
+  is(k){return this.k.has(k)||this.k.has(String(k).toUpperCase());}
+  consume(k){const had=this.down.has(k)||this.down.has(String(k).toUpperCase());this.down.delete(k);this.down.delete(String(k).toUpperCase());return had;}
+  tick(){this.down.clear();}
+}
 const input=new Input();
+
+/* Secret trigger: type '67' three times */
+let secretBuffer='', secretCount=0;
+function handleSecret(key){
+  if(key==='6' || key==='7'){
+    secretBuffer += key;
+    if(secretBuffer.length>2) secretBuffer=secretBuffer.slice(-2);
+    if(secretBuffer==='67'){ secretCount++; secretBuffer=''; }
+    if(secretCount>=3){ summonRadiant(); secretCount=0; secretBuffer=''; }
+  }else{
+    // reset if other keys in between
+    secretBuffer=''; secretCount=0;
+  }
+}
 
 /* Helpers */
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
@@ -150,126 +180,12 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=1.2){
   ctx.restore();
 }
 
-/* State */
+/* State (scene) */
 const ARENA={x:240,y:420,w:480,h:180};
-const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:280,acc:0.0,i:0,hp:20,hpMax:20};
-function updatePlayerHP(){pHPFill.style.width=(180*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
+const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:280,i:0,hp:20,hpMax:20};
+function updatePlayerHP(){pHPFill.style.width=(200*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
 updatePlayerHP();
 
-/* Boss */
-const BOSS={
-  name:'Golden Lord',
-  hpMax:600, hp:600, spare:0, spareNeed:100, _mid:false,
-  intro:[
-    "A golden hall. A silent figure descends.",
-    "A bow. A trial."
-  ],
-  acts:[
-    {name:'Check', run:(s)=>({text:'Golden Lord — ritual duelist. Swift and severe.', sparePlus:6})},
-    {name:'Bow', run:(s)=>({text:'You bow. The lord inclines its crest.', sparePlus:12, flag:'bowed'})},
-    {name:'Stillness', run:(s)=>({text: s.flags.bowed?'You still your breath. The tempo softens.':'You keep still. It watches.', sparePlus: s.flags.bowed?18:6, flag:s.flags.bowed?'calm':null})},
-    {name:'Compliment', run:(s)=>({text:'You honor its form. The blades ease.', sparePlus:10})}
-  ],
-  canSpare:(s)=> (TURN_COUNT>=7) && (s.boss.spare>=s.boss.spareNeed || s.boss.hp<=s.boss.hpMax*0.18),
-  onHit:(scene,dmg)=>{scene.flinch=0.16;scene.shake=0.12;},
-  attacks:[]
-};
-function bossBar(){bossHPFill.style.width=(360*Math.max(0,BOSS.hp/BOSS.hpMax))+'px';bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`;}
-bossBar();
-
-/* Boss sprite — detailed mantis lord */
-function drawGoldenLord(ctx,t,flinch=0){
-  const x=480,y=258;
-  ctx.save();
-  // flash halo on flinch
-  if(flinch>0){ctx.globalAlpha=0.7;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-  // cloak wings
-  ctx.shadowColor='#ffd166';ctx.shadowBlur=10;
-  ctx.fillStyle='#b8902f';
-  ctx.beginPath();ctx.moveTo(x-18,y+8);ctx.lineTo(x-46,y+30+Math.sin(t*2)*2);ctx.lineTo(x-10,y+38);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(x+18,y+8);ctx.lineTo(x+46,y+30+Math.cos(t*2)*2);ctx.lineTo(x+10,y+38);ctx.closePath();ctx.fill();
-  // body column and segments
-  ctx.fillStyle='#e5bf4d';
-  ctx.fillRect(x-5,y-6,10,38);
-  ctx.fillRect(x-4,y+32,8,10);
-  ctx.beginPath();ctx.ellipse(x,y+48,12,10,0,0,Math.PI*2);ctx.fill();
-  // crest head
-  ctx.beginPath();ctx.moveTo(x,y-32);ctx.lineTo(x-12,y-10);ctx.lineTo(x+12,y-10);ctx.closePath();ctx.fill();
-  ctx.shadowBlur=0;
-  // eyes
-  ctx.fillStyle='#0c0c12';ctx.fillRect(x-8,y-20,6,6);ctx.fillRect(x+2,y-20,6,6);
-  // blade arms
-  ctx.strokeStyle='#ffd166';ctx.lineWidth=4;
-  ctx.beginPath();ctx.moveTo(x-6,y+0);ctx.lineTo(x-32,y+10+Math.sin(t*3)*8);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x+6,y+0);ctx.lineTo(x+32,y+10+Math.cos(t*3)*8);ctx.stroke();
-  // mid legs
-  ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x-4,y+16);ctx.lineTo(x-18,y+28);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x+4,y+16);ctx.lineTo(x+18,y+28);ctx.stroke();
-  // halo ring
-  ctx.globalAlpha=0.5;ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,38+Math.sin(t*2.8)*2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
-  ctx.restore();
-}
-
-/* Patterns — harder, multi-phase, some tracking */
-let bullets=[]; function spawn(b){b.t=0;bullets.push(b);return b;}
-const P={
-  dash:(dur=4,speed=360)=>({ // horizontal blades at heart height
-    enter(){this.t=0;},
-    update(dt){this.t+=dt;
-      if(Math.random()<0.22){
-        const side=Math.random()<0.5?'L':'R', y=HEART.y+rand(-14,14);
-        const x=side==='L'?ARENA.x-20:ARENA.x+ARENA.w+20; const dir=side==='L'?1:-1;
-        spawn({x,y,vx:dir*speed,vy:0,r:4,col:'#ffd166',type:'blade'});
-      }
-    },
-    done(){return phaseT>dur;}
-  }),
-  plunge:(dur=4)=>({ // vertical drops from randomized columns
-    enter(){this.t=0;},
-    update(dt){this.t+=dt;
-      if(this.t>0.5){this.t=rand(0.1,0.4);
-        const cols=5, step=ARENA.w/(cols+1), jitter=rand(-8,8);
-        const i=Math.floor(rand(1,cols+1));
-        const x=ARENA.x+i*step+jitter;
-        spawn({x,y:ARENA.y-16,vx:0,vy:280,r:4,col:'#ffb347',type:'plunge'});
-      }
-    },
-    done(){return phaseT>dur;}
-  }),
-  angled:(dur=4)=>({ // angled slashes from center out
-    enter(){this.t=0;},
-    update(dt){this.t+=dt;
-      if(this.t>0.45){this.t=0;
-        const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2;
-        for(const a of [-0.7,-0.3,0.3,0.7]){
-          spawn({x:cx,y:cy,vx:Math.cos(a)*220,vy:Math.sin(a)*220,r:3,col:'#a6c7ff',type:'slash'});
-        }
-      }
-    },
-    done(){return phaseT>dur;}
-  }),
-  tracker:(dur=4,speed=220)=>({ // tracks last known heart pos
-    enter(){this.t=0;},
-    update(dt){this.t+=dt;
-      if(this.t>0.55){this.t=0;
-        const side=Math.random()<0.5?'L':'R';
-        const x=side==='L'?ARENA.x-14:ARENA.x+ARENA.w+14;
-        const y=rand(ARENA.y+10,ARENA.y+ARENA.h-10);
-        const dx=HEART.x-x, dy=HEART.y-y, L=Math.hypot(dx,dy)||1;
-        spawn({x,y,vx:dx/L*speed,vy:dy/L*speed,r:4,col:'#ffc4a3',type:'dart'});
-      }
-    },
-    done(){return phaseT>dur;}
-  }),
-  combo:(dur=6)=>({ // mix: dash + plunge simultaneously
-    enter(){this.a=P.dash(6,380);this.b=P.plunge(6);this.a.enter();this.b.enter();},
-    update(dt){this.a.update(dt);this.b.update(dt);},
-    done(){return phaseT>dur;}
-  })
-};
-BOSS.attacks=[P.dash(4,360),P.angled(4),P.plunge(4),P.tracker(4,230),P.combo(6)];
-
-/* Flow/UI */
 let time=0, phaseT=0, paused=false;
 let turn='player', menu='root';
 let attack=null, attackIndex=0;
@@ -277,9 +193,11 @@ let selIx=0;
 let TURN_COUNT=0;
 let scene={flinch:0,shake:0};
 let damagePopup=null;
-let slashes=[]; // FIGHT slash animations
+let slashes=[];
+let bullets=[];
+let showArena=false;
 let flags={};
-let showArena=false; // controls visibility of heart/bullets/box
+let currentBoss=null;
 
 /* Inventory */
 let items=[{n:'Dew Petal',h:8},{n:'Amber Draught',h:14},{n:'Radiant Nectar',h:24}];
@@ -287,26 +205,208 @@ function openInventory(){inv.style.display='block';invList.textContent=(items.le
 function closeInventory(){inv.style.display='none';}
 function useItem(ix){const it=items[ix];if(!it) return;HEART.hp=Math.min(HEART.hpMax,HEART.hp+it.h);updatePlayerHP();items.splice(ix,1);closeInventory();endPlayerTurn(0.25);}
 
-/* Boss damage with slash effect */
-function bossHit(dmg){
-  BOSS.hp=Math.max(0,BOSS.hp-dmg);bossBar();
-  scene.flinch=0.18;scene.shake=0.12;
-  damagePopup={x:480,y:200,t:0,text:String(dmg)};
-  // add golden slash
-  slashes.push({t:0,life:0.25,angle:rand(-0.2,0.2)});
+/* Boss definitions */
+function makeMantisBoss(){
+  const boss={
+    key:'mantis',
+    name:'Golden Lord',
+    hpMax:300, hp:300, spare:0, spareNeed:100,
+    intro:["A golden hall. A silent figure descends.","It bows. The trial begins."],
+    acts:[
+      {name:'Check', run:(s)=>({text:'Golden Lord — ritual mantis duelist. Swift, precise.', sparePlus:8})},
+      {name:'Bow', run:(s)=>({text:'You bow. The crest inclines.', sparePlus:12, flag:'bowed'})},
+      {name:'Stillness', run:(s)=>({text:(s.flags.bowed?'You still your breath. Its posture softens.':'You hold still. It watches.'), sparePlus:s.flags.bowed?18:6, flag:s.flags.bowed?'calm':null})},
+      {name:'Compliment', run:(s)=>({text:'You honor its form. Blades ease a fraction.', sparePlus:10})}
+    ],
+    canSpare:(s)=> (TURN_COUNT>=7) && (s.boss.spare>=s.boss.spareNeed || s.boss.hp<=s.boss.hpMax*0.18),
+    onHit:(scene,dmg)=>{scene.flinch=0.16;scene.shake=0.12;},
+    attacks:[]
+  };
+  // Patterns (harder)
+  const P={
+    dash:(dur=4,speed=360)=>({
+      enter(){}, update(dt){ if(Math.random()<0.26){ const side=Math.random()<0.5?'L':'R', y=HEART.y+rand(-16,16); const x=side==='L'?ARENA.x-20:ARENA.x+ARENA.w+20; const dir=side==='L'?1:-1; spawn({x,y,vx:dir*speed,vy:0,r:4,col:'#ffd166'});} },
+      done(){return phaseT>dur;}
+    }),
+    plunge:(dur=4)=>({
+      enter(){this.t=0;}, update(dt){this.t+=dt; if(this.t>0.5){this.t=rand(0.15,0.35); const cols=5, step=ARENA.w/(cols+1), jitter=rand(-10,10); const i=Math.floor(rand(1,cols+1)); const x=ARENA.x+i*step+jitter; spawn({x,y:ARENA.y-16,vx:0,vy:300,r:4,col:'#ffb347'});} },
+      done(){return phaseT>dur;}
+    }),
+    angled:(dur=4)=>({
+      enter(){this.t=0;}, update(dt){this.t+=dt; if(this.t>0.42){this.t=0; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; for(const a of [-0.8,-0.4,0.4,0.8]) spawn({x:cx,y:cy,vx:Math.cos(a)*230,vy:Math.sin(a)*230,r:3,col:'#a6c7ff'});} },
+      done(){return phaseT>dur;}
+    }),
+    tracker:(dur=4,speed=240)=>({
+      enter(){this.t=0;}, update(dt){this.t+=dt; if(this.t>0.5){this.t=0; const side=Math.random()<0.5?'L':'R'; const x=side==='L'?ARENA.x-14:ARENA.x+ARENA.w+14; const y=rand(ARENA.y+10,ARENA.y+ARENA.h-10); const dx=HEART.x-x, dy=HEART.y-y, L=Math.hypot(dx,dy)||1; spawn({x,y,vx:dx/L*speed,vy:dy/L*speed,r:4,col:'#ffc4a3'});} },
+      done(){return phaseT>dur;}
+    }),
+    combo:(dur=6)=>({
+      enter(){this.a=P.dash(6,380);this.b=P.plunge(6);this.a.enter?.();this.b.enter?.();},
+      update(dt){this.a.update(dt);this.b.update(dt);},
+      done(){return phaseT>dur;}
+    })
+  };
+  boss.attacks=[P.dash(4,360),P.angled(4),P.plunge(4),P.tracker(4,240),P.combo(6)];
+  return boss;
 }
 
-/* Turn control */
+function makeRadiantBoss(){
+  const boss={
+    key:'radiant',
+    name:'The Radiant One',
+    hpMax:420, hp:420, spare:0, spareNeed:9999, // no mercy
+    intro:["Light gathers. A crown of radiance opens its eye.","There is no mercy here."],
+    acts:[
+      {name:'Focus', run:(s)=>({text:'You steady your mind. The glare dims a little.', sparePlus:0})},
+      {name:'Resist', run:(s)=>({text:'You brace against the light. Your footing holds.', sparePlus:0})},
+      {name:'Illuminate', run:(s)=>({text:'You shine back. For a moment, equals.', sparePlus:0})}
+    ],
+    canSpare:(s)=> false,
+    onHit:(scene,dmg)=>{scene.flinch=0.14;scene.shake=0.1;},
+    attacks:[]
+  };
+  // Radiant patterns: beams, sword rain, homing orbs
+  const P={
+    starburst:(dur=5)=>({
+      enter(){this.t=0;},
+      update(dt){this.t+=dt; if(this.t>0.5){this.t=0; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2;
+        for(let k=0;k<10;k++){ const a=(k/10)*Math.PI*2 + rand(-0.08,0.08); spawn({x:cx,y:cy,vx:Math.cos(a)*220,vy:Math.sin(a)*220,r:3,col:'#ffe799'}); }
+      }},
+      done(){return phaseT>dur;}
+    }),
+    swordRain:(dur=5)=>({
+      enter(){this.t=0;},
+      update(dt){this.t+=dt; if(this.t>0.35){this.t=0; const x=ARENA.x+rand(30,ARENA.w-30); spawn({x,y:ARENA.y-18,vx:0,vy:320,r:3,col:'#ffcf66'});} if(Math.random()<0.2){ const y=ARENA.y+rand(20,ARENA.h-20); const dir=Math.random()<0.5?-1:1; const x=dir<0?ARENA.x+ARENA.w+18:ARENA.x-18; spawn({x,y,vx:dir*320,vy:0,r:3,col:'#ffcf66'}); } },
+      done(){return phaseT>dur;}
+    }),
+    homing:(dur=5,speed=210)=>({
+      enter(){this.t=0;},
+      update(dt){this.t+=dt; if(this.t>0.6){this.t=0; const x=ARENA.x+rand(0,ARENA.w), y=ARENA.y-10; const dx=HEART.x-x, dy=HEART.y-y, L=Math.hypot(dx,dy)||1; spawn({x,y,vx:dx/L*speed,vy:dy/L*speed,r:4,col:'#fff3b8'});} },
+      done(){return phaseT>dur;}
+    }),
+    combo:(dur=7)=>({
+      enter(){this.a=P.starburst(7);this.b=P.homing(7,220);this.a.enter();this.b.enter();},
+      update(dt){this.a.update(dt);this.b.update(dt);},
+      done(){return phaseT>dur;}
+    })
+  };
+  boss.attacks=[P.starburst(5),P.swordRain(5),P.homing(5,210),P.combo(7)];
+  return boss;
+}
+
+/* Boss drawing */
+function drawMantisLord(ctx,t,flinch=0){
+  const x=480,y=258;
+  ctx.save();
+  if(flinch>0){ctx.globalAlpha=0.7;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
+  ctx.shadowColor='#ffd166';ctx.shadowBlur=10;
+
+  // wings/cloak
+  ctx.fillStyle='#b8902f';
+  ctx.beginPath();ctx.moveTo(x-22,y+6);ctx.lineTo(x-50,y+28+Math.sin(t*2)*2);ctx.lineTo(x-12,y+40);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(x+22,y+6);ctx.lineTo(x+50,y+28+Math.cos(t*2)*2);ctx.lineTo(x+12,y+40);ctx.closePath();ctx.fill();
+
+  // thorax and abdomen segments
+  ctx.fillStyle='#e5bf4d';
+  ctx.fillRect(x-5,y-8,10,40);                // thorax
+  ctx.fillRect(x-4,y+30,8,12);                // waist
+  ctx.beginPath();ctx.ellipse(x,y+50,12,10,0,0,Math.PI*2);ctx.fill(); // abdomen
+
+  // triangular head with mandibles
+  ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-12,y-12);ctx.lineTo(x+12,y-12);ctx.closePath();ctx.fill();
+  // mandibles
+  ctx.beginPath();ctx.moveTo(x-6,y-12);ctx.lineTo(x-10,y-4);ctx.lineTo(x-4,y-8);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(x+6,y-12);ctx.lineTo(x+10,y-4);ctx.lineTo(x+4,y-8);ctx.closePath();ctx.fill();
+
+  ctx.shadowBlur=0;
+  // eyes
+  ctx.fillStyle='#0c0c12';ctx.fillRect(x-8,y-22,6,6);ctx.fillRect(x+2,y-22,6,6);
+
+  // antennae (twitch)
+  ctx.strokeStyle='#ffd166';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x-4,y-26);ctx.quadraticCurveTo(x-18,y-44+Math.sin(t*5)*2, x-22,y-54);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+4,y-26);ctx.quadraticCurveTo(x+18,y-44+Math.cos(t*5)*2, x+22,y-54);ctx.stroke();
+
+  // raptorial forelegs (blade arms)
+  ctx.strokeStyle='#ffd166';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x-34,y+10+Math.sin(t*3)*8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+6,y);ctx.lineTo(x+34,y+10+Math.cos(t*3)*8);ctx.stroke();
+
+  // hind legs
+  ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(x-4,y+18);ctx.lineTo(x-18,y+32);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+4,y+18);ctx.lineTo(x+18,y+32);ctx.stroke();
+
+  // halo
+  ctx.globalAlpha=0.5;ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,40+Math.sin(t*2.8)*2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
+
+  ctx.restore();
+}
+
+function drawRadiant(ctx,t,flinch=0){
+  const x=480,y=220;
+  ctx.save();
+  // aura
+  ctx.globalAlpha=0.25+0.1*Math.sin(t*3);
+  ctx.fillStyle='#fff3b8';ctx.beginPath();ctx.arc(x,y,60+5*Math.sin(t*2),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+
+  // body (moth-like radiant)
+  ctx.shadowColor='#ffe799';ctx.shadowBlur=12;
+  ctx.fillStyle='#ffe18a';
+  ctx.beginPath();ctx.ellipse(x,y,10,18,0,0,Math.PI*2);ctx.fill();
+  // head + crown
+  ctx.beginPath();ctx.arc(x,y-20,8,0,Math.PI*2);ctx.fill();
+  ctx.fillRect(x-2,y-32,4,8);
+  // wings
+  ctx.fillStyle='#ffd166';
+  for(const s of [-1,1]){
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.quadraticCurveTo(x+60*s,y-10, x+80*s,y+10+Math.sin(t*2)*6);
+    ctx.quadraticCurveTo(x+40*s,y+30, x,y+20);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.shadowBlur=0;
+  // eyes
+  ctx.fillStyle='#0c0c12';ctx.fillRect(x-6,y-22,4,4);ctx.fillRect(x+2,y-22,4,4);
+  ctx.restore();
+}
+
+/* Boss bar updates */
+function bossBar(){bossHPFill.style.width=(360*Math.max(0,currentBoss.hp/currentBoss.hpMax))+'px';bossHPVal.textContent=`${currentBoss.hp}/${currentBoss.hpMax}`;bossNameEl.textContent=currentBoss.name;}
+
+/* Bullets */
+function spawn(b){b.t=0; bullets.push(b); return b;}
+
+/* Attack controller */
+function setBoss(boss){
+  currentBoss=boss;
+  currentBoss.hp = currentBoss.hpMax;
+  bossBar();
+  attackIndex=0;
+}
+
+/* Slash + damage */
+function bossHit(dmg){
+  currentBoss.hp = Math.max(0, currentBoss.hp - dmg);
+  bossBar();
+  scene.flinch=0.18; scene.shake=0.12;
+  damagePopup={x:480,y:200,t:0,text:String(dmg)};
+  slashes.push({t:0,life:0.25,angle:rand(-0.2,0.2)});
+  currentBoss.onHit?.(scene,dmg);
+}
+
+/* Turn flow */
 function endPlayerTurn(delay=0.2){
   TURN_COUNT++;
   setTimeout(()=>{
-    turn='enemy';menu='root';uiCenter.textContent='Enemy turn';
+    turn='enemy'; menu='root'; uiCenter.textContent='Enemy turn';
     startAttack();
-  },delay*1000);
+  }, delay*1000);
 }
 function startAttack(){
   bullets.length=0; slashes.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
-  attack=BOSS.attacks[attackIndex]; attackIndex=(attackIndex+1)%BOSS.attacks.length; attack?.enter?.();
+  attack=currentBoss.attacks[attackIndex]; attackIndex=(attackIndex+1)%currentBoss.attacks.length; attack?.enter?.();
 }
 function finishAttack(){turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';}
 
@@ -316,40 +416,58 @@ function choose(){const map=['FIGHT','ACT','ITEM','MERCY']; doAction(map[selIx])
 function doAction(name){
   if(turn!=='player') return;
   if(name==='FIGHT'){
-    // fixed 20 damage + slash
     hideBubble();
-    bossHit(20);
+    bossHit(20); // fixed damage
+    // ensure no freeze: immediately schedule enemy turn
     endPlayerTurn(0.22);
   }else if(name==='ACT'){
-    const list=BOSS.acts.map((a,i)=>`${i+1}) ${a.name}`).join('\n');
-    showBubble('Choose an action:\n'+list+'\n(Press 1–'+BOSS.acts.length+', X to cancel)');
+    const list=currentBoss.acts.map((a,i)=>`${i+1}) ${a.name}`).join('\n');
+    showBubble('Choose an action:\n'+list+'\n(Press 1–'+currentBoss.acts.length+', X to cancel)');
     menu='act';
   }else if(name==='ITEM'){
     openInventory(); menu='item';
   }else if(name==='MERCY'){
-    if(BOSS.canSpare({boss:BOSS})){showBubble('You offered mercy.\nThe lord dissolves in light.');setTimeout(()=>initBattle(),1000);}
-    else {showBubble('The trial continues.'); setTimeout(()=>hideBubble(),700);}
+    if(currentBoss.canSpare?.({boss:currentBoss})){
+      showBubble('You offered mercy. The light bows back.');
+      setTimeout(()=>initBattle(),1000);
+    }else{
+      showBubble('They are not ready.');
+      setTimeout(()=>hideBubble(),700);
+    }
   }
 }
 
-/* Pause and restart */
-function togglePause(on){paused=on;pauseEl.style.display=on?'flex':'none';uiCenter.textContent=on?'Paused':'Your turn';}
-function restartBattle(){paused=false;pauseEl.style.display='none';initBattle();}
+/* Pause/restart */
+function togglePause(on){paused=on; pauseEl.style.display=on?'flex':'none'; uiCenter.textContent=on?'Paused':'Your turn';}
+function restartBattle(){paused=false; pauseEl.style.display='none'; initBattle();}
 
-/* Init */
+/* Intro/init */
 function initBattle(){
   hideBubble(); closeInventory();
   HEART.hp=20; HEART.i=0; HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; updatePlayerHP();
-  BOSS.hp=BOSS.hpMax; BOSS.spare=0; bossBar();
-  bullets.length=0; slashes.length=0; phaseT=0; attackIndex=0; turn='player'; menu='root'; uiCenter.textContent='Your turn'; boxEl.style.display='none'; showArena=false;
-  TURN_COUNT=0; scene.flinch=0; scene.shake=0; damagePopup=null; flags={};
-  showBubble(BOSS.intro.join('\n'));
+  setBoss(makeMantisBoss());
+  bullets.length=0; slashes.length=0; phaseT=0; turn='player'; menu='root'; uiCenter.textContent='Your turn'; boxEl.style.display='none'; showArena=false;
+  damagePopup=null; scene.flinch=0; scene.shake=0; flags={}; TURN_COUNT=0; items=[{n:'Dew Petal',h:8},{n:'Amber Draught',h:14},{n:'Radiant Nectar',h:24}];
+  showBubble(currentBoss.intro.join('\n'));
 }
-initBattle();
+
+/* Secret: summon Radiant */
+function summonRadiant(){
+  hideBubble(); closeInventory();
+  setBoss(makeRadiantBoss());
+  bullets.length=0; slashes.length=0; phaseT=0; turn='player'; menu='root'; uiCenter.textContent='Your turn'; boxEl.style.display='none'; showArena=false;
+  damagePopup=null; scene.flinch=0; scene.shake=0; flags={}; TURN_COUNT=0;
+  showBubble(currentBoss.intro.join('\n'));
+}
 
 /* Loop */
 let last=performance.now();
-function loop(now){const dt=Math.min(0.033,(now-last)/1000); last=now; if(!paused){update(dt); render(dt);} requestAnimationFrame(loop);} requestAnimationFrame(loop);
+function loop(now){
+  const dt=Math.min(0.033,(now-last)/1000); last=now;
+  if(!paused){ update(dt); render(dt); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 
 /* Update */
 function update(dt){
@@ -365,12 +483,12 @@ function update(dt){
   }
 
   if(turn==='player' && menu==='act'){
-    for(let i=1;i<=BOSS.acts.length;i++){
+    for(let i=1;i<=currentBoss.acts.length;i++){
       if(input.consume(String(i))){
-        const act=BOSS.acts[i-1];
-        const res=act.run({boss:BOSS,flags});
+        const act=currentBoss.acts[i-1];
+        const res=act.run({boss:currentBoss,flags});
         if(res.flag) flags[res.flag]=true;
-        if(res.sparePlus) BOSS.spare=Math.min(BOSS.spareNeed,(BOSS.spare||0)+res.sparePlus);
+        if(res.sparePlus) currentBoss.spare=Math.min(currentBoss.spareNeed,(currentBoss.spare||0)+res.sparePlus);
         showBubble(res.text);
         setTimeout(()=>{hideBubble(); endPlayerTurn(0.25);},460);
       }
@@ -386,10 +504,9 @@ function update(dt){
   if(turn==='enemy'){
     // hide dialogue while dodging
     bubble.style.display='none';
-
     phaseT+=dt;
 
-    // smoother heart motion (with a touch of acceleration)
+    // heart movement
     let dx=0,dy=0;
     if(input.is('ArrowLeft')||input.is('a')) dx-=1;
     if(input.is('ArrowRight')||input.is('d')) dx+=1;
@@ -400,16 +517,13 @@ function update(dt){
     HEART.y=clamp(HEART.y+dy/L*HEART.sp*dt, ARENA.y+HEART.r, ARENA.y+ARENA.h-HEART.r);
     HEART.i=Math.max(0,HEART.i-dt);
 
-    // attack logic
+    // update attack
     attack?.update?.(dt);
 
-    // bullets update
-    for(const b of bullets){
-      b.t+=dt;
-      if(b.type==='blade'||b.type==='dart'||b.type==='slash'||b.type==='plunge'){
-        b.x+=b.vx*dt; b.y+=b.vy*dt;
-      }
-    }
+    // bullets
+    for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
+    bullets=bullets.filter(b=>b.x>ARENA.x-100 && b.x<ARENA.x+ARENA.w+100 && b.y>ARENA.y-100 && b.y<ARENA.y+ARENA.h+140);
+
     // collisions
     for(const b of bullets){
       const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
@@ -417,52 +531,50 @@ function update(dt){
         HEART.hp=Math.max(0,HEART.hp-1); updatePlayerHP(); HEART.i=0.85;
       }
     }
-    // cull
-    bullets=bullets.filter(b=>b.x>ARENA.x-80 && b.x<ARENA.x+ARENA.w+80 && b.y>ARENA.y-80 && b.y<ARENA.y+ARENA.h+120);
 
     // end phase
     if(attack?.done && attack.done()){ finishAttack(); }
 
-    if(HEART.hp<=0){turn='defeat'; setTimeout(()=>restartBattle(),900);}
+    // defeat
+    if(HEART.hp<=0){ turn='defeat'; setTimeout(()=>restartBattle(),900); }
   }
 
-  // slash animations progression
+  // slash anim
   slashes.forEach(s=>s.t+=dt);
   slashes=slashes.filter(s=>s.t<s.life);
 
-  // impact decay
+  // impacts decay
   scene.flinch=Math.max(0,scene.flinch-dt);
   scene.shake=Math.max(0,scene.shake-dt);
 
   // victory
-  if(BOSS.hp<=0 && turn!=='victory'){turn='victory'; showArena=false; boxEl.style.display='none'; showBubble('The rite ends. The hall exhales.'); setTimeout(()=>initBattle(),1100);}
+  if(currentBoss.hp<=0 && turn!=='victory'){
+    turn='victory'; showArena=false; boxEl.style.display='none';
+    showBubble('The rite ends. The hall exhales.');
+    setTimeout(()=>initBattle(),1100);
+  }
 }
 
 /* Render */
 function render(dt){
-  // shake
   const sx=(scene.shake>0?Math.sin(time*70)*3:0), sy=(scene.shake>0?Math.cos(time*63)*2:0);
   ctx.save(); ctx.translate(sx,sy);
 
   // background
   ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
-  ctx.fillStyle='#1a130f';
-  for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
+  // faint glyph specks
+  ctx.fillStyle='#1a130f'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
   // boss sprite
-  drawGoldenLord(ctx,time,scene.flinch);
+  if(currentBoss?.key==='mantis') drawMantisLord(ctx,time,scene.flinch);
+  else if(currentBoss?.key==='radiant') drawRadiant(ctx,time,scene.flinch);
 
-  // only draw arena, heart, bullets during enemy turn
+  // arena + heart + bullets only during enemy turn
   if(turn==='enemy' && showArena){
-    // arena box
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
-
-    // bullets
     for(const b of bullets){ctx.fillStyle=b.col||'#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2);ctx.fill();}
-
-    // golden heart
     ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
-    drawHeart(ctx,HEART.x-20,HEART.y-24,'#ffd166');
+    drawHeart(ctx,HEART.x-20,HEART.y-24,'#ffd166'); // golden heart
     ctx.restore();
   }
 
@@ -476,21 +588,13 @@ function render(dt){
     if(alpha<=0) damagePopup=null;
   }
 
-  // render slash effects on boss when FIGHT pressed
+  // slash effects
   for(const s of slashes){
-    const p = s.t / s.life;
-    const len = 140, w = 10*(1-p), x=480, y=240;
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.rotate(s.angle);
-    ctx.globalAlpha = 0.9*(1-p);
-    const grad = ctx.createLinearGradient(-len/2,0,len/2,0);
-    grad.addColorStop(0,'rgba(255,241,182,0)');
-    grad.addColorStop(0.5,'var(--slash)');
-    grad.addColorStop(1,'rgba(255,241,182,0)');
-    ctx.fillStyle=grad;
-    ctx.fillRect(-len/2,-w/2,len,w);
-    ctx.restore();
+    const p=s.t/s.life, len=140, w=10*(1-p), x=480, y=240;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(s.angle); ctx.globalAlpha=0.9*(1-p);
+    const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
+    grad.addColorStop(0,'rgba(255,241,182,0)'); grad.addColorStop(0.5,'#fff1b6'); grad.addColorStop(1,'rgba(255,241,182,0)');
+    ctx.fillStyle=grad; ctx.fillRect(-len/2,-w/2,len,w); ctx.restore();
   }
 
   ctx.restore();
@@ -500,7 +604,7 @@ function render(dt){
 uiMenu.addEventListener('mousemove',e=>{const it=e.target.closest('.uiBtn'); if(!it) return; const ix=[...uiMenu.children].indexOf(it); if(ix>=0) setSelection(ix);});
 uiMenu.addEventListener('click',()=>choose());
 
-/* Keyboard */
+/* Keyboard for menus/inventory */
 addEventListener('keydown',e=>{
   if(e.key==='Escape'){restartBattle();return;}
   if(e.key==='p'||e.key==='P'){togglePause(!paused);return;}
@@ -511,16 +615,18 @@ addEventListener('keydown',e=>{
     if(e.key==='ArrowRight') setSelection(Math.min(3,selIx+1));
     if(e.key==='z'||e.key==='Z'||e.key==='Enter') choose();
   }else if(menu==='act'){
-    if(['1','2','3','4'].includes(e.key)){
-      const idx=parseInt(e.key)-1; const act=BOSS.acts[idx];
-      const res=act.run({boss:BOSS,flags});
-      if(res.flag) flags[res.flag]=true;
-      if(res.sparePlus) BOSS.spare=Math.min(BOSS.spareNeed,(BOSS.spare||0)+res.sparePlus);
-      showBubble(res.text); setTimeout(()=>{hideBubble(); endPlayerTurn(0.25);},460);
+    for(let i=1;i<=currentBoss.acts.length;i++){
+      if(e.key===String(i)){
+        const act=currentBoss.acts[i-1];
+        const res=act.run({boss:currentBoss,flags});
+        if(res.flag) flags[res.flag]=true;
+        if(res.sparePlus) currentBoss.spare=Math.min(currentBoss.spareNeed,(currentBoss.spare||0)+res.sparePlus);
+        showBubble(res.text); setTimeout(()=>{hideBubble(); endPlayerTurn(0.25);},460);
+      }
     }
     if(e.key==='x'||e.key==='X'){ hideBubble(); menu='root'; }
   }else if(menu==='item'){
-    if(['1','2','3','4','5','6','7','8','9'].includes(e.key)) useItem(parseInt(e.key)-1);
+    if('123456789'.includes(e.key)) useItem(parseInt(e.key)-1);
     if(e.key==='x'||e.key==='X'){ closeInventory(); menu='root'; }
   }
 });
