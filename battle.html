@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UNDERTALE GOLD — Boss Rush</title>
+<style>
+:root{--bg:#000;--fg:#f7f6fb;--muted:#a9a9b6;--panel:#0d0c12;--line:#1b1a22;--gold:#ffd166}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:ui-monospace,monospace}
+#wrap{width:960px;margin:12px auto;position:relative}
+#hud{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:920px;height:36px;background:#0c0c12;border:1px solid #1b1a22;border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#bdbdcf;font-size:12px;z-index:2}
+canvas{display:block;margin:0 auto;border:4px solid #0a0a0f;background:#000;image-rendering:pixelated}
+#foot{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:110px;background:#0b0b12;border:1px solid #1b1a22;border-radius:10px;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+.btn{background:#11121a;color:#f7f6fb;border:1px solid #1b1a22;border-radius:8px;padding:8px 12px;cursor:pointer}
+.small{font-size:12px;color:#a9a9b6}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div id="hudL">Boss Rush</div>
+    <div id="hudC">Wave: 1 • Score: 0</div>
+    <div id="hudR">WASD move • Z strike • X heal • Esc retry</div>
+  </div>
+  <canvas id="battle" width="960" height="720"></canvas>
+  <div id="foot">
+    <div><button id="retryBtn" class="btn">Retry</button></div>
+    <div class="small">Hold to breathe between waves.</div>
+    <div><button id="quitBtn" class="btn">Quit</button></div>
+  </div>
+</div>
+<script>
+/* Shared profile */
+const LS='utg_shared_profile_v1';
+function prof(){try{return JSON.parse(localStorage.getItem(LS))||{name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}catch{return {name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}}
+const P=prof();
+
+/* Canvas */
+const cv=document.getElementById('battle'), ctx=cv.getContext('2d');
+const hudC=document.getElementById('hudC');
+
+/* Input */
+class Input{constructor(){this.k=new Set();addEventListener('keydown',e=>this.k.add(e.key));addEventListener('keyup',e=>this.k.delete(e.key));}
+is(k){return this.k.has(k)||this.k.has(String(k).toUpperCase());}}
+const input=new Input();
+
+/* Player heart in box */
+const box={x:240,y:420,w:480,h:180};
+const heart={x:box.x+box.w/2,y:box.y+box.h/2,r:6,sp:220,i:0,hp:20,hpMax:20,heals:2};
+function drawHeart(ctx,x,y,color){ctx.save();ctx.translate(x,y);ctx.scale(1.2,1.2);const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const s=3;for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s+40,(r-3)*s+20,s,s);ctx.restore();}
+
+/* Boss framework */
+function makeBossSprite(name,core,ring,bg){
+  return {
+    name,core,ring,bg,
+    hpMax:180,hp:180,
+    enter(s){s.timer=0;},
+    update(s,dt){}, // per pattern replaced
+    patterns:[]
+  };
+}
+
+/* Boss library (4 distinct patterns, cycles) */
+function bossRadial(name,core,ring,bg){const b=makeBossSprite(name,core,ring,bg);b.patterns=[
+  {dur:6,enter(s){s.t=0;},update(s,dt){s.t+=dt;if(s.t>0.6){s.t=0;const N=16;for(let i=0;i<N;i++){const a=i*(Math.PI*2)/N + s.time*0.4; s.spawn({x:box.x+box.w/2,y:box.y+box.h/2,vx:Math.cos(a)*120,vy:Math.sin(a)*120,r:3,col:ring});}}}},
+  {dur:7,enter(s){},update(s,dt){if(Math.random()<0.05){const side=Math.random()<0.5?'L':'R';const x=side==='L'?box.x-12:box.x+box.w+12;const y=rand(box.y,box.y+box.h);const dx=heart.x-x,dy=heart.y-y;const L=Math.hypot(dx,dy)||1;s.spawn({x,y,vx:dx/L*180,vy:dy/L*180,r:4,col:core});}}}
+];return b;}
+function bossBouncers(name,core,ring,bg){const b=makeBossSprite(name,core,ring,bg);b.patterns=[
+  {dur:8,enter(s){for(let i=0;i<4;i++){s.spawn({x:box.x+rand(40,box.w-40),y:box.y+rand(20,box.h-20),vx:rand(-140,140),vy:rand(-140,140),r:6,col:core,type:'bounce'})}},update(s,dt){}},
+  {dur:7,enter(s){s.t=0;},update(s,dt){s.t+=dt;if(s.t>0.5){s.t=0;const dx=heart.x-(box.x+box.w/2),dy=heart.y-(box.y+box.h/2),L=Math.hypot(dx,dy)||1;s.spawn({x:box.x+box.w/2,y:box.y+box.h/2,vx:dx/L*220,vy:dy/L*220,r:3,col:ring});}}}
+];return b;}
+function bossSweep(name,core,ring,bg){const b=makeBossSprite(name,core,ring,bg);b.patterns=[
+  {dur:8,enter(s){s.a=-Math.PI/3;s.dir=1;s.t=0;},update(s,dt){s.a+=dt*0.6*s.dir;if(s.a>Math.PI/3)s.dir=-1;if(s.a<-Math.PI/3)s.dir=1;s.t+=dt;if(s.t>0.22){s.t=0;const vx=Math.cos(s.a)*90,vy=Math.sin(s.a)*90;const head=s.spawn({x:box.x+box.w/2,y:box.y+box.h/2,vx,vy,r:5,col:ring});head.s=0;head.onTick=(S,self,dt)=>{self.s+=dt;if(Math.floor(self.s*10)%4===0&&self.s<1.6){for(let k=-1;k<=1;k+=2){const ang=Math.atan2(self.vy,self.vx)+k*0.42;S.spawn({x:self.x,y:self.y,vx:Math.cos(ang)*220,vy:Math.sin(ang)*220,r:3,col:core});}}};}},
+  {dur:6,enter(s){},update(s,dt){if(Math.random()<0.06){const y=rand(box.y+10,box.y+box.h-10);for(let x=box.x+20;x<box.x+box.w-20;x+=40)s.spawn({x,y,vx:0,vy:0,r:4,col:core,type:'pulse'});}}}
+];return b;}
+function bossEcho(name,core,ring,bg){const b=makeBossSprite(name,core,ring,bg);b.patterns=[
+  {dur:8,enter(s){s.last={x:heart.x,y:heart.y};s.t=0;},update(s,dt){s.t+=dt;if(s.t>0.55){s.t=0;const dx=heart.x-s.last.x,dy=heart.y-s.last.y;s.spawn({x:s.last.x,y:s.last.y,vx:dx*3,vy:dy*3,r:4,col:ring});s.last={x:heart.x,y:heart.y};}}},
+  {dur:7,enter(s){s.t=0;},update(s,dt){s.t+=dt;if(s.t>0.8){s.t=0;const cx=box.x+box.w/2,cy=box.y+box.h/2;for(let i=0;i<6;i++){const a=i*(Math.PI*2)/6;s.spawn({x:cx,y:cy,vx:Math.cos(a)*140,vy:Math.sin(a)*140,r:4,col:core});}}}}
+];return b;}
+
+/* Random utilities */
+function rand(a,b){return Math.random()*(b-a)+a;}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+/* Rush manager */
+const bosses=[
+  bossRadial('Starwarden', '#a6c7ff','#ffd166','#030311'),
+  bossBouncers('Lantern Mantis', '#ff9f1c','#ffd2ae','#0f0a08'),
+  bossSweep('Prism Weaver', '#7affb7','#a6c7ff','#081014'),
+  bossEcho('Echo Twin', '#ffc4a3','#ffd166','#0e0e18')
+];
+let wave=1, score=0, current=null, pattIdx=0, pattT=0, bullets=[];
+function nextBoss(){
+  const b=JSON.parse(JSON.stringify(bosses[(wave-1)%bosses.length])); // lite clone
+  current=b;
+  current.hp=current.hpMax;
+  pattIdx=0;pattT=0;bullets.length=0;
+  enterPattern();
+}
+function enterPattern(){const p=current.patterns[pattIdx]; current.enter=()=>{}; current.update=(S,dt)=>p.update(S,dt); current.enter(); p.enter && p.enter(scene); }
+function nextPattern(){pattIdx=(pattIdx+1)%current.patterns.length; pattT=0; enterPattern();}
+
+/* Scene update/render */
+const scene={
+  time:0,
+  spawn(b){b.t=0;bullets.push(b);return b;}
+};
+document.getElementById('retryBtn').onclick=()=>{wave=1;score=0;heart.hp=heart.hpMax;heart.heals=2;nextBoss();};
+document.getElementById('quitBtn').onclick=()=>{location.href='index.html';};
+
+/* Loop */
+let last=performance.now(); nextBoss();
+function loop(now){
+  const dt=Math.min(0.033,(now-last)/1000); last=now; scene.time+=dt; pattT+=dt;
+  // controls
+  if(input.is('a')) heart.x-=heart.sp*dt;
+  if(input.is('d')) heart.x+=heart.sp*dt;
+  if(input.is('w')) heart.y-=heart.sp*dt;
+  if(input.is('s')) heart.y+=heart.sp*dt;
+  heart.x=clamp(heart.x,box.x+heart.r,box.x+box.w-heart.r);
+  heart.y=clamp(heart.y,box.y+heart.r,box.y+box.h-heart.r);
+  if(input.is('x') && heart.heals>0){heart.heals--;heart.hp=Math.min(heart.hpMax,heart.hp+10);}
+  // strike (simple: small damage on Z with cooldown)
+  scene.strikeCD=(scene.strikeCD||0)-dt;
+  if(input.is('z') && scene.strikeCD<=0){
+    scene.strikeCD=0.6;
+    current.hp=Math.max(0,current.hp- (12 + (wave-1)*2));
+  }
+
+  // pattern driving
+  current.update(scene,dt);
+
+  // bullets update
+  for(const b of bullets){
+    b.t+=dt;
+    if(b.type==='bounce'){
+      b.x+=b.vx*dt; b.y+=b.vy*dt;
+      if(b.x-b.r<box.x||b.x+b.r>box.x+box.w) b.vx*=-1;
+      if(b.y-b.r<box.y||b.y+b.r>box.y+box.h) b.vy*=-1;
+    }else if(b.type==='pulse'){
+      // pulsing obstacle
+      b.r=3+Math.sin(scene.time*6+ (b.x*0.02))*2;
+    }else{
+      b.x+=b.vx*dt; b.y+=b.vy*dt;
+    }
+    b.x=clamp(b.x,box.x-40,box.x+box.w+40);
+    b.y=clamp(b.y,box.y-40,box.y+box.h+40);
+    // custom tick
+    if(b.onTick) b.onTick(scene,b,dt);
+  }
+  // collisions
+  for(const b of bullets){
+    const dx=b.x-heart.x, dy=b.y-heart.y, rr=(b.r||4)+heart.r;
+    if(dx*dx+dy*dy<=rr*rr && heart.i<=0){
+      heart.hp-=1; heart.i=0.9;
+    }
+  }
+  heart.i=Math.max(0,heart.i-dt);
+
+  // pattern switch
+  if(pattT > (current.patterns[pattIdx].dur||7)){ nextPattern(); bullets=bullets.filter(()=>false); }
+
+  // check win/lose
+  if(heart.hp<=0){ // lose -> reset this wave
+    score=Math.max(0,score-10);
+    heart.hp=heart.hpMax;heart.heals=2;bullets.length=0;pattT=0;pattIdx=0;enterPattern();
+  }
+  if(current.hp<=0){ // next wave
+    score+=25 + wave*5;
+    wave++; heart.hp=Math.min(heart.hpMax,heart.hp+5);
+    nextBoss();
+  }
+  hudC.textContent=`Wave: ${wave} • Score: ${score}`;
+
+  // render
+  // bg
+  ctx.fillStyle=current.bg||'#000'; ctx.fillRect(0,0,960,720);
+  // boss "sprite" above box
+  const cx=480, cy=280, r=26+Math.sin(scene.time*3)*3;
+  ctx.save(); ctx.shadowColor=current.ring; ctx.shadowBlur=10;
+  ctx.fillStyle=current.core; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0; ctx.fillStyle='#0b0b12'; ctx.fillRect(cx-6,cy-4,4,4); ctx.fillRect(cx+2,cy-4,4,4);
+  ctx.strokeStyle=current.ring; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(cx,cy,r+10,0,Math.PI*2); ctx.stroke(); ctx.restore();
+  // boss HP
+  ctx.fillStyle='#f7f6fb'; ctx.font='14px monospace'; ctx.fillText(`${current.name}`,20,36);
+  ctx.fillStyle='#222'; ctx.fillRect(20,52,360,10); ctx.fillStyle='#ff6b6b';
+  ctx.fillRect(20,52,360*Math.max(0,current.hp/current.hpMax),10); ctx.strokeStyle='#444'; ctx.strokeRect(20,52,360,10);
+
+  // arena
+  ctx.strokeStyle='#ffd166'; ctx.lineWidth=3; ctx.strokeRect(box.x,box.y,box.w,box.h);
+  // bullets
+  for(const b of bullets){ctx.fillStyle=b.col||'#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2);ctx.fill();}
+  // heart
+  ctx.save(); if(heart.i>0){ctx.globalAlpha=0.6+0.3*Math.sin(scene.time*20);} drawHeart(ctx,heart.x-20,heart.y-24,P.glow); ctx.restore();
+  // heart HUD
+  ctx.fillStyle='#f7f6fb'; ctx.font='14px monospace';
+  ctx.fillText(`HP: ${heart.hp}/${heart.hpMax} • Heals: ${heart.heals}`,20,690);
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
