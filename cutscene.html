@@ -1,0 +1,16 @@
+<script>
+function playCutscene(key){
+  switch(key){
+    case "first_boss_intro":
+      showBubble("The Golden Mantises bow in unison.\nThe trial begins...");
+      break;
+    case "last_boss_intro":
+      showBubble("Radiance descends with blinding light!\nPrepare yourself!");
+      break;
+    case "secret_boss_intro":
+      showBubble("You have discovered the hidden Golden Specter!");
+      break;
+    default: showBubble(""); break;
+  }
+}
+</script>
