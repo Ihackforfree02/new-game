@@ -1,809 +1,146 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>UNDERTALE • Hollow Trial — Battle</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNDERTALE YELLOW — Trial of the Golden Lord</title>
 <style>
-:root{--fg:#ffd166;--hp:#ff6b6b;--ui:#0b0b0b;--line:#262626;--emerald:#7affb7}
-html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
-#stage{position:fixed;left:50%;top:50%;transform-origin:top left}
-#wrap{position:relative;width:960px;height:720px}
-canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
-#bossHUD{position:absolute;left:20px;top:18px;display:flex;flex-direction:column;gap:6px}
-#bossName{font-size:14px;font-weight:700}
-#bossHP{height:12px;width:360px;background:#141414;border:1px solid #383838;position:relative}
-#bossHPFill{position:absolute;inset:0 0 0 auto;background:var(--hp);width:100%}
-#bossHPVal{font-size:12px;margin-top:2px}
-#playerHUD{position:absolute;right:20px;top:18px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
-#playerNameLabel{font-size:13px;color:var(--emerald)}
-#pHP{height:12px;width:200px;background:#141414;border:1px solid #383838;position:relative}
-#pHPFill{position:absolute;inset:0 0 0 auto;background:var(--emerald);width:100%}
-#pHPVal{font-size:12px;margin-top:2px}
-#uiBar{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px}
-.uiMenu{display:flex;gap:36px}
-.uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .06s}
-.uiBtn.sel{transform:translateY(-2px)}
-.uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
-.uiLabel{font-size:20px;letter-spacing:1px}
-#box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none}
-#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;display:block;z-index:10}
-.bub{position:relative;background:var(--ui);border:2px solid #fff;padding:10px 14px}
-.bub::before,.bub::after{content:"";position:absolute;bottom:-12px;left:40px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent}
-.bub::before{border-top:12px solid #fff;transform:translateY(2px)}
-.bub::after{border-top:12px solid var(--ui)}
-#bubbleText{white-space:pre-line;line-height:1.45;color:var(--fg)}
-/* small responsiveness hint */
-@media (max-width:520px){#wrap{transform:scale(.7)}}
+:root{--fg:#ffd166;--hp:#ff6b6b;--ui:#0b0b0b;--line:#262626;--emerald:#7affb7;}
+html,body{margin:0;height:100%;background:#000;color:var(--fg);font-family:ui-monospace,monospace;overflow:hidden;}
+#stage{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);}
+#wrap{position:relative;width:960px;height:720px;}
+canvas{display:block;width:960px;height:720px;background:#070606;border:4px solid #0a0a0f;}
+#bossHUD,#playerHUD{position:absolute;display:flex;flex-direction:column;gap:6px;}
+#bossHUD{left:20px;top:22px;}
+#playerHUD{right:20px;top:22px;align-items:flex-end;}
+#bossHP,#pHP{height:10px;background:#141414;border:1px solid #383838;position:relative;}
+#bossHPFill{background:var(--hp);position:absolute;inset:0 0 0 auto;width:100%;}
+#pHPFill{background:var(--emerald);position:absolute;inset:0 0 0 auto;width:100%;}
+#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;}
+.uiMenu{display:flex;gap:36px;}
+.uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .06s;}
+.uiBtn.sel{transform:translateY(-1px);}
+.uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.uiLabel{font-size:20px;letter-spacing:1px;}
+#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;display:block;z-index:10;}
+.bub{position:relative;background:var(--ui);border:2px solid #fff;padding:10px 14px;}
+.bub::before,.bub::after{content:"";position:absolute;bottom:-12px;left:40px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;}
+.bub::before{border-top:12px solid #fff;transform:translateY(2px);}
+.bub::after{border-top:12px solid var(--ui);}
+#bubbleText{white-space:pre-line;line-height:1.45;color:var(--fg);}
 </style>
 </head>
 <body>
-<div id="stage"><div id="wrap">
-  <canvas id="cv" width="960" height="720"></canvas>
-
-  <div id="bossHUD">
-    <div id="bossName">—</div>
-    <div id="bossHP"><div id="bossHPFill"></div></div>
-    <div id="bossHPVal">000/000</div>
-  </div>
-
-  <div id="playerHUD">
-    <div id="playerNameLabel">Traveler</div>
-    <div id="pHP"><div id="pHPFill"></div></div>
-    <div id="pHPVal">20/20</div>
-  </div>
-
-  <div id="box"></div>
-
-  <div id="bubble"><div class="bub"><div id="bubbleText"></div></div></div>
-
-  <div id="uiBar">
-    <div class="uiMenu" id="uiMenu">
-      <div class="uiBtn sel"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
-      <div class="uiBtn"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
-      <div class="uiBtn"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
-      <div class="uiBtn"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
+<div id="stage">
+  <div id="wrap">
+    <div id="bossHUD">
+      <div id="bossName">Golden Mantis</div>
+      <div id="bossHP"><div id="bossHPFill"></div></div>
+      <div id="bossHPVal">0/0</div>
     </div>
-    <div id="uiCenter">Your turn.</div>
-    <div id="uiRight"></div>
+    <div id="playerHUD">
+      <div id="playerNameLabel">Traveler</div>
+      <div id="pHP"><div id="pHPFill"></div></div>
+      <div id="pHPVal">20/20</div>
+    </div>
+    <canvas id="cv" width="960" height="720"></canvas>
+    <div id="bubble"><div class="bub"><div id="bubbleText"></div></div></div>
+    <div id="uiBar">
+      <div class="uiMenu" id="uiMenu">
+        <div class="uiBtn sel"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
+        <div class="uiBtn"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
+        <div class="uiBtn"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
+        <div class="uiBtn"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
+      </div>
+      <div id="uiCenter">Your turn.</div>
+    </div>
   </div>
-
-</div></div>
+</div>
 
 <script>
-/* -------------- Utilities -------------- */
-const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-const stage=document.getElementById('stage');
-function resizeStage(){const s=Math.min(window.innerWidth/960,window.innerHeight/720);stage.style.transform=`translate(-50%,-50%) scale(${s})`;}
-addEventListener('resize',resizeStage); resizeStage();
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function rand(a,b){return Math.random()*(b-a)+a;}
+// ========== Profile ==========
+const PROF='utg_profile_v1';
+const DEFAULTS={name:'Traveler',heart:'#ffd166'};
+let PRO={...DEFAULTS, ...JSON.parse(localStorage.getItem(PROF)||'{}')};
+document.getElementById('playerNameLabel').textContent=PRO.name;
 
-/* -------------- Input -------------- */
-class Input {
-  constructor(){ this.k=new Set(); this.down=new Set();
-    addEventListener('keydown',e=>{ this.k.add(e.key); this.down.add(e.key); onGlobalKey(e.key); });
-    addEventListener('keyup',e=>{ this.k.delete(e.key); });
+// ========== Canvas ==========
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const ARENA={x:240,y:420,w:480,h:180};
+let HEART={x:480,y:510,r:5,sp:280,i:0,hp:20,hpMax:20};
+function updatePlayerHP(){document.getElementById('pHPFill').style.width=(200*HEART.hp/HEART.hpMax)+'px';document.getElementById('pHPVal').textContent=`${HEART.hp}/${HEART.hpMax}`;}
+updatePlayerHP();
+
+// ========== Input ==========
+class Input{
+  constructor(){this.k=new Set();this.down=new Set();
+    addEventListener('keydown',e=>{this.k.add(e.key);this.down.add(e.key);});
+    addEventListener('keyup',e=>{this.k.delete(e.key);});
   }
-  is(k){ return this.k.has(k) || this.k.has(String(k).toUpperCase()); }
-  consume(k){ const had=this.down.has(k)||this.down.has(String(k).toUpperCase()); this.down.delete(k); this.down.delete(String(k).toUpperCase()); return had; }
-  tick(){ this.down.clear(); }
+  is(k){return this.k.has(k)||this.k.has(String(k).toUpperCase());}
+  consume(k){const had=this.down.has(k)||this.down.has(String(k).toUpperCase());this.down.delete(k);this.down.delete(String(k).toUpperCase());return had;}
+  tick(){this.down.clear();}
 }
 const input=new Input();
 
-/* -------------- Arena / Heart -------------- */
-const ARENA={x:240,y:420,w:480,h:180};
-const PLAYER = { name:'Traveler', hp:20, hpMax:20, color:'#ffd166' };
-let HEART = { x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2, r:6, i:0, hp:PLAYER.hp, hpMax:PLAYER.hpMax, sp:300 };
+// ========== Bubble ==========
+const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
+let lastDialog='';
+function showBubble(t){lastDialog=t;bubble.style.display='block';bubbleText.textContent=t;}
+function hideBubble(){bubble.style.display='none';}
 
-/* -------------- UI Elements -------------- */
-const bossNameEl=document.getElementById('bossName'),
-      bossHPFill=document.getElementById('bossHPFill'),
-      bossHPVal=document.getElementById('bossHPVal'),
-      pHPFill=document.getElementById('pHPFill'),
-      pHPVal=document.getElementById('pHPVal'),
-      bubbleText=document.getElementById('bubbleText'),
-      uiMenu=document.getElementById('uiMenu'),
-      uiCenter=document.getElementById('uiCenter');
-
-let selIx=0;
-function setSelection(ix){ [...uiMenu.children].forEach((c,i)=>c.classList.toggle('sel',i===ix)); selIx=ix; }
-
-/* -------------- Bullets / Effects -------------- */
-let bullets=[]; // {x,y,vx,vy,r,col,damage}
-let slashes=[]; // cosmetic
-
-function spawnBullet(o){ bullets.push(o); }
-function clearBullets(){ bullets.length=0; }
-
-/* -------------- Secret trigger (type "67" three times -> "676767") -------------- */
-let keySeq='';
-function onGlobalKey(k){
-  // track only digits
-  if(k.length===1 && /[0-9]/.test(k)){
-    keySeq += k;
-    if(keySeq.length>8) keySeq = keySeq.slice(-8);
-    if(keySeq.endsWith('676767')) {
-      activateSecretBoss();
-      keySeq=''; // reset
-    }
-  } else if (k==='Escape') {
-    // small convenience to reset
-    keySeq='';
-  }
-}
-
-/* -------------- Attack patterns factory -------------- */
-function makeAttack(type,opts={}){
-  // returns object with enter/update/done
-  const dur = opts.dur||2.8;
-  let s={t:0};
-  return {
-    duration:dur,
-    enter(){ s.t=0; if(type==='spear_line'){ this._tick=0; } /* ...*/ },
-    update(dt){
-      s.t+=dt;
-      if(type==='spear_line'){
-        // periodically spawn left/right spear shots
-        this._tick = (this._tick||0) + dt;
-        if(this._tick>0.22){ this._tick=0;
-          const side = Math.random()<0.5 ? -1:1;
-          spawnBullet({x: ARENA.x + (side<0? -10: ARENA.w+10), y: ARENA.y + rand(20,ARENA.h-20), vx: (side<0? 220:-220)* (opts.speedMult||1), vy:0, r:4, col:opts.color||'#ffd166', damage:7});
-        }
-      } else if(type==='arc'){
-        if(rand(0,1)<0.06){
-          const cx = ARENA.x + ARENA.w/2, cy = ARENA.y + rand(20,ARENA.h-20);
-          for(let a=-0.9;a<=0.9;a+=0.45){
-            spawnBullet({x:cx,y:cy,vx:Math.cos(a)*(opts.speed||200),vy:Math.sin(a)*(opts.speed||200),r:3,col:opts.color||'#a6c7ff',damage:6});
-          }
-        }
-      } else if(type==='drops'){
-        if(rand(0,1)<0.12){
-          const cols = 5, step=ARENA.w/(cols+1);
-          const i = Math.floor(rand(1,cols+1));
-          spawnBullet({x:ARENA.x + i*step + rand(-12,12), y: ARENA.y - 18, vx:0, vy: 260*(opts.speedMult||1), r:4, col:opts.color||'#ffb347', damage:6});
-        }
-      } else if(type==='spiral'){
-        // spawn rotating spiral paced by t
-        const n = 6;
-        for(let i=0;i<n;i++){
-          const a = s.t*4 + (i/n)*Math.PI*2;
-          if(Math.random()<0.02) spawnBullet({x:ARENA.x+ARENA.w/2 + Math.cos(a)*10, y:ARENA.y+ARENA.h/2 + Math.sin(a)*10, vx:Math.cos(a)*180, vy:Math.sin(a)*180, r:3, col:opts.color||'#ff66ff', damage:6});
-        }
-      } else if(type==='orbit'){
-        if(rand(0,1)<0.08) {
-          const cx = ARENA.x + ARENA.w/2, cy = ARENA.y + ARENA.h/2;
-          const ang = rand(0,Math.PI*2);
-          const spd = 160;
-          spawnBullet({x:cx+Math.cos(ang)*80, y:cy+Math.sin(ang)*80, vx: Math.cos(ang+Math.PI/2)*spd, vy: Math.sin(ang+Math.PI/2)*spd, r:4, col:opts.color||'#99ffcc', damage:7});
-        }
-      } else if(type==='beam'){
-        if(s.t>0.4 && Math.random()<0.02) {
-          // slow single beam - represented as long fast bullets
-          const y = ARENA.y + rand(20,ARENA.h-20);
-          for(let x=ARENA.x; x<ARENA.x+ARENA.w; x+=40) spawnBullet({x,y,vx:0,vy:0,r:6,col:opts.color||'#66ffff',damage:10, life:0.6});
-        }
-      } else if(type==='wave'){
-        if(rand(0,1)<0.07){
-          const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+30;
-          for(let i=0;i<8;i++){
-            const angle = Math.PI/6 + i*0.15;
-            spawnBullet({x:cx+(i-4)*20,y:cy,vx:Math.cos(angle)*220,vy:Math.sin(angle)*220,r:3,col:opts.color||'#aaff66',damage:6});
-          }
-        }
-      } else if(type==='random'){
-        if(rand(0,1)<0.12){
-          spawnBullet({x:ARENA.x+rand(0,ARENA.w),y:ARENA.y - 10, vx:rand(-120,120), vy:rand(140,260), r:4, col:opts.color||'#ff88ff', damage:6});
-        }
-      }
-    },
-    done(){ return s.t >= this.duration; }
-  };
-}
-
-/* -------------- Boss data (51 bosses + secret) -------------- */
-/* We'll create 51 bosses; first is a special 'Mantis Lords' group (3 minions),
-   then other bosses programmatically with unique palettes and dialogue templates.
-*/
-const bossNames = [
-  'Mantis Lords', // group of three mantises (special)
-  'Hornet',
-  'Broken Vessel',
-  'Dung Defender',
-  'Brooding Mawlek',
-  'Uumuu',
-  'Nosk',
-  'False Knight',
-  'Zote the Mighty',
-  'Soul Master',
-  'Troupe Master',
-  'Grimmkin',
-  'Xero',
-  'Collector',
-  'Traitor Lord',
-  'Elder Hu',
-  'Tiso Shade',
-  'Crystal Guardian',
-  'Deep Dweller',
-  'Shade Stalker',
-  'Dream Sentinel',
-  'Hollow Knight Echo',
-  'Weaver Shade',
-  'Iron Sentinel',
-  'Wispling King',
-  'Pale Knight',
-  'Rot King',
-  'Fungal Champion',
-  'Bone Lord',
-  'Rune Keeper',
-  'Abyssal Flame',
-  'Echoing Hornet',
-  'Spectral Warden',
-  'Glass Guardian',
-  'Silent Knight',
-  'Marrow Watcher',
-  'Blighted Knight',
-  'Cinder Shade',
-  'Glimmer Gazer',
-  'Ashen Knight',
-  'Thorn Matriarch',
-  'Puppeteer',
-  'Corpulence',
-  'Blooming Sentry',
-  'Shardbearer',
-  'Gravel Maw',
-  'Void Herald',
-  'Radiance Echo',
-  'Nailmaster (Echo)',
-  'Tremor Lord',
-  'Secret 67' // placeholder secret slot; will be overwritten by secret boss object
-];
-
-// small helper to pick distinct palettes
-const palettes = [
-  ['#ffd166','#fff1b6','#b8902f'],
-  ['#ff6666','#ffb2b2','#893333'],
-  ['#66ccff','#a6ddff','#2b6f9b'],
-  ['#cc66ff','#f1c9ff','#7a2e8a'],
-  ['#99ffcc','#dfffe8','#2e8f6b'],
-  ['#ffff88','#fff4c2','#b89b3a'],
-  ['#ff88ff','#ffd1ff','#b36aa3'],
-  ['#a6ff66','#eaffb9','#5a9930'],
-  ['#66ffff','#e6ffff','#2b9999'],
-  ['#ffb347','#ffd9b2','#9b5b2b']
-];
-
-/* Build boss objects */
-const bosses = [];
-for(let i=0;i<50;i++){
-  const name = bossNames[i] || `Boss ${i+1}`;
-  // pick palette
-  const pal = palettes[i % palettes.length];
-  const base = pal[0];
-  // hp scaling a bit with index
-  const hpMax = Math.round(160 + i*6 + rand(0,80));
-  // attacks types (mix)
-  const patterns = ['spear_line','arc','drops','spiral','orbit','beam','wave','random'];
-  // pick 2 patterns
-  const p1 = patterns[i % patterns.length];
-  const p2 = patterns[(i+3) % patterns.length];
-  // dialogue templates
-  const intros = [
-    `${name} appears from the shadows.`,
-    `You face ${name}.`,
-    `A presence: ${name}.`,
-    `${name} steps into the arena.`,
-    `${name} challenges you.`
-  ];
-  const taunts = [
-    `You cannot stand before ${name}.`,
-    `${name} strikes with fierce will.`,
-    `Watch closely... ${name} moves.`,
-    `${name} knows your weakness.`,
-    `${name} laughs.`
-  ];
-  const deaths = [
-    `${name} falls. The hall quiets.`,
-    `${name} collapses.`,
-    `${name} releases one last breath.`,
-    `${name} fades away.`,
-    `${name} is ended.`
-  ];
-  let boss = {
-    id:i+1,
-    name,
-    hp:hpMax,
-    hpMax,
-    palette:pal,
-    bg: (i%2===0) ? '#121212' : '#151216',
-    intro:[intros[i%intros.length]],
-    taunt:[taunts[i%taunts.length]],
-    death:[deaths[i%deaths.length]],
-    spare:0,
-    spareNeed: 40 + Math.floor(i*1.2),
-    acts: [
-      {name:'Check', run: (s)=>({text:`${name}: ${taunts[i%taunts.length]}`})},
-      {name:'Bow', run: (s)=>({text:`You bow to ${name}. It regards you.`, sparePlus:8})
+// ========== Boss Data ==========
+const bosses=[
+  {
+    key:'golden_mantis',name:'Golden Mantis',hpMax:300,hp:300,
+    intro:['Three golden mantises appear!','Prepare yourself!'],
+    acts:[
+      {name:'Check', run:s=>({text:'The mantises are fast and elegant.',sparePlus:8})},
+      {name:'Bow', run:s=>({text:'You bow. They respect you slightly.',sparePlus:12})}
     ],
-    draw: function(ctx,t){
-      // procedural pixel boss: varying shape using id
-      const cx = 480, cy = 220 + Math.sin(t*2 + i)*6;
-      ctx.save(); ctx.translate(cx,cy);
-      // body
-      ctx.fillStyle = this.palette[0];
-      const w = 18 + (i%5);
-      const h = 28 + (i%6);
-      ctx.fillRect(-w/2,-h/2,w,h);
-      // mask/eye
-      ctx.fillStyle = this.palette[1];
-      ctx.fillRect(-4,-h/2-6,8,10);
-      // accent
-      ctx.fillStyle = this.palette[2];
-      ctx.fillRect(-w/2,h/2-6,w,6);
-      ctx.restore();
-    },
-    makeAttacks: function(){
-      // two attack phases created with factories
-      return [
-        makeAttack(p1,{color:this.palette[0],dur:2.6}),
-        makeAttack(p2,{color:this.palette[1],dur:3.2})
-      ];
-    }
-  };
-  boss.attacks = boss.makeAttacks();
-  bosses.push(boss);
-}
-/* Replace first entry with Mantis Lords special 3-minion fight */
-const mantisTemplate = {
-  id:0,
-  name:'Mantis Lords',
-  hp:450, hpMax:450,
-  bg:'#1a1a2d',
-  intro:["Three golden mantises descend.","The Mantis Lords test you!"],
-  death:["The Mantis Lords bow and fall."],
-  spare:0, spareNeed:200,
-  acts:[
-    {name:'Check', run:()=>({text:"A group of ritual duelists. They watch you intently."})},
-    {name:'Bow', run:()=>({text:"You bow. They tilt their heads." , sparePlus:12})}
-  ],
-  draw: function(ctx,t,flags){
-    // draw three mantises across the middle
-    const baseY = 220;
-    const xs = [420,480,540];
-    for(let k=0;k<3;k++){
-      const cx = xs[k];
-      const cy = baseY + Math.sin(t*3 + k)*4;
-      ctx.save();
-      ctx.translate(cx,cy);
-      ctx.shadowColor='#ffd166';
-      ctx.shadowBlur=8;
-      ctx.fillStyle='#b8902f';
-      ctx.fillRect(-10,-22,20,44);
-      ctx.fillStyle='#e5bf4d';
-      ctx.fillRect(-8,18,16,10);
-      ctx.restore();
+    attacks:[
+      {name:'Spear Swipe',dur:4,speed:360},
+      {name:'Spin Slash',dur:5,speed:280}
+    ],
+    draw:function(ctx,t){
+      const x=480, y=200;
+      ctx.fillStyle='#ffd166';ctx.fillRect(x-20,y-40,40,40);
+      ctx.fillStyle='#fff';ctx.fillRect(x-5,y-5,10,10);
     }
   },
-  // the mantis-lords fight uses minions
-  minions: [
-    {name:'Golden Mantis A', hp:150, hpMax:150},
-    {name:'Golden Mantis B', hp:150, hpMax:150},
-    {name:'Golden Mantis C', hp:150, hpMax:150}
-  ],
-  makeAttacks: function(){
-    // coordinated attacks: choose one minion to attack each phase
-    return [
-      // combo where spears + drops spawn
-      { duration:3.8, enter(){ this.t=0; this.tick=0; }, update(dt){
-          this.t+=dt; this.tick+=dt;
-          if(this.tick>0.18){ this.tick=0;
-            const side = Math.random()<0.5?-1:1;
-            spawnBullet({x:ARENA.x + (side<0?-8:ARENA.w+8), y:ARENA.y + rand(20,ARENA.h-20), vx:(side<0?220:-220), vy:0, r:4, col:'#ffd166', damage:8});
-          }
-          if(Math.random()<0.08) spawnBullet({x:ARENA.x + rand(0,ARENA.w), y:ARENA.y - 10, vx:0, vy:260, r:4, col:'#ffb347', damage:8});
-        }, done(){ return this.t>this.duration; }
-      },
-      // arcs
-      makeAttack('arc',{color:'#a6c7ff',dur:3.2})
-    ];
-  }
-};
-// replace bosses[0] (which was generated) with mantisTemplate
-bosses[0] = mantisTemplate;
-bosses[0].attacks = mantisTemplate.makeAttacks();
-
-/* secret boss definition (distinct) */
-const secretBoss = {
-  id:999, name:'Secret 67', hp:900, hpMax:900, bg:'#330033',
-  intro:["An impossible presence awakens...","You summoned it."],
-  death:["The Secret 67 dissolves into static."],
-  spare:0, spareNeed:9999,
-  acts:[{name:'Check', run:()=>({text:"There's... nothing human about this."})}],
-  draw(ctx,t){
-    ctx.save(); ctx.translate(480,220);
-    const s = 1 + Math.sin(t*3)*0.08;
-    ctx.scale(s,s);
-    // flickering cube
-    for(let i=0;i<6;i++){
-      ctx.fillStyle = i%2? '#ff77ff':'#663366';
-      ctx.fillRect(-70 + i*20, -40 + Math.sin(t*6 + i)*10, 14, 14);
-    }
-    ctx.restore();
-  },
-  makeAttacks(){
-    return [
-      makeAttack('spiral',{color:'#ff77ff',dur:4}),
-      makeAttack('orbit',{color:'#cc88ff',dur:4}),
-      makeAttack('beam',{color:'#ffffff',dur:3.6}),
-      makeAttack('random',{color:'#ff66ff',dur:3.2})
-    ];
-  }
-};
-
-/* -------------- Game state -------------- */
-let bossIndex = 0;
-let currentBoss = bosses[bossIndex];
-let attackIndex = 0;
-let attackObj = null;
-let turn = 'player'; // 'player' or 'enemy' or 'victory' or 'defeat'
-let phaseT = 0;
-let lastTime = performance.now();
-
-/* show bubble helper */
-function showBubble(t,instant){
-  bubbleText.textContent = t || '';
-  document.getElementById('bubble').style.display = t? 'block':'none';
-}
-
-/* -------------- UI helpers -------------- */
-function updateHUD(){
-  bossNameEl.textContent = currentBoss.name;
-  bossHPFill.style.width = Math.max(0, (360 * ( (currentBoss.minions) ? (currentBoss.minions.reduce((s,m)=>s+m.hp,0)/currentBoss.minions.reduce((s,m)=>s+m.hpMax,0)) : (currentBoss.hp/currentBoss.hpMax) ) ) ) + 'px';
-  if(currentBoss.minions){
-    const alive = currentBoss.minions.filter(m=>m.hp>0).length;
-    bossHPVal.textContent = `${alive} / ${currentBoss.minions.length}`;
-  } else {
-    bossHPVal.textContent = `${Math.max(0,Math.floor(currentBoss.hp))}/${currentBoss.hpMax}`;
-  }
-  pHPFill.style.width = Math.max(0,(200 * (HEART.hp/HEART.hpMax))) + 'px';
-  pHPVal.textContent = `${Math.max(0,HEART.hp)}/${HEART.hpMax}`;
-}
-
-/* -------------- Items / Inventory -------------- */
-let items = [{name:'Dew Petal', heal:8},{name:'Amber Draught', heal:14},{name:'Radiant Nectar', heal:24}];
-function openInventory(){
-  let txt = (items.length? items.map((it,i)=> `${i+1}) ${it.name} (+${it.heal} HP)`).join('\n') : '(Empty)') + '\n\nPress 1–9 to use, X to cancel';
-  showBubble(txt);
-}
-
-/* -------------- ACT behavior -------------- */
-function openActs(){
-  // show acts for current boss
-  const acts = currentBoss.acts || [{name:'Check',run:()=>({text:'There is nothing.'})}];
-  let txt = acts.map((a,i)=> `${i+1}) ${a.name}`).join('\n') + '\n\nPress 1–9 to choose, X to cancel';
-  showBubble(txt);
-}
-
-/* -------------- Player actions -------------- */
-function doFight(){
-  // simple fight: damage boss or target a minion if present
-  const dmg = 18 + Math.floor(rand(-4,6));
-  if(currentBoss.minions){
-    // target first alive minion
-    const m = currentBoss.minions.find(m=>m.hp>0);
-    if(m){
-      m.hp = Math.max(0, m.hp - dmg);
-      showBubble(`You strike ${m.name} for ${dmg} damage.`);
-    }
-    // if all dead, the group is defeated
-    if(currentBoss.minions.every(m=>m.hp<=0)){
-      showBubble(currentBoss.death?.[0] || `${currentBoss.name} is defeated.`);
-      // move to next boss after short delay
-      setTimeout(nextBoss, 900);
-      turn='victory';
-    } else {
-      // enemy turn
-      setTimeout(()=>{ startEnemyTurn(); }, 300);
-    }
-  } else {
-    currentBoss.hp = Math.max(0, currentBoss.hp - dmg);
-    showBubble(`You hit ${currentBoss.name} for ${dmg} damage.`);
-    updateHUD();
-    if(currentBoss.hp<=0){
-      // defeated
-      showBubble(currentBoss.death?.[0] || `${currentBoss.name} falls.`);
-      turn='victory';
-      setTimeout(nextBoss,900);
-    } else {
-      setTimeout(()=> startEnemyTurn(), 300);
+  {
+    key:'radiance',name:'The Radiance',hpMax:800,hp:800,
+    intro:['A brilliant light blinds you.','The final trial begins.'],
+    acts:[
+      {name:'Check', run:s=>({text:'Its light burns yet mesmerizes.',sparePlus:20})},
+      {name:'Bow', run:s=>({text:'You bow. It acknowledges your courage.',sparePlus:50})}
+    ],
+    attacks:[
+      {name:'Light Beam',dur:5,speed:400},
+      {name:'Golden Orbs',dur:6,speed:360}
+    ],
+    draw:function(ctx,t){
+      ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(480,200,30+Math.sin(t*3)*6,0,Math.PI*2);ctx.fill();
     }
   }
+];
+
+// ========== Battle ==========
+let currentBoss=bosses[0], attackIndex=0, turn='player', menu='root', bullets=[], phaseT=0, showArena=false, slashes=[];
+const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getElementById('bossHPVal'), bossNameEl=document.getElementById('bossName');
+function setBoss(b){currentBoss=b;currentBoss.hp=currentBoss.hpMax;updateBossBar();}
+function updateBossBar(){bossHPFill.style.width=(360*currentBoss.hp/currentBoss.hpMax)+'px';bossHPVal.textContent=`${currentBoss.hp}/${currentBoss.hpMax}`;bossNameEl.textContent=currentBoss.name;}
+setBoss(currentBoss);
+showBubble(currentBoss.intro.join('\n'));
+
+// ========== Render ==========
+function drawHeart(ctx,x,y){ctx.fillStyle=PRO.heart;ctx.fillRect(x-HEART.r,y-HEART.r,HEART.r*2,HEART.r*2);}
+function loop(){ctx.clearRect(0,0,960,720);
+  currentBoss.draw(ctx,performance.now()/500);
+  drawHeart(ctx,HEART.x,HEART.y);
+  requestAnimationFrame(loop);
 }
-
-function doAct(num){
-  const act = currentBoss.acts && currentBoss.acts[num-1];
-  if(!act){ showBubble('Nothing.'); return; }
-  const res = act.run({boss: currentBoss});
-  if(res.sparePlus) currentBoss.spare = Math.min(currentBoss.spareNeed, (currentBoss.spare||0) + res.sparePlus);
-  if(res.text) showBubble(res.text);
-  // small delay then enemy turn
-  setTimeout(()=> startEnemyTurn(), 500);
-}
-
-function doItem(num){
-  const it = items[num-1];
-  if(!it){ showBubble('No item.'); return; }
-  HEART.hp = Math.min(HEART.hpMax, HEART.hp + it.heal);
-  items.splice(num-1,1);
-  updateHUD();
-  showBubble(`You used ${it.name}.`);
-  setTimeout(()=> startEnemyTurn(), 300);
-}
-function doMercy(){
-  // can spare when boss.spare >= spareNeed or boss.hp <= 10% of max
-  let can = false;
-  if(currentBoss.minions){
-    can = currentBoss.minions.every(m=>m.hp<=Math.max(1, Math.floor(m.hpMax*0.18)));
-  } else {
-    can = (currentBoss.spare >= currentBoss.spareNeed) || (currentBoss.hp <= currentBoss.hpMax * 0.12);
-  }
-  if(can){
-    showBubble(`You offered mercy. ${currentBoss.name} accepts...`);
-    setTimeout(nextBoss,700);
-    turn='victory';
-  } else {
-    showBubble("They are not ready.");
-  }
-}
-
-/* -------------- Enemy Turn logic -------------- */
-let activeAttack = null;
-function startEnemyTurn(){
-  turn='enemy';
-  uiCenter.textContent='Enemy turn';
-  // pick attack for this phase
-  if(currentBoss.minions){
-    // pick an attack pattern that uses the group's behaviour (mantisTemplate)
-    const attacks = currentBoss.attacks || [];
-    activeAttack = attacks[ attackIndex % attacks.length ];
-  } else {
-    const atks = currentBoss.attacks || currentBoss.makeAttacks && currentBoss.makeAttacks();
-    activeAttack = atks ? atks[attackIndex % atks.length] : makeAttack('random',{color:currentBoss.palette?currentBoss.palette[0]:'#fff', dur:2.8});
-  }
-  activeAttack.enter && activeAttack.enter();
-  phaseT = 0;
-  // enable arena
-  // HEART is allowed to move in arena during enemy turn; bullets spawn in update loop
-}
-
-/* -------------- Finish Enemy Turn -------------- */
-function finishEnemyTurn(){
-  // cleanup
-  activeAttack = null;
-  attackIndex++;
-  turn='player';
-  uiCenter.textContent='Your turn';
-  clearBullets();
-  updateHUD();
-}
-
-/* -------------- Boss progression -------------- */
-function nextBoss(){
-  // advance bossIndex; special case when secret triggered
-  if(currentBoss === secretBoss) {
-    showBubble("You beat the secret force. The world shudders.");
-    // end game for now
-    setTimeout(()=>initAll(true), 900);
-    return;
-  }
-  bossIndex++;
-  if(bossIndex >= bosses.length){
-    // after last generated boss, show secret prompt
-    showBubble("You have passed through the gauntlet. The end... or is it?");
-    setTimeout(()=>initAll(true),1000);
-    return;
-  }
-  currentBoss = bosses[bossIndex];
-  // if boss object has makeAttacks, re-create them to avoid re-using old state
-  if(currentBoss.makeAttacks) currentBoss.attacks = currentBoss.makeAttacks();
-  // if it's mantis group, ensure minions exist with hp
-  if(currentBoss.minions){
-    currentBoss.minions.forEach(m=>{ m.hp = m.hpMax; });
-  } else {
-    currentBoss.hp = currentBoss.hpMax;
-  }
-  attackIndex = 0;
-  activeAttack = null;
-  HEART.hp = HEART.hpMax;
-  turn='player';
-  uiCenter.textContent='Your turn';
-  showBubble((currentBoss.intro && currentBoss.intro.join('\n')) || `You face ${currentBoss.name}.`);
-  updateHUD();
-}
-
-/* -------------- Secret boss activation -------------- */
-function activateSecretBoss(){
-  // swap in secret boss as current boss fight immediately
-  currentBoss = secretBoss;
-  if(currentBoss.makeAttacks) currentBoss.attacks = currentBoss.makeAttacks();
-  HEART.hp = HEART.hpMax;
-  turn='player';
-  bossIndex = bosses.length; // out of bounds so nextBoss won't advance wrongly
-  showBubble(currentBoss.intro.join('\n'));
-  updateHUD();
-}
-
-/* -------------- Update loop -------------- */
-function update(dt){
-  input.tick();
-  // Menu navigation during player turn
-  if(turn==='player'){
-    if(input.consume('ArrowLeft')) setSelection(Math.max(0,selIx-1));
-    if(input.consume('ArrowRight')) setSelection(Math.min(3,selIx+1));
-    if(input.consume('z') || input.consume('Z') || input.consume('Enter')){
-      const map = ['FIGHT','ACT','ITEM','MERCY'];
-      const choice = map[selIx];
-      if(choice==='FIGHT') doFight();
-      else if(choice==='ACT') openActs();
-      else if(choice==='ITEM') openInventory();
-      else if(choice==='MERCY') doMercy();
-    }
-    // Number input for ACT/ITEM choices
-    for(let n=1;n<=9;n++){
-      if(input.consume(String(n))){
-        // if bubble shows acts (we assume it does if last action was openActs)
-        const acts = currentBoss.acts || [];
-        if(bubbleText.textContent && bubbleText.textContent.startsWith(acts.map((a,i)=> `${i+1}) ${a.name}`).join('\n')) ){
-          doAct(n);
-        } else {
-          // treat as ITEM use
-          doItem(n);
-        }
-      }
-    }
-    if(input.consume('x')||input.consume('X')) { // cancel
-      showBubble('');
-    }
-  }
-
-  // Enemy turn: update active attack & bullets
-  if(turn==='enemy' && activeAttack){
-    phaseT += dt;
-    activeAttack.update && activeAttack.update(dt);
-    // bullets movement
-    for(let b of bullets){
-      b.x += (b.vx||0)*dt;
-      b.y += (b.vy||0)*dt;
-      if(b.life){ b.life -= dt; if(b.life<=0) b._kill = true; }
-      // collision with heart
-      const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=b.r+HEART.r;
-      if(dx*dx+dy*dy <= rr*rr && HEART.i<=0){
-        HEART.hp = Math.max(0, HEART.hp - (b.damage || 7));
-        HEART.i = 0.9;
-        updateHUD();
-      }
-    }
-    bullets = bullets.filter(b=> !b._kill && b.x>-50 && b.x<1010 && b.y>-80 && b.y<960);
-
-    // finish attack after duration
-    if(activeAttack.done && activeAttack.done()){
-      // if mantis minions, maybe rotate which minion attacked; here we just finish
-      finishEnemyTurn();
-    } else if(phaseT > (activeAttack.duration || 3.2)){
-      finishEnemyTurn();
-    }
-  }
-
-  // heart invulnerability ticker
-  HEART.i = Math.max(0, HEART.i - dt);
-
-  // movement of heart only during enemy turn
-  if(turn==='enemy'){
-    let dx=0,dy=0;
-    if(input.is('ArrowLeft')) dx -= 1;
-    if(input.is('ArrowRight')) dx += 1;
-    if(input.is('ArrowUp')) dy -= 1;
-    if(input.is('ArrowDown')) dy += 1;
-    const L = Math.hypot(dx,dy) || 1;
-    HEART.x = clamp(HEART.x + dx/L * HEART.sp * dt, ARENA.x + HEART.r, ARENA.x + ARENA.w - HEART.r);
-    HEART.y = clamp(HEART.y + dy/L * HEART.sp * dt, ARENA.y + HEART.r, ARENA.y + ARENA.h - HEART.r);
-  } else {
-    // keep heart centered inside arena on player turn
-    HEART.x = clamp(HEART.x, ARENA.x + HEART.r, ARENA.x+ARENA.w - HEART.r);
-    HEART.y = clamp(HEART.y, ARENA.y + HEART.r, ARENA.y+ARENA.h - HEART.r);
-  }
-}
-
-/* -------------- Render loop -------------- */
-function drawPixelHeart(ctx,x,y,color='#ffd166',scale=1){
-  ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
-  // small 4x4 pixel heart-ish
-  const s=3;
-  const m=[[0,1,1,0],[1,1,1,1],[1,1,1,1],[0,1,1,0]];
-  ctx.fillStyle=color;
-  for(let r=0;r<m.length;r++) for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-2)*s,(r-2)*s,s,s);
-  ctx.restore();
-}
-
-function render(now){
-  // clear
-  ctx.fillStyle = '#080606';
-  ctx.fillRect(0,0,960,720);
-  // background pattern based on boss bg
-  ctx.fillStyle = (currentBoss.bg || '#121214');
-  ctx.fillRect(0,0,960,360);
-
-  // subtle grid for retro undertale feel
-  for(let i=0;i<96;i++){ ctx.fillStyle = i%4? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.015)'; ctx.fillRect((i*97)%960,(i*151)%360,2,2); }
-
-  // boss draw (if mantis group, pass t)
-  const t = performance.now()/1000;
-  if(currentBoss.draw) currentBoss.draw(ctx,t);
-  // if show arena -> draw arena box
-  if(turn==='enemy' || turn==='player'){
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-    ctx.strokeRect(ARENA.x, ARENA.y, ARENA.w, ARENA.h);
-  }
-
-  // bullets
-  for(let b of bullets){
-    ctx.fillStyle = b.col || '#fff';
-    ctx.beginPath(); ctx.arc(b.x,b.y, b.r || 4, 0, Math.PI*2); ctx.fill();
-  }
-
-  // heart
-  drawPixelHeart(ctx, HEART.x, HEART.y, PLAYER.color);
-
-  // slashes etc (not extensively used)
-}
-
-/* -------------- Game init and loop -------------- */
-function initAll(reset=false){
-  // initialize bossIndex, currentBoss
-  bossIndex = 0;
-  currentBoss = bosses[bossIndex];
-  // create attacks if needed
-  for(let b of bosses){ if(b.makeAttacks) b.attacks = b.makeAttacks(); }
-  secretBoss.attacks = secretBoss.makeAttacks && secretBoss.makeAttacks();
-  currentBoss.attacks = currentBoss.attacks || (currentBoss.makeAttacks && currentBoss.makeAttacks());
-  // reset hearts and player
-  HEART.hp = HEART.hpMax = PLAYER.hpMax;
-  HEART.x = ARENA.x + ARENA.w/2; HEART.y = ARENA.y + ARENA.h/2; HEART.i = 0;
-  turn = 'player'; phaseT = 0; attackIndex = 0;
-  bullets = [];
-  showBubble(currentBoss.intro && currentBoss.intro.join('\n'));
-  updateHUD();
-}
-
-// main loop
-let last=performance.now();
-function mainLoop(now){
-  const dt = Math.min(0.033, (now - last)/1000);
-  last = now;
-  update(dt);
-  render(now);
-  requestAnimationFrame(mainLoop);
-}
-initAll();
-requestAnimationFrame(mainLoop);
-
-/* -------------- UI interaction events -------------- */
-uiMenu.addEventListener('mousemove', e=>{
-  const it = e.target.closest('.uiBtn'); if(!it) return;
-  const ix = [...uiMenu.children].indexOf(it); if(ix>=0) setSelection(ix);
-});
-uiMenu.addEventListener('click', ()=>{
-  const map = ['FIGHT','ACT','ITEM','MERCY'];
-  const choice = map[selIx];
-  if(choice==='FIGHT') doFight();
-  else if(choice==='ACT') openActs();
-  else if(choice==='ITEM') openInventory();
-  else if(choice==='MERCY') doMercy();
-});
-
-/* -------------- Keyboard commands for debugging / convenience -------------- */
-// press R to restart
-addEventListener('keydown', e=>{ if(e.key==='r' || e.key==='R'){ initAll(); } });
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
