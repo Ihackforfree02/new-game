@@ -5,155 +5,88 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>UNDERTALE GOLD — Trial of the Golden Lord</title>
 <style>
-:root{
-  --bg:#000; --fg:#ffd166; --hp:#ff6b6b; --ui:#0b0b0b; --line:#262626; --white:#ffffff; --emerald:#7affb7; --slash:#fff1b6;
-}
+:root{--fg:#ffd166;--hp:#ff6b6b;--ui:#0b0b0b;--line:#262626;--emerald:#7affb7;--white:#fff;}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
 #stage{position:fixed;left:50%;top:50%;transform-origin:top left}
 #wrap{position:relative;width:960px;height:720px}
 canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
 
-/* Boss HUD */
-#bossHUD{position:absolute;left:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
-#bossName{font-size:13px;color:var(--fg)}
+/* HUD */
+#bossHUD{position:absolute;left:20px;top:22px;display:flex;flex-direction:column;gap:6px}
+#bossName{font-size:13px}
 #bossHP{height:10px;width:360px;background:#141414;border:1px solid #383838;position:relative}
-#bossHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--hp);width:100%}
-#bossHPVal{color:var(--fg);font-size:12px;margin-top:2px}
-
-/* Player HUD */
+#bossHPFill{position:absolute;inset:0 0 0 auto;background:var(--hp);width:100%}
+#bossHPVal{font-size:12px;margin-top:2px}
 #playerHUD{position:absolute;right:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 #playerNameLabel{font-size:13px;color:#9be7c0}
 #pHP{height:10px;width:200px;background:#141414;border:1px solid #383838;position:relative}
-#pHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--emerald);width:100%}
-#pHPVal{color:var(--fg);font-size:12px;margin-top:2px}
+#pHPFill{position:absolute;inset:0 0 0 auto;background:var(--emerald);width:100%}
+#pHPVal{font-size:12px;margin-top:2px}
 
 /* Bottom UI */
 #uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px}
 .uiMenu{display:flex;gap:36px}
-.uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer;transform:translateY(0);transition:transform .06s}
+.uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .06s}
 .uiBtn.sel{transform:translateY(-1px)}
-.uiKey{width:20px;height:20px;border:2px solid var(--white);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--fg)}
-.uiLabel{font-size:20px;color:var(--fg);letter-spacing:1px}
-.uiBtn.sel .uiKey,.uiBtn:hover .uiKey{border-color:var(--fg)}
-.uiBtn.sel .uiLabel,.uiBtn:hover .uiLabel{color:var(--white)}
-#uiCenter{font-size:14px;color:var(--fg)}
-#uiRight{font-size:12px;color:var(--fg)}
+.uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.uiLabel{font-size:20px;letter-spacing:1px}
 
-/* Arena box (visible only during enemy turn) */
-#box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid var(--white);display:none}
+/* Arena box only during enemy turn */
+#box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none}
 
-/* Dialogue bubble (hidden during enemy turns) */
-#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;color:var(--fg);display:none;z-index:10}
-.bub{position:relative;background:var(--ui);border:2px solid var(--white);padding:10px 14px;filter:contrast(140%) saturate(120%)}
+/* Dialogue bubble (auto-hidden during enemy turn, preserved text) */
+#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;display:block;z-index:10}
+.bub{position:relative;background:var(--ui);border:2px solid #fff;padding:10px 14px}
 .bub::before,.bub::after{content:"";position:absolute;bottom:-12px;left:40px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent}
-.bub::before{border-top:12px solid var(--white);transform:translateY(2px)}
+.bub::before{border-top:12px solid #fff;transform:translateY(2px)}
 .bub::after{border-top:12px solid var(--ui)}
-#bubbleText{white-space:pre-line;line-height:1.45}
+#bubbleText{white-space:pre-line;line-height:1.45;color:var(--fg)}
 
 /* Inventory */
-#inv{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);width:520px;background:var(--ui);border:2px solid var(--white);display:none;z-index:11}
-#invHead{padding:8px 12px;border-bottom:2px solid var(--white);font-weight:700}
-#invList{padding:8px 12px;line-height:1.8;white-space:pre;color:var(--fg)}
-
-/* Pause */
-#pause{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:20}
-#pausePanel{background:var(--ui);border:2px solid var(--white);padding:12px 16px;width:360px}
-.pauseBtn{display:block;width:100%;text-align:center;margin:6px 0;padding:8px 10px;border:1px solid var(--white);cursor:pointer;background:transparent;color:var(--fg)}
-
-/* Settings */
-#settings{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:25}
-#settingsPanel{background:var(--ui);border:2px solid var(--white);padding:12px 16px;width:420px}
-.setRow{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
-input[type="text"]{width:220px;background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
-select{width:220px;background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
-.setButtons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-.setBtn{padding:6px 10px;border:1px solid var(--white);background:transparent;color:var(--fg);cursor:pointer}
+#inv{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);width:520px;background:var(--ui);border:2px solid #fff;display:none;z-index:11}
+#invHead{padding:8px 12px;border-bottom:2px solid #fff;font-weight:700}
+#invList{padding:8px 12px;line-height:1.8;white-space:pre}
 </style>
 </head>
 <body>
 <div id="stage">
   <div id="wrap">
-    <!-- Boss HUD -->
     <div id="bossHUD">
       <div id="bossName">Golden Lord</div>
       <div id="bossHP"><div id="bossHPFill"></div></div>
       <div id="bossHPVal">000/000</div>
     </div>
-
-    <!-- Player HUD -->
     <div id="playerHUD">
       <div id="playerNameLabel">Traveler</div>
       <div id="pHP"><div id="pHPFill"></div></div>
       <div id="pHPVal">20/20</div>
     </div>
 
-    <canvas id="cv" width="960" height="720" aria-label="Battlefield"></canvas>
-    <div id="box" aria-hidden="true"></div>
+    <canvas id="cv" width="960" height="720"></canvas>
+    <div id="box"></div>
 
-    <!-- Dialogue -->
     <div id="bubble"><div class="bub"><div id="bubbleText"></div></div></div>
 
-    <!-- Inventory -->
     <div id="inv">
       <div id="invHead">Inventory</div>
       <div id="invList"></div>
     </div>
 
-    <!-- Bottom UI -->
-    <div id="uiBar" role="group" aria-label="Battle menu">
+    <div id="uiBar">
       <div class="uiMenu" id="uiMenu">
-        <div class="uiBtn sel" data-action="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
-        <div class="uiBtn" data-action="ACT"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
-        <div class="uiBtn" data-action="ITEM"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
-        <div class="uiBtn" data-action="MERCY"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
+        <div class="uiBtn sel"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
+        <div class="uiBtn"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
+        <div class="uiBtn"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
+        <div class="uiBtn"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
       </div>
       <div id="uiCenter">Your turn.</div>
       <div id="uiRight"></div>
     </div>
-
-    <!-- Pause -->
-    <div id="pause">
-      <div id="pausePanel">
-        <div style="margin-bottom:8px;text-align:center">Paused</div>
-        <button id="btnResume" class="pauseBtn">Resume</button>
-        <button id="btnRestart" class="pauseBtn">Restart</button>
-        <button id="btnQuit" class="pauseBtn">Quit</button>
-      </div>
-    </div>
-
-    <!-- Settings (opens on Control key) -->
-    <div id="settings">
-      <div id="settingsPanel">
-        <div style="margin-bottom:8px;font-weight:700">Settings</div>
-        <div class="setRow">
-          <label for="setName">Name</label>
-          <input id="setName" type="text" placeholder="Your name"/>
-        </div>
-        <div class="setRow">
-          <label for="setHeart">Heart color</label>
-          <select id="setHeart">
-            <option value="#ffd166">Gold</option>
-            <option value="#ff2f2f">Red</option>
-            <option value="#5ec2ff">Blue</option>
-            <option value="#7affb7">Green</option>
-            <option value="#c08bff">Purple</option>
-            <option value="#ff8ee6">Pink</option>
-            <option value="#ffbf5e">Orange</option>
-            <option value="#fff28a">Yellow</option>
-          </select>
-        </div>
-        <div class="setButtons">
-          <button id="setCancel" class="setBtn">Cancel</button>
-          <button id="setSave" class="setBtn">Save</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
 
 <script>
-/* ===== Profile ===== */
+/* Profile */
 const PROF='utg_profile_v1';
 const DEFAULTS={name:'Traveler',heart:'#ffd166'};
 function getProfile(){try{return {...DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF))||{})};}catch{return {...DEFAULTS};}}
@@ -161,12 +94,12 @@ function setProfile(p){try{localStorage.setItem(PROF,JSON.stringify(p));}catch{}
 let PRO=getProfile();
 document.getElementById('playerNameLabel').textContent=PRO.name;
 
-/* ===== Responsive ===== */
+/* Responsive */
 const stage=document.getElementById('stage');
-function resizeStage(){const W=960,H=720;const s=Math.min(innerWidth/W,innerHeight/H);stage.style.transform=`translate(-50%, -50%) scale(${s})`;}
+function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${s})`;}
 addEventListener('resize',resizeStage); resizeStage();
 
-/* ===== Elements ===== */
+/* Elements */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const boxEl=document.getElementById('box');
 const uiMenu=document.getElementById('uiMenu'), uiCenter=document.getElementById('uiCenter');
@@ -175,50 +108,37 @@ const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getEl
 const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const inv=document.getElementById('inv'), invList=document.getElementById('invList');
-const pauseEl=document.getElementById('pause');
-const settingsEl=document.getElementById('settings');
-const setNameEl=document.getElementById('setName');
-const setHeartEl=document.getElementById('setHeart');
-const setCancel=document.getElementById('setCancel');
-const setSave=document.getElementById('setSave');
-document.getElementById('btnQuit').onclick=()=>location.href='index.html';
-document.getElementById('btnRestart').onclick=()=>restartBattle();
-document.getElementById('btnResume').onclick=()=>togglePause(false);
 
-/* ===== Input ===== */
-class Input{
-  constructor(){this.k=new Set();this.down=new Set();
-    addEventListener('keydown',e=>{
-      this.k.add(e.key);this.down.add(e.key);
-      if(e.key==='Control'){openSettings();} // Control opens settings
-    });
-    addEventListener('keyup',e=>{this.k.delete(e.key);});
-  }
+/* Input */
+class Input{constructor(){this.k=new Set();this.down=new Set();
+  addEventListener('keydown',e=>{this.k.add(e.key);this.down.add(e.key);});
+  addEventListener('keyup',e=>{this.k.delete(e.key);});}
   is(k){return this.k.has(k)||this.k.has(String(k).toUpperCase());}
   consume(k){const had=this.down.has(k)||this.down.has(String(k).toUpperCase());this.down.delete(k);this.down.delete(String(k).toUpperCase());return had;}
   tick(){this.down.clear();}
 }
 const input=new Input();
 
-/* ===== Helpers ===== */
+/* Helpers */
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function rand(a,b){return Math.random()*(b-a)+a;}
 function typeText(el,str,spd=14,done){el.textContent='';let i=0;clearInterval(typeText._t);typeText._t=setInterval(()=>{el.textContent=str.slice(0,++i);if(i>=str.length){clearInterval(typeText._t);done&&done();}},spd);}
-function showBubble(t){bubble.style.display='block';typeText(bubbleText,t);}
+let lastDialog='';
+function showBubble(t){lastDialog=t;bubble.style.display='block';typeText(bubbleText,t);}
 function hideBubble(){bubble.style.display='none';}
 
-/* ===== Heart ===== */
-function drawHeart(ctx,x,y,color,scale=1.2){
+/* Heart (smaller) */
+function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
   const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
   ctx.fillStyle=color;const s=3;
-  for(let r=0;r<m.length;r++) for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s+40,(r-3)*s+20,s,s);
+  for(let r=0;r<m.length;r++) for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);
   ctx.restore();
 }
 
-/* ===== Scene state ===== */
+/* Scene */
 const ARENA={x:240,y:420,w:480,h:180};
-const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:280,i:0,hp:20,hpMax:20};
+const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:280,i:0,hp:20,hpMax:20}; // r smaller
 function updatePlayerHP(){pHPFill.style.width=(200*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
 updatePlayerHP();
 
@@ -233,12 +153,12 @@ let flags={}, currentBoss=null;
 
 let items=[{n:'Dew Petal',h:8},{n:'Amber Draught',h:14},{n:'Radiant Nectar',h:24}];
 
-/* ===== Inventory ===== */
+/* Inventory */
 function openInventory(){inv.style.display='block';invList.textContent=(items.length?items.map((it,i)=>`${i+1}) ${it.n} (+${it.h} HP)`).join('\n'):'(Empty)')+'\n\nPress 1–9 to use, X to close';}
 function closeInventory(){inv.style.display='none';}
 function useItem(ix){const it=items[ix];if(!it) return;HEART.hp=Math.min(HEART.hpMax,HEART.hp+it.h);updatePlayerHP();items.splice(ix,1);closeInventory();endPlayerTurn(0.25);}
 
-/* ===== Boss factory: Mantis Lord (stable) ===== */
+/* Boss: Mantis Lord */
 function makeMantisBoss(){
   const boss={
     key:'mantis',
@@ -257,90 +177,70 @@ function makeMantisBoss(){
     attacks:[]
   };
   const P={
-    spearThrust:(dur=4,speed=340)=>({
-      enter(){}, update(dt){ if(Math.random()<0.25){ const side=Math.random()<0.5?'L':'R', y=HEART.y+rand(-12,12); const x=side==='L'?ARENA.x-22:ARENA.x+ARENA.w+22; const dir=side==='L'?1:-1; spawn({x,y,vx:dir*speed,vy:0,r:4,col:'#ffd166'});} },
+    spear:(dur=4,speed=340)=>({
+      enter(){}, update(dt){ if(Math.random()<0.25){ const L=HEART.y+rand(-12,12); const left=Math.random()<0.5;
+        const x=left?ARENA.x-22:ARENA.x+ARENA.w+22; const dir=left?1:-1; spawn({x,y:L,vx:dir*speed,vy:0,r:4,col:'#ffd166'});} },
       done(){return phaseT>dur;}
     }),
-    swordSweep:(dur=4)=>({
+    arcs:(dur=4)=>({
       enter(){this.t=0;}, update(dt){this.t+=dt; if(this.t>0.48){this.t=0; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; for(const a of [-0.85,-0.5,0.5,0.85]) spawn({x:cx,y:cy,vx:Math.cos(a)*220,vy:Math.sin(a)*220,r:3,col:'#a6c7ff'});} },
       done(){return phaseT>dur;}
     }),
-    plungeLine:(dur=4)=>({
+    drops:(dur=4)=>({
       enter(){this.t=0;}, update(dt){this.t+=dt; if(this.t>0.44){this.t=rand(0.12,0.3); const cols=5, step=ARENA.w/(cols+1), jitter=rand(-10,10); const i=Math.floor(rand(1,cols+1)); const x=ARENA.x+i*step+jitter; spawn({x,y:ARENA.y-16,vx:0,vy:290,r:4,col:'#ffb347'});} },
       done(){return phaseT>dur;}
     }),
-    feintCombo:(dur=6)=>({
-      enter(){this.a=P.spearThrust(6,360);this.b=P.plungeLine(6);this.a.enter?.();this.b.enter?.();},
+    combo:(dur=6)=>({
+      enter(){this.a=P.spear(6,360);this.b=P.drops(6);this.a.enter?.();this.b.enter?.();},
       update(dt){this.a.update(dt);this.b.update(dt);},
       done(){return phaseT>dur;}
     })
   };
-  boss.attacks=[P.spearThrust(4,340),P.swordSweep(4),P.plungeLine(4),P.feintCombo(6)];
+  boss.attacks=[P.spear(4,340),P.arcs(4),P.drops(4),P.combo(6)];
   return boss;
 }
 
-/* ===== Drawing: Mantis (mantis-like + FNF bob) ===== */
+/* Draw Mantis (with subtle bob) */
 function drawMantisLord(ctx,t,flinch=0){
   const x=480, y=258 + Math.sin(t*6)*3;
   ctx.save();
   if(flinch>0){ctx.globalAlpha=0.7;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
   ctx.shadowColor='#ffd166';ctx.shadowBlur=10;
-
-  // wings/cloak
   ctx.fillStyle='#b8902f';
   ctx.beginPath();ctx.moveTo(x-22,y+6);ctx.lineTo(x-50,y+28+Math.sin(t*2)*2);ctx.lineTo(x-12,y+40);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(x+22,y+6);ctx.lineTo(x+50,y+28+Math.cos(t*2)*2);ctx.lineTo(x+12,y+40);ctx.closePath();ctx.fill();
-
-  // thorax & abdomen
   ctx.fillStyle='#e5bf4d';
   ctx.fillRect(x-5,y-8,10,40);
   ctx.fillRect(x-4,y+30,8,12);
   ctx.beginPath();ctx.ellipse(x,y+50,12,10,0,0,Math.PI*2);ctx.fill();
-
-  // head + mandibles
   ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-12,y-12);ctx.lineTo(x+12,y-12);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(x-6,y-12);ctx.lineTo(x-10,y-4);ctx.lineTo(x-3,y-9);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(x+6,y-12);ctx.lineTo(x+10,y-4);ctx.lineTo(x+3,y-9);ctx.closePath();ctx.fill();
-
   ctx.shadowBlur=0;
-  // eyes
   ctx.fillStyle='#0c0c12';ctx.fillRect(x-8,y-22,6,6);ctx.fillRect(x+2,y-22,6,6);
-
-  // antennae
   ctx.strokeStyle='#ffd166';ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(x-4,y-26);ctx.quadraticCurveTo(x-18,y-44+Math.sin(t*5)*2, x-22,y-54);ctx.stroke();
   ctx.beginPath();ctx.moveTo(x+4,y-26);ctx.quadraticCurveTo(x+18,y-44+Math.cos(t*5)*2, x+22,y-54);ctx.stroke();
-
-  // forelegs (blades)
-  ctx.strokeStyle='#ffd166';ctx.lineWidth=4;
+  ctx.lineWidth=4;ctx.strokeStyle='#ffd166';
   ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x-34,y+10+Math.sin(t*3)*8);ctx.stroke();
   ctx.beginPath();ctx.moveTo(x+6,y);ctx.lineTo(x+34,y+10+Math.cos(t*3)*8);ctx.stroke();
-
-  // hind legs
   ctx.lineWidth=3;
   ctx.beginPath();ctx.moveTo(x-4,y+18);ctx.lineTo(x-18,y+32);ctx.stroke();
   ctx.beginPath();ctx.moveTo(x+4,y+18);ctx.lineTo(x+18,y+32);ctx.stroke();
-
-  // halo
   ctx.globalAlpha=0.5;ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,40+Math.sin(t*2.8)*2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;
   ctx.restore();
 }
 
-/* ===== Boss bar updates ===== */
+/* Boss bar */
 function bossBar(){bossHPFill.style.width=(360*Math.max(0,currentBoss.hp/currentBoss.hpMax))+'px';bossHPVal.textContent=`${currentBoss.hp}/${currentBoss.hpMax}`;bossNameEl.textContent=currentBoss.name;}
 
-/* ===== Bullets ===== */
+/* Bullets */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 
-/* ===== Boss control ===== */
-function setBoss(b){
-  currentBoss=b;
-  currentBoss.hp=currentBoss.hpMax;
-  bossBar();
-  attackIndex=0;
-}
+/* Boss control */
+function setBoss(b){currentBoss=b; currentBoss.hp=currentBoss.hpMax; bossBar(); attackIndex=0;}
 
-/* ===== Slash + damage (no freezes) ===== */
+/* Slash + damage */
 function bossHit(dmg){
   currentBoss.hp=Math.max(0,currentBoss.hp-dmg); bossBar();
   scene.flinch=0.18; scene.shake=0.12;
@@ -349,11 +249,12 @@ function bossHit(dmg){
   currentBoss.onHit?.(scene,dmg);
 }
 
-/* ===== Turn flow ===== */
+/* Turn flow + dialogue visibility control */
 function endPlayerTurn(delay=0.2){
   TURN_COUNT++;
   setTimeout(()=>{
     turn='enemy'; menu='root'; uiCenter.textContent='Enemy turn';
+    bubble.style.display='none'; // hide dialogue while dodging
     startAttack();
   }, delay*1000);
 }
@@ -361,15 +262,19 @@ function startAttack(){
   bullets.length=0; slashes.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
   attack=currentBoss.attacks[attackIndex]; attackIndex=(attackIndex+1)%currentBoss.attacks.length; attack?.enter?.();
 }
-function finishAttack(){turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';}
+function finishAttack(){
+  turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
+  // restore the dialogue that was present before enemy turn
+  if(lastDialog){ bubbleText.textContent=lastDialog; bubble.style.display='block'; }
+}
 
-/* ===== Menus ===== */
+/* Menus */
 function setSelection(ix){[...uiMenu.children].forEach((c,i)=>c.classList.toggle('sel',i===ix)); selIx=ix;}
 function choose(){const map=['FIGHT','ACT','ITEM','MERCY']; doAction(map[selIx]);}
 function doAction(name){
   if(turn!=='player') return;
   if(name==='FIGHT'){
-    hideBubble();
+    showBubble('You strike.'); // stays in memory, will come back after dodging
     bossHit(20);
     endPlayerTurn(0.22);
   }else if(name==='ACT'){
@@ -384,63 +289,35 @@ function doAction(name){
       setTimeout(()=>initBattle(),900);
     }else{
       showBubble('They are not ready.');
-      setTimeout(()=>hideBubble(),700);
     }
   }
 }
 
-/* ===== Pause/restart ===== */
-function togglePause(on){paused=on; pauseEl.style.display=on?'flex':'none'; uiCenter.textContent=on?'Paused':'Your turn';}
-function restartBattle(){paused=false; pauseEl.style.display='none'; initBattle();}
+/* Pause/restart */
+function restartBattle(){initBattle();}
 
-/* ===== Settings ===== */
-function openSettings(){
-  setNameEl.value=PRO.name||'';
-  setHeartEl.value=PRO.heart||DEFAULTS.heart;
-  settingsEl.style.display='flex';
-}
-setCancel.onclick=()=>settingsEl.style.display='none';
-setSave.onclick=()=>{
-  PRO.name=(setNameEl.value||'').trim()||DEFAULTS.name;
-  PRO.heart=setHeartEl.value||DEFAULTS.heart;
-  setProfile(PRO);
-  document.getElementById('playerNameLabel').textContent=PRO.name;
-  settingsEl.style.display='none';
-};
-
-/* ===== Intro/init ===== */
+/* Init */
 function initBattle(){
-  hideBubble(); closeInventory();
-  HEART.hp=20; HEART.i=0; HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; updatePlayerHP();
-  setBoss(makeMantisBoss()); // ensure mantis loads reliably
   bullets.length=0; slashes.length=0; phaseT=0; turn='player'; menu='root'; uiCenter.textContent='Your turn'; boxEl.style.display='none'; showArena=false;
-  damagePopup=null; scene.flinch=0; scene.shake=0; flags={}; TURN_COUNT=0; items=[{n:'Dew Petal',h:8},{n:'Amber Draught',h:14},{n:'Radiant Nectar',h:24}];
+  scene.flinch=0; scene.shake=0; damagePopup=null; flags={}; TURN_COUNT=0; items=[{n:'Dew Petal',h:8},{n:'Amber Draught',h:14},{n:'Radiant Nectar',h:24}];
+  HEART.hp=20; HEART.i=0; HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; updatePlayerHP();
+  setBoss(makeMantisBoss());
   showBubble(currentBoss.intro.join('\n'));
 }
 initBattle();
 
-/* ===== Loop ===== */
+/* Loop */
 let last=performance.now();
-function loop(now){
-  const dt=Math.min(0.033,(now-last)/1000); last=now;
-  if(!paused){ update(dt); render(dt); }
-  requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(0.033,(now-last)/1000); last=now; update(dt); render(dt); requestAnimationFrame(loop);} requestAnimationFrame(loop);
 
-/* ===== Update ===== */
+/* Update */
 function update(dt){
   input.tick(); time+=dt;
-
-  if(input.consume('Escape')) restartBattle();
-  if(input.consume('p')||input.consume('P')) togglePause(!paused);
-
   if(turn==='player' && menu==='root'){
     if(input.consume('ArrowLeft')) setSelection(Math.max(0,selIx-1));
     if(input.consume('ArrowRight')) setSelection(Math.min(3,selIx+1));
     if(input.consume('z')||input.consume('Z')||input.consume('Enter')) choose();
   }
-
   if(turn==='player' && menu==='act'){
     for(let i=1;i<=currentBoss.acts.length;i++){
       if(input.consume(String(i))){
@@ -449,21 +326,18 @@ function update(dt){
         if(res.flag) flags[res.flag]=true;
         if(res.sparePlus) currentBoss.spare=Math.min(currentBoss.spareNeed,(currentBoss.spare||0)+res.sparePlus);
         showBubble(res.text);
-        setTimeout(()=>{hideBubble(); endPlayerTurn(0.25);},460);
+        setTimeout(()=>{endPlayerTurn(0.25);},460);
       }
     }
-    if(input.consume('x')||input.consume('X')){ hideBubble(); menu='root'; }
+    if(input.consume('x')||input.consume('X')){ showBubble('You step back.'); menu='root'; }
   }
-
   if(turn==='player' && menu==='item'){
     for(let i=1;i<=9;i++){ if(input.consume(String(i))) { useItem(i-1); break; } }
     if(input.consume('x')||input.consume('X')){ closeInventory(); menu='root'; }
   }
 
   if(turn==='enemy'){
-    bubble.style.display='none';
     phaseT+=dt;
-
     // heart movement
     let dx=0,dy=0;
     if(input.is('ArrowLeft')||input.is('a')) dx-=1;
@@ -475,34 +349,33 @@ function update(dt){
     HEART.y=clamp(HEART.y+dy/L*HEART.sp*dt, ARENA.y+HEART.r, ARENA.y+ARENA.h-HEART.r);
     HEART.i=Math.max(0,HEART.i-dt);
 
-    // update attack
+    // attack update
     attack?.update?.(dt);
 
-    // bullets
+    // bullets movement
     for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
     bullets=bullets.filter(b=>b.x>ARENA.x-100 && b.x<ARENA.x+ARENA.w+100 && b.y>ARENA.y-100 && b.y<ARENA.y+ARENA.h+140);
 
-    // collisions
+    // collisions — now 7 damage per hit
     for(const b of bullets){
       const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
       if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){
-        HEART.hp=Math.max(0,HEART.hp-1); updatePlayerHP(); HEART.i=0.85;
+        HEART.hp=Math.max(0,HEART.hp-7); // 7 damage
+        updatePlayerHP();
+        HEART.i=0.85;
       }
     }
 
-    // end phase
+    // phase end
     if(attack?.done && attack.done()){ finishAttack(); }
 
-    if(HEART.hp<=0){ turn='defeat'; setTimeout(()=>restartBattle(),900); }
+    // defeat
+    if(HEART.hp<=0){ turn='defeat'; showBubble('You fall. The hall dims.'); setTimeout(()=>initBattle(),1100); }
   }
 
-  // slash anim
-  slashes.forEach(s=>s.t+=dt);
-  slashes=slashes.filter(s=>s.t<s.life);
-
-  // impact decay
-  scene.flinch=Math.max(0,scene.flinch-dt);
-  scene.shake=Math.max(0,scene.shake-dt);
+  // slash timing
+  slashes.forEach(s=>s.t+=dt); slashes=slashes.filter(s=>s.t<s.life);
+  scene.flinch=Math.max(0,scene.flinch-dt); scene.shake=Math.max(0,scene.shake-dt);
 
   // victory
   if(currentBoss.hp<=0 && turn!=='victory'){
@@ -512,17 +385,15 @@ function update(dt){
   }
 }
 
-/* ===== Render ===== */
+/* Render */
 function render(dt){
   const sx=(scene.shake>0?Math.sin(time*70)*3:0), sy=(scene.shake>0?Math.cos(time*63)*2:0);
   ctx.save(); ctx.translate(sx,sy);
 
-  // background
   ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
-  ctx.fillStyle='#1a130f';
-  for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
+  ctx.fillStyle='#1a130f'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
-  // boss (always drawn)
+  // boss
   currentBoss?.draw?.(ctx,time,scene.flinch);
 
   // arena/heart/bullets only during enemy turn
@@ -530,7 +401,7 @@ function render(dt){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
     for(const b of bullets){ctx.fillStyle=b.col||'#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2);ctx.fill();}
     ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
-    drawHeart(ctx,HEART.x-20,HEART.y-24,PRO.heart||DEFAULTS.heart);
+    drawHeart(ctx,HEART.x-6,HEART.y-6,PRO.heart||DEFAULTS.heart,0.8); // smaller heart
     ctx.restore();
   }
 
@@ -544,7 +415,7 @@ function render(dt){
     if(alpha<=0) damagePopup=null;
   }
 
-  // slash effects
+  // slash effects on boss
   for(const s of slashes){
     const p=s.t/s.life, len=140, w=10*(1-p), x=480, y=240;
     ctx.save(); ctx.translate(x,y); ctx.rotate(s.angle); ctx.globalAlpha=0.9*(1-p);
@@ -556,36 +427,9 @@ function render(dt){
   ctx.restore();
 }
 
-/* ===== UI interactions ===== */
+/* UI interactions */
 uiMenu.addEventListener('mousemove',e=>{const it=e.target.closest('.uiBtn'); if(!it) return; const ix=[...uiMenu.children].indexOf(it); if(ix>=0) setSelection(ix);});
 uiMenu.addEventListener('click',()=>choose());
-
-/* ===== Keyboard menus/inventory ===== */
-addEventListener('keydown',e=>{
-  if(e.key==='Escape'){restartBattle();return;}
-  if(e.key==='p'||e.key==='P'){togglePause(!paused);return;}
-  if(turn!=='player') return;
-
-  if(menu==='root'){
-    if(e.key==='ArrowLeft') setSelection(Math.max(0,selIx-1));
-    if(e.key==='ArrowRight') setSelection(Math.min(3,selIx+1));
-    if(e.key==='z'||e.key==='Z'||e.key==='Enter') choose();
-  }else if(menu==='act'){
-    for(let i=1;i<=currentBoss.acts.length;i++){
-      if(e.key===String(i)){
-        const act=currentBoss.acts[i-1];
-        const res=act.run({boss:currentBoss,flags});
-        if(res.flag) flags[res.flag]=true;
-        if(res.sparePlus) currentBoss.spare=Math.min(currentBoss.spareNeed,(currentBoss.spare||0)+res.sparePlus);
-        showBubble(res.text); setTimeout(()=>{hideBubble(); endPlayerTurn(0.25);},460);
-      }
-    }
-    if(e.key==='x'||e.key==='X'){ hideBubble(); menu='root'; }
-  }else if(menu==='item'){
-    if('123456789'.includes(e.key)) useItem(parseInt(e.key)-1);
-    if(e.key==='x'||e.key==='X'){ closeInventory(); menu='root'; }
-  }
-});
 </script>
 </body>
 </html>
