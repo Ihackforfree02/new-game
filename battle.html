@@ -15,19 +15,19 @@ html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-mo
 canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
 
 /* HUD */
-#bossHUD{position:absolute;left:20px;top:22px;display:flex;flex-direction:column;gap:6px}
+#bossHUD{position:absolute;left:20px;top:22px;display:flex;flex-direction:column;gap:6px;z-index:3}
 #bossName{font-size:13px}
 #bossHP{height:10px;width:360px;background:#141414;border:1px solid #383838;position:relative}
 #bossHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--hp);width:100%}
 #bossHPVal{font-size:12px;margin-top:2px}
-#playerHUD{position:absolute;right:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+#playerHUD{position:absolute;right:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;z-index:3}
 #playerNameLabel{font-size:13px;color:#9be7c0}
 #pHP{height:10px;width:220px;background:#141414;border:1px solid #383838;position:relative}
 #pHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--emerald);width:100%}
 #pHPVal{font-size:12px;margin-top:2px}
 
 /* Bottom UI */
-#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px}
+#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3}
 .uiMenu{display:flex;gap:36px}
 .uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .06s}
 .uiBtn.sel{transform:translateY(-1px)}
@@ -37,10 +37,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #uiRight{font-size:12px;color:#ccc;display:flex;gap:12px;align-items:center}
 
 /* Arena */
-#box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none}
+#box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;z-index:1}
 
 /* Dialogue (auto-hidden during enemy turn, preserved text) */
-#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;display:block;z-index:10}
+#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;display:block;z-index:4}
 .bub{position:relative;background:var(--ui);border:2px solid #fff;padding:10px 14px}
 .bub::before,.bub::after{content:"";position:absolute;bottom:-12px;left:40px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent}
 .bub::before{border-top:12px solid #fff;transform:translateY(2px)}
@@ -48,20 +48,20 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #bubbleText{white-space:pre-line;line-height:1.45;color:var(--fg)}
 
 /* Inventory */
-#inv{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);width:520px;background:var(--ui);border:2px solid #fff;display:none;z-index:11}
+#inv{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);width:520px;background:var(--ui);border:2px solid #fff;display:none;z-index:5}
 #invHead{padding:8px 12px;border-bottom:2px solid #fff;font-weight:700}
 #invList{padding:8px 12px;line-height:1.8;white-space:pre}
 
 /* Settings */
-#settings{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:25}
-#settingsPanel{background:#0e0e0e;border:2px solid #fff;padding:12px 16px;width:460px}
+#settings{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:6}
+#settingsPanel{background:#0e0e0e;border:2px solid #fff;padding:12px 16px;width:480px}
 .setRow{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
 input[type="text"], select{width:260px;background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
 .setButtons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .setBtn{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
 
-/* Pause toast */
-#toast{position:absolute;left:50%;top:86px;transform:translateX(-50%);background:#0e0e0e;border:1px solid #fff;color:#ffd166;padding:6px 10px;display:none;z-index:30}
+/* Toast */
+#toast{position:absolute;left:50%;top:86px;transform:translateX(-50%);background:#0e0e0e;border:1px solid #fff;color:#ffd166;padding:6px 10px;display:none;z-index:7}
 </style>
 </head>
 <body>
@@ -150,7 +150,7 @@ input[type="text"], select{width:260px;background:#111;color:#ffd166;border:1px 
 
 <script>
 /* ========================= Profile ========================= */
-const PROF='utg_profile_v2';
+const PROF='utg_profile_v3';
 const DEFAULTS={name:'Traveler',heart:'#ffd166',diff:'Normal'};
 function getProfile(){try{return {...DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF))||{})};}catch{return {...DEFAULTS};}}
 function setProfile(p){try{localStorage.setItem(PROF,JSON.stringify(p));}catch{}}
@@ -217,8 +217,8 @@ function showToast(t){toast.textContent=t; toast.style.display='block'; clearTim
 const DIFFS={
   Easy:{spd:0.90,rate:0.85,dmg:0.8,tele:1.15},
   Normal:{spd:1.00,rate:1.00,dmg:1.0,tele:1.00},
-  Hard:{spd:1.25,rate:1.30,dmg:1.2,tele:0.85},
-  Insane:{spd:1.5,rate:1.6,dmg:1.4,tele:0.72}
+  Hard:{spd:1.28,rate:1.35,dmg:1.25,tele:0.80},
+  Insane:{spd:1.55,rate:1.7,dmg:1.5,tele:0.68}
 };
 let DIFF_LABEL=PRO.diff||'Normal'; let DIFF=DIFFS[DIFF_LABEL]||DIFFS.Normal; diffLabel.textContent=DIFF_LABEL;
 addEventListener('keydown',e=>{
@@ -266,10 +266,10 @@ function useItem(ix){const it=items[ix];if(!it) return; HEART.hp=Math.min(HEART.
 /* ========================= Bullet + pattern helpers ========================= */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 function trackHeart(dt){HEART._pdt=dt; HEART._px=(HEART._px==null?HEART.x:HEART.x); HEART._py=(HEART._py==null?HEART.y:HEART.y);}
-function leadAim(fromx,fromy,base=0.06){const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60); const vy0=(HEART.y-(HEART._py||HEART.y))/(HEART._pdt||1/60); return {vx0,vy0,lead:base*DIFF.spd};}
+function leadAim(){const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60); const vy0=(HEART.y-(HEART._py||HEART.y))/(HEART._pdt||1/60); return {vx0,vy0,lead:0.06*DIFF.spd};}
 function spawnAimed(fromx,fromy,speed,color='#fff',radius=3){
   const dx=HEART.x-fromx, dy=HEART.y-fromy, L=Math.hypot(dx,dy)||1;
-  const {vx0,vy0,lead}=leadAim(fromx,fromy);
+  const {vx0,vy0,lead}=leadAim();
   const vx=(dx/L)*speed*DIFF.spd + vx0*lead, vy=(dy/L)*speed*DIFF.spd + vy0*lead;
   return spawn({x:fromx,y:fromy,vx,vy,r:radius,col:color});
 }
@@ -278,37 +278,31 @@ function spawnAimed(fromx,fromy,speed,color='#fff',radius=3){
 function patDash(duration=4){
   let t=0, gap=Math.max(0.05,0.14/DIFF.rate);
   let g=0;
-  return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(12,ARENA.h-12); const x=left?ARENA.x-24:ARENA.x+ARENA.w+24; const dir=left?1:-1; spawn({x,y,vx:dir*(370+60*DIFF.spd),vy:0,r:4,col:'#ffd166'});}},done(){return t>=duration;}};
+  return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(12,ARENA.h-12); const x=left?ARENA.x-24:ARENA.x+ARENA.w+24; const dir=left?1:-1; spawn({x,y,vx:dir*(380+70*DIFF.spd),vy:0,r:4,col:'#ffd166'});}},done(){return t>=duration;}};
 }
 function patPlunge(duration=4){
-  let t=0, gap=Math.max(0.08,0.18/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const cols=6+Math.floor(2*DIFF.rate); const step=ARENA.w/(cols+1); const i=randi(1,cols+1); const x=ARENA.x+i*step+rand(-10,10); spawn({x,y:ARENA.y-18,vx:0,vy:(300+50*DIFF.spd),r:4,col:'#ffb347'});}},done(){return t>=duration;}};
+  let t=0, gap=Math.max(0.08,0.18/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const cols=6+Math.floor(2*DIFF.rate); const step=ARENA.w/(cols+1); const i=randi(1,cols+1); const x=ARENA.x+i*step+rand(-10,10); spawn({x,y:ARENA.y-18,vx:0,vy:(300+60*DIFF.spd),r:4,col:'#ffb347'});}},done(){return t>=duration;}};
 }
 function patArcs(duration=4){
-  let t=0, rate=Math.max(0.08,0.42/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; const angles=[-0.9,-0.5,0.5,0.9]; for(const a of angles){spawn({x:cx,y:cy,vx:Math.cos(a)*(230+30*DIFF.spd),vy:Math.sin(a)*(230+30*DIFF.spd),r:3,col:'#a6c7ff'});}}},done(){return t>=duration;}};
+  let t=0, rate=Math.max(0.08,0.42/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; const angles=[-0.9,-0.5,0.5,0.9]; for(const a of angles){spawn({x:cx,y:cy,vx:Math.cos(a)*(240+40*DIFF.spd),vy:Math.sin(a)*(240+40*DIFF.spd),r:3,col:'#a6c7ff'});}}},done(){return t>=duration;}};
 }
 function patStarburst(duration=4,count=10,col='#ffe799'){
-  let t=0, rate=Math.max(0.24,0.52/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<count;k++){const a=(k/count)*Math.PI*2+rand(-0.08,0.08); spawn({x:cx,y:cy,vx:Math.cos(a)*(230+40*DIFF.spd),vy:Math.sin(a)*(230+40*DIFF.spd),r:3,col:col});}}},done(){return t>=duration;}};
+  let t=0, rate=Math.max(0.24,0.52/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<count;k++){const a=(k/count)*Math.PI*2+rand(-0.08,0.08); spawn({x:cx,y:cy,vx:Math.cos(a)*(240+50*DIFF.spd),vy:Math.sin(a)*(240+50*DIFF.spd),r:3,col:col});}}},done(){return t>=duration;}};
 }
-function patHoming(duration=4,spd=220,col='#fff3b8'){
+function patHoming(duration=4,spd=230,col='#fff3b8'){
   let t=0, rate=Math.max(0.28,0.6/DIFF.rate); let g=0; return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w), y=ARENA.y-10; spawnAimed(x,y,spd,col,4);} },done(){return t>=duration;}};
 }
 function patSweepLaser(duration=4){
   let t=0, a=rand(0,Math.PI*2), dir=Math.random()<0.5?-1:1, emit=Math.max(0.06,0.12/DIFF.rate), g=0;
   const pivot={x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2};
-  return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;a+=dir*(1.2*DIFF.spd)*dt;if(g>=emit){g=0;const lx=pivot.x+Math.cos(a)*(ARENA.w/2-10), ly=pivot.y+Math.sin(a)*(ARENA.h/2-10); spawnAimed(lx,ly,230,'#ffe799',3);} },done(){return t>=duration;}};
+  return {enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;a+=dir*(1.25*DIFF.spd)*dt;if(g>=emit){g=0;const lx=pivot.x+Math.cos(a)*(ARENA.w/2-10), ly=pivot.y+Math.sin(a)*(ARENA.h/2-10); spawnAimed(lx,ly,240,'#ffe799',3);} },done(){return t>=duration;}};
 }
 function patSpiral(duration=4){
-  let t=0, a0=rand(0,Math.PI*2), rad=Math.max(ARENA.w,ARENA.h)*0.6; const rateR=(rad/(duration*1.4))*DIFF.rate, rateA=6.0*DIFF.spd;
-  return {enter(){t=0;},update(dt){t+=dt;const steps=2+Math.floor(2*DIFF.rate); for(let i=0;i<steps;i++){const a=a0+t*rateA+i*(Math.PI*2/steps);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad; spawnAimed(x,y,220+30*DIFF.spd,'#a6c7ff',3);} rad=Math.max(28,rad-rateR*dt);},done(){return t>=duration;}};
+  let t=0, a0=rand(0,Math.PI*2), rad=Math.max(ARENA.w,ARENA.h)*0.6; const rateR=(rad/(duration*1.4))*DIFF.rate, rateA=6.2*DIFF.spd;
+  return {enter(){t=0;},update(dt){t+=dt;const steps=2+Math.floor(2*DIFF.rate); for(let i=0;i<steps;i++){const a=a0+t*rateA+i*(Math.PI*2/steps);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad; spawnAimed(x,y,230+40*DIFF.spd,'#a6c7ff',3);} rad=Math.max(28,rad-rateR*dt);},done(){return t>=duration;}};
 }
-function patCombo(duration=6){ // plunge + dash
-  const A=patPlunge(duration), B=patDash(duration);
-  return {enter(){A.enter();B.enter();},update(dt){A.update(dt);B.update(dt);},done(dt){return false;}}; // end controlled by duration in phase wrapper
-}
-function patPressure(duration=8){ // spiral + sweep + combo
-  const A=patSpiral(duration), B=patSweepLaser(duration), C=patCombo(duration);
-  return {enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}}; // end by wrapper
-}
+function patCombo(duration=6){ const A=patPlunge(duration), B=patDash(duration); return {enter(){A.enter();B.enter();},update(dt){A.update(dt);B.update(dt);},done(){return false;}}; }
+function patPressure(duration=8){ const A=patSpiral(duration), B=patSweepLaser(duration), C=patCombo(duration); return {enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}}; }
 
 /* Phase wrapper */
 function phase(duration, ...parts){
@@ -323,34 +317,14 @@ function phase(duration, ...parts){
 /* ========================= Drawing library ========================= */
 function aura(ctx,x,y,r,clr,a=0.25){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=clr;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
 function eyes(ctx,x,y){ctx.fillStyle='#0c0c12';ctx.fillRect(x-6,y-6,4,4);ctx.fillRect(x+2,y-6,4,4);}
-
-/* Golden Duelist (mantis-inspired original) */
-function drawDuelist(ctx,t,flinch=0){
-  const x=480,y=258+Math.sin(t*6)*3;
-  ctx.save();
-  if(flinch>0){ctx.globalAlpha=0.6;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-  ctx.shadowColor='#ffd166';ctx.shadowBlur=10;
-  ctx.fillStyle='#b8902f';
-  ctx.beginPath();ctx.moveTo(x-22,y+6);ctx.lineTo(x-50,y+28+Math.sin(t*2)*2);ctx.lineTo(x-12,y+40);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(x+22,y+6);ctx.lineTo(x+50,y+28+Math.cos(t*2)*2);ctx.lineTo(x+12,y+40);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#e5bf4d';ctx.fillRect(x-5,y-8,10,40);ctx.fillRect(x-4,y+30,8,12);
-  ctx.beginPath();ctx.ellipse(x,y+50,12,10,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-12,y-12);ctx.lineTo(x+12,y-12);ctx.closePath();ctx.fill();
-  ctx.shadowBlur=0; eyes(ctx,x-2,y-16);
-  ctx.strokeStyle='#ffd166';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x-34,y+10+Math.sin(t*3)*8);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x+6,y);ctx.lineTo(x+34,y+10+Math.cos(t*3)*8);ctx.stroke();
-  ctx.restore();
-}
-/* Threadwarden */
-function drawThreadwarden(ctx,t){const x=480,y=248+Math.sin(t*4)*2;ctx.save();aura(ctx,x,y,42,'#fff1b6',0.15);ctx.fillStyle='#d0d2e6';ctx.fillRect(x-6,y-8,12,36);ctx.fillStyle:'#e8e9f5';ctx.beginPath();ctx.arc(x,y-18,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle:'#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-40,y-8);ctx.lineTo(x+40,y-8);ctx.stroke();eyes(ctx,x-2,y-16);ctx.restore();}
+function drawDuelist(ctx,t,flinch=0){const x=480,y=258+Math.sin(t*6)*3;ctx.save();if(flinch>0){ctx.globalAlpha=0.6;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}ctx.shadowColor='#ffd166';ctx.shadowBlur=10;ctx.fillStyle='#b8902f';ctx.beginPath();ctx.moveTo(x-22,y+6);ctx.lineTo(x-50,y+28+Math.sin(t*2)*2);ctx.lineTo(x-12,y+40);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x+22,y+6);ctx.lineTo(x+50,y+28+Math.cos(t*2)*2);ctx.lineTo(x+12,y+40);ctx.closePath();ctx.fill();ctx.fillStyle='#e5bf4d';ctx.fillRect(x-5,y-8,10,40);ctx.fillRect(x-4,y+30,8,12);ctx.beginPath();ctx.ellipse(x,y+50,12,10,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-12,y-12);ctx.lineTo(x+12,y-12);ctx.closePath();ctx.fill();ctx.shadowBlur=0;eyes(ctx,x-2,y-16);ctx.strokeStyle='#ffd166';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x-34,y+10+Math.sin(t*3)*8);ctx.stroke();ctx.beginPath();ctx.moveTo(x+6,y);ctx.lineTo(x+34,y+10+Math.cos(t*3)*8);ctx.stroke();ctx.restore();}
+function drawThreadwarden(ctx,t){const x=480,y=248+Math.sin(t*4)*2;ctx.save();aura(ctx,x,y,42,'#fff1b6',0.15);ctx.fillStyle='#d0d2e6';ctx.fillRect(x-6,y-8,12,36);ctx.fillStyle='#e8e9f5';ctx.beginPath();ctx.arc(x,y-18,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-40,y-8);ctx.lineTo(x+40,y-8);ctx.stroke();eyes(ctx,x-2,y-16);ctx.restore();}
 function drawCinderMaestro(ctx,t){const x=480,y=250;ctx.save();aura(ctx,x,y,48,'#ffb45e',0.18);ctx.fillStyle='#ff9a3c';ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff7b1f';ctx.beginPath();ctx.moveTo(x-40,y+10);ctx.lineTo(x,y-20);ctx.lineTo(x+40,y+10);ctx.closePath();ctx.fill();eyes(ctx,x-2,y-4);ctx.restore();}
 function drawAuricSovereign(ctx,t){const x=480,y=220;ctx.save();aura(ctx,x,y,60,'#fff3b8',0.26);ctx.fillStyle='#ffe18a';ctx.beginPath();ctx.ellipse(x,y,10,18,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x,y-20,8,0,Math.PI*2);ctx.fill();ctx.fillRect(x-2,y-32,4,8);ctx.fillStyle='#ffd166';for(const s of [-1,1]){ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+60*s,y-10,x+80*s,y+10+Math.sin(t*2)*6);ctx.quadraticCurveTo(x+40*s,y+30,x,y+20);ctx.closePath();ctx.fill();}ctx.restore();}
 function drawVesselPrime(ctx,t){const x=480,y=250;ctx.save();aura(ctx,x,y,44,'#ffd166',0.16);ctx.fillStyle='#e9e1c4';ctx.fillRect(x-10,y-10,20,38);ctx.fillStyle='#f6e9b3';ctx.beginPath();ctx.arc(x,y-18,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x-18,y+10);ctx.lineTo(x+18,y+10);ctx.stroke();eyes(ctx,x-2,y-16);ctx.restore();}
-
-/* A few more silhouettes we’ll reuse variationally */
-function drawScholar(ctx,t){const x=480,y=240;ctx.save();aura(ctx,x,y,44,'#c8f0ff',0.14);ctx.fillStyle='#c1d8f0';ctx.fillRect(x-8,y-8,16,36);ctx.fillStyle='#eaf3ff';ctx.beginPath();ctx.arc(x,y-18,9,0,Math.PI*2);ctx.fill();eyes(ctx,x-2,y-16);ctx.restore();}
-function drawWarden(ctx,t){const x=480,y=250;ctx.save();aura(ctx,x,y,48,'#ffb45e',0.14);ctx.fillStyle:'#ff9a3c';ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();ctx.fillStyle:'#ffd166';ctx.fillRect(x-22,y+12,44,8);eyes(ctx,x-2,y-2);ctx.restore();}
-function drawKnight(ctx,t){const x=480,y=250;ctx.save();aura(ctx,x,y,42,'#9ab0ff',0.12);ctx.fillStyle:'#b7c1d9';ctx.fillRect(x-12,y-10,24,36);ctx.fillStyle:'#e6ebf5';ctx.beginPath();ctx.arc(x,y-18,12,0,Math.PI*2);ctx.fill();ctx.fillStyle:'#c9d3ea';ctx.fillRect(x-28,y+4,12,6);ctx.fillRect(x+16,y+4,12,6);ctx.restore();}
+function drawScholar(ctx,t){const x=480,y=240;ctx.save();aura(ctx,x,y,44,'#c8f0ff',0.14);ctx.fillStyle='#c1d8f0';ctx.fillRect(x-8,y-8,16,36);ctx.fillStyle:'#eaf3ff';ctx.beginPath();ctx.arc(x,y-18,9,0,Math.PI*2);ctx.fill();eyes(ctx,x-2,y-16);ctx.restore();}
+function drawWarden(ctx,t){const x=480,y=250;ctx.save();aura(ctx,x,y,48,'#ffb45e',0.14);ctx.fillStyle='#ff9a3c';ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffd166';ctx.fillRect(x-22,y+12,44,8);eyes(ctx,x-2,y-2);ctx.restore();}
+function drawKnight(ctx,t){const x=480,y=250;ctx.save();aura(ctx,x,y,42,'#9ab0ff',0.12);ctx.fillStyle='#b7c1d9';ctx.fillRect(x-12,y-10,24,36);ctx.fillStyle='#e6ebf5';ctx.beginPath();ctx.arc(x,y-18,12,0,Math.PI*2);ctx.fill();ctx.fillStyle:'#c9d3ea';ctx.fillRect(x-28,y+4,12,6);ctx.fillRect(x+16,y+4,12,6);ctx.restore();}
 function drawGhost(ctx,t){const x=480,y=230+Math.sin(t*2)*5;ctx.save();aura(ctx,x,y,50,'#fff3b8',0.2);ctx.fillStyle='#fff8da';ctx.beginPath();ctx.ellipse(x,y,18,26,0,0,Math.PI*2);ctx.fill();eyes(ctx,x-2,y-8);ctx.restore();}
 
 /* ========================= Boss framework ========================= */
@@ -373,10 +347,9 @@ function makeBoss(key,conf){
   };
 }
 
-/* Boss roster (51) */
+/* ========================= Boss roster (51 + secret) ========================= */
 const BOSSES=[];
 
-/* Boss 1 — Golden Duelist: 7 damage as requested */
 BOSSES.push(makeBoss('goldenDuelist',{
   name:'Golden Duelist',
   hpMax:300,
@@ -398,7 +371,6 @@ BOSSES.push(makeBoss('goldenDuelist',{
   ]
 }));
 
-/* Boss 2 — Threadwarden */
 BOSSES.push(makeBoss('threadWarden',{
   name:'Threadwarden',
   hpMax:320, damage:6,
@@ -417,7 +389,6 @@ BOSSES.push(makeBoss('threadWarden',{
   ]
 }));
 
-/* Boss 3 — Cinder Maestro */
 BOSSES.push(makeBoss('cinderMaestro',{
   name:'Cinder Maestro',
   hpMax:300, damage:6,
@@ -435,7 +406,6 @@ BOSSES.push(makeBoss('cinderMaestro',{
   ]
 }));
 
-/* Boss 4 — Auric Sovereign (radiant judge) */
 BOSSES.push(makeBoss('auricSovereign',{
   name:'Auric Sovereign',
   hpMax:360, damage:7,
@@ -453,7 +423,6 @@ BOSSES.push(makeBoss('auricSovereign',{
   ]
 }));
 
-/* Boss 5 — Vessel Prime */
 BOSSES.push(makeBoss('vesselPrime',{
   name:'Vessel Prime',
   hpMax:360, damage:7,
@@ -472,9 +441,9 @@ BOSSES.push(makeBoss('vesselPrime',{
   ]
 }));
 
-/* Template sets to quickly build diverse originals up to 50 */
-const shapes=[drawScholar,drawWarden,drawKnight,drawGhost,drawDuelist,drawThreadwarden,drawCinderMaestro];
-const blurb=[
+/* Auto-generate bosses 6–50 with varied draws and patterns */
+const genShapes=[drawScholar,drawWarden,drawKnight,drawGhost,drawDuelist,drawThreadwarden,drawCinderMaestro];
+const genBlurbs=[
   'It counts your steps.',
   'It values form over haste.',
   'It judges with quiet hands.',
@@ -483,34 +452,30 @@ const blurb=[
   'Gold dust hangs in arcs.',
   'You are seen.'
 ];
-const names=[
+const genNames=[
   'Bell Marshal','Gilt Regent','Echo Archivist','Sand Adjudicator','Petal Duelist','Storm Verger','Gloam Rector','Comb Warden','Thorn Precentor','Moon Bearer',
   'Glass Cantor','Oath Sunder','Flame Chorister','Vine Paladin','Tide Prior','Gutter Herald','Crown Sibilant','Spiral Sister','Static Prior','Sun Seneschal',
   'Frost Captain','Cradle Vicar','Dune Canon','Rift Confessor','Bloom Castellan','Stone Lector','Ink Curator','Vault Peon','Star Ordinant','Rust Deacon',
   'Cinder Bailiff','Wisp Proctor','Gale Auditor','Quartz Warden','Night Tutor','Mire Factor','Pale Executor','Chorus Reeve','Reed Justiciar','Smelt Bailiff',
   'Veil Arbiter','Mael Bishop','Hive Prefect','Torch Prior','Hush Regent'
 ];
-
-/* Build bosses 6–50 */
 let keyIndex=6;
-for(let i=0;i<names.length && BOSSES.length<50;i++){
-  const name=names[i];
+for(let i=0;i<genNames.length && BOSSES.length<50;i++){
+  const name=genNames[i];
   const hp=260 + ((i%5)*20);
   const dmg=5 + (i%3);
-  const draw=shapes[i % shapes.length];
-  const intro=[`${name} enters.`, blurb[i % blurb.length]];
+  const draw=genShapes[i % genShapes.length];
+  const intro=[`${name} enters.`, genBlurbs[i % genBlurbs.length]];
   const acts=[
     {name:'Check', run:()=>({text:`${name} — ritual and resolve.`, sparePlus:6})},
     {name:'Respect', run:()=>({text:'You lower your guard, slightly.', sparePlus:8})},
     {name:'Focus', run:()=>({text:'You narrow the noise.', sparePlus:6})}
   ];
-  // rotate attacks for variety
-  const seq = [
-    phase(4, [patDash,patArcs,patPlunge,patStarburst]),
-    phase(4, [patSpiral,patSweepLaser,patHoming,patDash]),
-    phase(6, [patCombo,patPressure,patArcs,patStarburst]),
-  ];
-  BOSSES.push(makeBoss('boss'+keyIndex,{name, hpMax:hp, damage:dmg, intro, acts, draw, attacks:seq}));
+  const a = phase(4, patDash(4));
+  const b = phase(4, (i%2?patSpiral(4):patArcs(4)));
+  const c = phase(6, (i%3?patStarburst(6,12,'#ffe799'):patHoming(6,230,'#fff3b8')));
+  const d = phase(7, (i%2?patPressure(7):patCombo(7)));
+  BOSSES.push(makeBoss('boss'+keyIndex,{name, hpMax:hp, damage:dmg, intro, acts, draw, attacks:[a,b,c,d]}));
   keyIndex++;
 }
 
@@ -543,7 +508,7 @@ BOSSES.push(makeBoss('finalGoldPot',{
     {name:'Humble', run:()=>({text:'You kneel. It warms to you.', sparePlus:10})},
     {name:'Offer', run:()=>({text:'You lay down what you have. It considers.', sparePlus:16})}
   ],
-  draw:(ctx,t)=>{const x=480,y=240;ctx.save();aura(ctx,x,y,60,'#ffd166',0.3);ctx.fillStyle='#e7c75a';ctx.beginPath();ctx.ellipse(x,y+20,60,30,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f6df87';ctx.fillRect(x-46,y-10,92,30);ctx.fillStyle='#fff2a8';ctx.fillRect(x-52,y-18,104,10);eyes(ctx,x-2,y-4);ctx.restore();},
+  draw:(ctx,t)=>{const x=480,y=240;ctx.save();aura(ctx,x,y,60,'#ffd166',0.3);ctx.fillStyle='#e7c75a';ctx.beginPath();ctx.ellipse(x,y+20,60,30,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f6df87';ctx.fillRect(x-46,y-10,92,30);ctx.fillStyle:'#fff2a8';ctx.fillRect(x-52,y-18,104,10);eyes(ctx,x-2,y-4);ctx.restore();},
   attacks:[
     phase(5, patStarburst(5,16,'#ffd166')),
     phase(5, patSweepLaser(5)),
@@ -553,8 +518,8 @@ BOSSES.push(makeBoss('finalGoldPot',{
 }));
 
 /* ========================= Boss control ========================= */
-function setBossByIndex(ix){currentIndex=clamp(ix,1,51); bossIxEl.textContent=`${currentIndex}/51`; const k=(currentIndex===51?'radiantOne': currentIndex===0?'goldenDuelist':null); const boss= (currentIndex===51? getBossByKey('radiantOne') : BOSSES[currentIndex-1]); setBoss(boss);}
-function getBossByKey(key){if(key==='radiantOne') return BOSSES[50]; if(key==='finalGoldPot') return BOSSES[52]||BOSSES[BOSSES.length-1]; return BOSSES.find(b=>b.key===key);}
+function setBossByIndex(ix){currentIndex=clamp(ix,1,51); bossIxEl.textContent=`${currentIndex}/51`; const boss= (currentIndex===51? getBossByKey('radiantOne') : BOSSES[currentIndex-1]); setBoss(boss);}
+function getBossByKey(key){if(key==='radiantOne') return BOSSES[50]; if(key==='finalGoldPot') return BOSSES[BOSSES.length-1]; return BOSSES.find(b=>b.key===key);}
 function setBossByKey(key){const b=getBossByKey(key); const idx=(key==='radiantOne'?51: BOSSES.indexOf(b)+1); currentIndex=idx; bossIxEl.textContent=`${currentIndex}/51`; setBoss(b);}
 function setBoss(b){currentBoss=b; currentBoss.hp=currentBoss.hpMax; bossNameEl.textContent=currentBoss.name; bossBar(); attackIndex=0;}
 function bossBar(){bossHPFill.style.width=(360*Math.max(0,currentBoss.hp/currentBoss.hpMax))+'px'; bossHPVal.textContent=`${currentBoss.hp}/${currentBoss.hpMax}`;}
