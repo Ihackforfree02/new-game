@@ -3,9 +3,18 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Undertale Gold — Stable Routes Build</title>
+<title>Undertale Gold — Routes + Unique Bosses + Baby Bee + Admin</title>
 <style>
-:root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626}
+:root{
+  --fg:#ffd166;          /* gold */
+  --hp:#ff6b6b;          /* red */
+  --emerald:#7affb7;     /* green */
+  --ui:#0b0b0b;          /* ui black */
+  --line:#262626;        /* ui line */
+  --bub-bg:#0b0b0b;      /* bubble background (black) */
+  --bub-border:#ffd166;  /* bubble border (gold) */
+  --bub-fg:#ffd166;      /* bubble text (gold) */
+}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
 #stage{position:fixed;left:50%;top:50%;transform-origin:top left}
 #wrap{position:relative;width:960px;height:720px}
@@ -26,17 +35,19 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 /* Arena */
 #box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;z-index:1}
 
-/* Dialogue + submenu */
+/* Dialogue + submenu (gold on black) */
 #bubble{position:absolute;left:50%;bottom:148px;transform:translateX(-50%);max-width:905px;min-height:124px;display:block;z-index:4}
-.bub{background:var(--ui);border:2px solid #fff;padding:16px 20px}
+.bub{background:var(--bub-bg);border:2px solid var(--bub-border);padding:16px 20px;color:var(--bub-fg)}
 #bubbleText{white-space:pre-line;line-height:1.6;font-size:16px}
-#submenuHint{font-size:12px;opacity:.8;margin-top:6px}
+#submenuHint{font-size:12px;opacity:.85;margin-top:6px}
 
 /* Bottom UI */
-#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:#0b0b0b;border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3;transition:opacity .18s ease, transform .18s ease}
+#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3;transition:opacity .18s ease, transform .18s ease}
 #uiBar.hidden{opacity:0;pointer-events:none;transform:translate(-50%,6px)}
 .uiMenu{display:flex;gap:36px}
 .uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer}
+.uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.uiLabel{font-size:20px;letter-spacing:1px}
 #uiCenter{font-size:14px}
 
 /* Tips + toast */
@@ -44,9 +55,15 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #secretToast{position:absolute;left:50%;top:120px;transform:translateX(-50%);background:#111;border:1px solid #fff;color:#ffd166;padding:6px 10px;font-size:12px;opacity:0;transition:opacity .25s}
 #secretToast.show{opacity:1}
 
-/* Key glyphs */
-.uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
-.uiLabel{font-size:20px;letter-spacing:1px}
+/* Admin panel (opens on “67” three times) */
+#admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:8}
+#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:640px;color:#ffd166;max-width:95%}
+.adRow{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:10px;flex-wrap:wrap}
+.adBtn{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
+.adInput,.adSelect{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
+.adInput{width:200px}
+.adSelect{width:280px}
+.adHelp{color:#bbb;font-size:12px}
 </style>
 </head>
 <body>
@@ -84,14 +101,44 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="uiCenter">Your turn.</div>
   </div>
 
-  <div id="tips">Move: Arrow/WASD — Confirm: Z/Enter — Back: X/Backspace — Secret: type 67 three times</div>
-  <div id="secretToast">Secret boss summoned</div>
+  <div id="tips">Move: Arrow/WASD — Confirm: Z/Enter — Back: X/Backspace — Type “67” three times to open Admin</div>
+  <div id="secretToast">Admin opened</div>
+
+  <!-- Admin -->
+  <div id="admin">
+    <div id="adminPanel">
+      <div style="font-weight:700;margin-bottom:8px">Admin panel</div>
+      <div class="adRow">
+        <label>Username</label>
+        <input id="adUser" class="adInput" placeholder="Your name"/>
+        <button id="adUserSave" class="adBtn">Save name</button>
+      </div>
+      <div class="adRow">
+        <label>Boss</label>
+        <select id="adBoss" class="adSelect"></select>
+      </div>
+      <div class="adRow">
+        <label>Player max HP</label>
+        <input id="adHP" class="adInput" type="number" min="1" max="99" value="50"/>
+        <button id="adHeal" class="adBtn">Heal to full</button>
+      </div>
+      <div class="adRow">
+        <label>Progress</label>
+        <button id="adSkip" class="adBtn">Skip to next</button>
+        <button id="adReset" class="adBtn">Reset progress</button>
+      </div>
+      <div class="adRow" style="justify-content:flex-end">
+        <button id="adClose" class="adBtn">Close</button>
+      </div>
+      <small class="adHelp">Open with “67” typed three times.</small>
+    </div>
+  </div>
 </div></div>
 
 <script>
 "use strict";
 
-/* ===== Responsive scale (no forced fullscreen) ===== */
+/* ===== Responsive scaling ===== */
 const stage=document.getElementById('stage');
 function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${Math.max(0.2,s)})`;}
 addEventListener('resize',resizeStage,{passive:true}); resizeStage();
@@ -103,9 +150,12 @@ const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText'), submenuHint=document.getElementById('submenuHint');
 const uiMenu=document.getElementById('uiMenu'), uiBar=document.getElementById('uiBar'), uiCenter=document.getElementById('uiCenter');
 const boxEl=document.getElementById('box'); const secretToast=document.getElementById('secretToast');
+const admin=document.getElementById('admin'); const adUser=document.getElementById('adUser'); const adUserSave=document.getElementById('adUserSave');
+const adBoss=document.getElementById('adBoss'); const adHP=document.getElementById('adHP'); const adHeal=document.getElementById('adHeal');
+const adSkip=document.getElementById('adSkip'); const adReset=document.getElementById('adReset'); const adClose=document.getElementById('adClose');
 
 /* ===== Save ===== */
-const SAVE_KEY='utg_final_stable_v1';
+const SAVE_KEY='utg_routes_admin_v1';
 function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}catch{return {};}}
 function writeSave(d){try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch{}}
 let SAVE=loadSave();
@@ -115,7 +165,7 @@ const ARENA={x:240,y:420,w:480,h:180};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:Math.max(1,SAVE.hp||50),hpMax:Math.max(1,SAVE.hp||50),_px:0,_py:0,_pdt:1/60};
 let username=(SAVE.username||'Traveler').slice(0,16); nameLabel.textContent=username;
 
-/* ===== Deterministic turn state ===== */
+/* ===== Turn state ===== */
 const TURN={PLAYER:'player',ENEMY:'enemy',VICTORY:'victory',DEFEAT:'defeat',TRANS:'transition'};
 let time=0, turn=TURN.PLAYER, paused=false, showArena=false;
 let attack=null, attackSeq=null, attackIx=0, phaseT=0, bullets=[], damagePopup=null;
@@ -141,7 +191,7 @@ function useItem(i){
   return "Nothing happened.";
 }
 
-/* ===== UI helpers ===== */
+/* ===== UI helpers (gold/black bubble theme already set) ===== */
 function say(t,h=false){bubble.style.display='block'; bubbleText.textContent=t; submenuHint.style.display=h?'block':'none';}
 function hideSay(){bubble.style.display='none'; submenuHint.style.display='none';}
 function bossBar(){bossNameEl.textContent=BOSS.name; bossHPFill.style.width=(440*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`;}
@@ -152,36 +202,41 @@ function toast(msg){secretToast.textContent=msg; secretToast.classList.add('show
 /* ===== Input + movement lock ===== */
 const down=new Set();
 addEventListener('keydown',e=>{
-  // Ignore movement keys unless enemy+main
   const isMove=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key);
-  if(!(turn===TURN.ENEMY && mode==='main') && isMove) return;
+  if(!(turn===TURN.ENEMY && mode==='main') && isMove) return; // only move during enemy+main
   down.add(e.key);
 
   // Submenu back
   if((e.key==='x'||e.key==='X'||e.key==='Backspace') && (mode==='act'||mode==='item')){
     mode='main'; say('Your turn.'); submenuHint.style.display='none';
   }
-  // Submenu choose (defaults to first if Enter)
+  // Submenu choose
   if(mode==='act'||mode==='item'){
     if('1234'.includes(e.key)) handleSubmenuSelect(parseInt(e.key,10)-1);
     if(e.key==='Enter'||e.key==='z'||e.key==='Z') handleSubmenuSelect(0);
   }
 
-  // Secret 67
+  // Secret “67” three times -> admin
   handleSecretKey(e.key);
 });
 addEventListener('keyup',e=>down.delete(e.key));
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
 
-/* ===== Secret 67 robust ===== */
-let secretBuf='', secretCount=0, secretCooldown=0;
+/* ===== Secret “67×3” -> admin ===== */
+let secretBuf='', pairCount=0, secretCooldown=0;
 function handleSecretKey(k){
   if(secretCooldown>0) return;
   if(k==='6'||k==='7'){
     secretBuf=(secretBuf+k).slice(-2);
-    if(secretBuf==='67'){secretCount++; secretBuf='';}
-    if(secretCount>=3){ secretCount=0; secretCooldown=30; summonSecret67(); }
-  }else{ secretBuf=''; secretCount=0; }
+    if(secretBuf==='67'){
+      pairCount++;
+      secretBuf='';
+      secretCooldown=12;
+      if(pairCount>=3){ pairCount=0; openAdmin(); toast('Admin opened'); }
+    }
+  }else{
+    secretBuf=''; pairCount=0;
+  }
 }
 
 /* ===== Drawing helpers ===== */
@@ -191,16 +246,83 @@ function blink(freq=4){return Math.sin(time*freq)>0.8;}
 function glow(x,y,r,fill,a=0.22){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
 
 /* ===== Boss sprites ===== */
-function drawDoge(ctx,t){const x=480,y=250+bob(2),b=blink(4);glow(x,y,60,'#fff3b8',0.25);ctx.save();ctx.fillStyle='#e8c764';ctx.fillRect(x-20,y-6,40,26);ctx.strokeStyle='#fff6cf';ctx.lineWidth=2;ctx.strokeRect(x-20,y-6,40,26);ctx.fillStyle='#caa95a';ctx.beginPath();ctx.moveTo(x-22,y-6);ctx.lineTo(x-34,y-18+wag(2));ctx.lineTo(x-10,y-8);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x+22,y-6);ctx.lineTo(x+34,y-18-wag(2));ctx.lineTo(x+10,y-8);ctx.closePath();ctx.fill();ctx.fillStyle='#f6dfa2';ctx.beginPath();ctx.arc(x,y+6,16,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2b1a0f';if(!b){ctx.fillRect(x-7,y,4,5);ctx.fillRect(x+3,y,4,5);}else{ctx.fillRect(x-7,y+2,4,1);ctx.fillRect(x+3,y+2,4,1);}ctx.fillStyle='#ffd166';ctx.beginPath();ctx.moveTo(x-18,y+18);ctx.quadraticCurveTo(x-40,y+26+wag(3),x-10,y+40);ctx.lineTo(x+10,y+40);ctx.quadraticCurveTo(x+40,y+26-wag(3),x+18,y+18);ctx.closePath();ctx.fill();ctx.restore();}
-function drawCheems(ctx,t){const x=480,y=250+bob(2),b=blink(3.5);glow(x,y,62,'#ffd6ea',0.24);ctx.save();ctx.fillStyle='#f0a3c2';ctx.beginPath();ctx.moveTo(x-42,y+34);ctx.lineTo(x+42,y+34);ctx.lineTo(x+34,y+56);ctx.lineTo(x-34,y+56);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe0f0';ctx.beginPath();ctx.moveTo(x,y-28);ctx.bezierCurveTo(x-38,y-20,x-36,y,x,y+6);ctx.bezierCurveTo(x+36,y,x+38,y-20,x,y-28);ctx.closePath();ctx.fill();ctx.fillStyle='#fff0f8';ctx.fillRect(x-8,y-14,16,2);ctx.fillStyle='#2b0f1a';if(!b){ctx.fillRect(x-10,y-12,5,6);ctx.fillRect(x+5,y-12,5,6);}else{ctx.fillRect(x-10,y-10,5,2);ctx.fillRect(x+5,y-10,5,2);}ctx.fillStyle='#ff4d6d';ctx.beginPath();ctx.arc(x,y-34+Math.sin(t*4),7,0,Math.PI*2);ctx.fill();ctx.restore();}
-function drawBell(ctx,t){const x=480,y=230+bob(2.6);glow(x,y,66,'#fff3b8',0.28);ctx.save();ctx.fillStyle='#ffe18a';ctx.beginPath();ctx.ellipse(x,y,14,22,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=6;ctx.beginPath();ctx.arc(x,y+18,34,Math.PI,0);ctx.stroke();ctx.restore();}
-function drawBee(ctx,t){const x=480,y=245+bob(2.4),b=blink(5);glow(x,y,58,'#ffe87a',0.25);ctx.save();ctx.fillStyle='#ffeb80';ctx.beginPath();ctx.ellipse(x,y,22,16,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#202020';ctx.fillRect(x-22,y-4,44,4);ctx.fillRect(x-22,y+4,44,4);ctx.fillStyle='rgba(200,240,255,0.6)';ctx.beginPath();ctx.ellipse(x-12,y-18,10,6,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(x+12,y-18,10,6,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111';if(!b){ctx.fillRect(x-6,y-2,3,3);ctx.fillRect(x+3,y-2,3,3);}else{ctx.fillRect(x-6,0,3,1);ctx.fillRect(x+3,0,3,1);}ctx.fillStyle='#fff3b8';ctx.fillRect(x+22,y,2,2);ctx.restore();}
-function drawSkibidi(ctx,t){const x=480,y=245+bob(3);glow(x,y,62,'#ffb9b9',0.26);ctx.save();ctx.fillStyle='#222';ctx.fillRect(x-18,y-36,36,20);ctx.fillStyle='#ff2d2d';ctx.fillRect(x-6,y-30,12,8);ctx.fillStyle='#444';ctx.fillRect(x-10,y-10,20,44);ctx.strokeStyle='#999';ctx.lineWidth=3;for(const s of [-1,1]){ctx.beginPath();ctx.moveTo(x+s*8,y+4);ctx.lineTo(x+s*(24+Math.sin(t*12+s)*2),y+20+Math.sin(t*16+s)*6);ctx.stroke();}ctx.restore();}
+function drawDoge(ctx,t){
+  const x=480,y=250+bob(2),b=blink(4);
+  glow(x,y,60,'#fff3b8',0.25);
+  ctx.save();
+  // helm+trim
+  ctx.fillStyle='#e8c764'; ctx.fillRect(x-20,y-6,40,26);
+  ctx.strokeStyle='#fff6cf'; ctx.lineWidth=2; ctx.strokeRect(x-20,y-6,40,26);
+  // ears
+  ctx.fillStyle='#caa95a'; ctx.beginPath(); ctx.moveTo(x-22,y-6); ctx.lineTo(x-34,y-18+wag(2)); ctx.lineTo(x-10,y-8); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+22,y-6); ctx.lineTo(x+34,y-18-wag(2)); ctx.lineTo(x+10,y-8); ctx.closePath(); ctx.fill();
+  // face
+  ctx.fillStyle='#f6dfa2'; ctx.beginPath(); ctx.arc(x,y+6,16,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2b1a0f'; if(!b){ctx.fillRect(x-7,y,4,5);ctx.fillRect(x+3,y,4,5);} else {ctx.fillRect(x-7,y+2,4,1);ctx.fillRect(x+3,y+2,4,1);}
+  // cape
+  ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(x-18,y+18); ctx.quadraticCurveTo(x-40,y+26+wag(3), x-10,y+40); ctx.lineTo(x+10,y+40); ctx.quadraticCurveTo(x+40,y+26-wag(3), x+18,y+18); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawCheems(ctx,t){
+  const x=480,y=250+bob(2),b=blink(3.5);
+  glow(x,y,62,'#ffd6ea',0.24);
+  ctx.save();
+  ctx.fillStyle='#f0a3c2'; ctx.beginPath(); ctx.moveTo(x-42,y+34); ctx.lineTo(x+42,y+34); ctx.lineTo(x+34,y+56); ctx.lineTo(x-34,y+56); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#ffe0f0'; ctx.beginPath(); ctx.moveTo(x,y-28); ctx.bezierCurveTo(x-38,y-20,x-36,y,x,y+6); ctx.bezierCurveTo(x+36,y,x+38,y-20,x,y-28); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#fff0f8'; ctx.fillRect(x-8,y-14,16,2);
+  ctx.fillStyle='#2b0f1a'; if(!b){ctx.fillRect(x-10,y-12,5,6); ctx.fillRect(x+5,y-12,5,6);} else {ctx.fillRect(x-10,y-10,5,2); ctx.fillRect(x+5,y-10,5,2);}
+  ctx.fillStyle='#ff4d6d'; ctx.beginPath(); ctx.arc(x,y-34+Math.sin(t*4),7,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawBell(ctx,t){
+  const x=480,y=230+bob(2.6);
+  glow(x,y,66,'#fff3b8',0.28);
+  ctx.save();
+  ctx.fillStyle='#ffe18a'; ctx.beginPath(); ctx.ellipse(x,y,14,22,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ffd166'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(x,y+18,34,Math.PI,0); ctx.stroke();
+  ctx.restore();
+}
+function drawBee(ctx,t){
+  const x=480,y=245+bob(2.4),b=blink(5);
+  glow(x,y,58,'#ffe87a',0.25);
+  ctx.save();
+  ctx.fillStyle='#ffeb80'; ctx.beginPath(); ctx.ellipse(x,y,22,16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#202020'; ctx.fillRect(x-22,y-4,44,4); ctx.fillRect(x-22,y+4,44,4);
+  ctx.fillStyle='rgba(200,240,255,0.6)'; ctx.beginPath(); ctx.ellipse(x-12,y-18,10,6,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+12,y-18,10,6,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111'; if(!b){ctx.fillRect(x-6,y-2,3,3); ctx.fillRect(x+3,y-2,3,3);} else {ctx.fillRect(x-6,0,3,1); ctx.fillRect(x+3,0,3,1);}
+  ctx.fillStyle='#fff3b8'; ctx.fillRect(x+22,y,2,2);
+  ctx.restore();
+}
+function drawSkibidi(ctx,t){
+  const x=480, y=245+bob(3);
+  glow(x,y,62,'#ffb9b9',0.26);
+  ctx.save();
+  // Demon silhouette
+  ctx.fillStyle='#2a0f0f'; ctx.beginPath(); ctx.ellipse(x,y+8,18,28,0,0,Math.PI*2); ctx.fill();
+  // Head (camera-like visor)
+  ctx.fillStyle='#111'; ctx.fillRect(x-18,y-36,36,22);
+  ctx.fillStyle='#ff2d2d'; ctx.fillRect(x-6,y-30,12,8);
+  // Arms
+  ctx.strokeStyle='#555'; ctx.lineWidth=3;
+  for(const s of [-1,1]){ ctx.beginPath(); ctx.moveTo(x+s*10,y+2); ctx.lineTo(x+s*(28+Math.sin(t*12+s)*2),y+22+Math.sin(t*16+s)*6); ctx.stroke(); }
+  // Gold “67” chain
+  ctx.strokeStyle='#ffd166'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x,y-6,16,Math.PI*0.1,Math.PI-0.1,false); ctx.stroke();
+  ctx.fillStyle='#ffd166'; ctx.font='bold 14px monospace'; ctx.fillText('67', x-8, y+2);
+  ctx.restore();
+}
 
 /* ===== Heart ===== */
-function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const s=3;for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);ctx.restore();}
+function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
+  ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
+  const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
+  ctx.fillStyle=color; const s=3;
+  for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);
+  ctx.restore();
+}
 
-/* ===== Spawning (fast but fair) ===== */
+/* ===== Spawning ===== */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=0.08){
   const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60), vy0=(HEART.y-(HEART._py||HEART.y))/(HEART._pdt||1/60);
@@ -210,58 +332,91 @@ function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=0.08){
 }
 function rand(a,b){return Math.random()*(b-a)+a;}
 
-/* ===== Patterns ===== */
-function patCone(dur=3.2,dmg=3,col='#fff3b8',spd=210,count=5,spread=Math.PI/2.8){let t=0,g=0,rate=0.18;const cx=ARENA.x+ARENA.w/2,y=ARENA.y+12;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<count;k++){const a=(-spread)+k*(2*spread/(Math.max(1,count-1)));spawn({x:cx,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg});}}},done(){return t>=dur;}};}
-function patFalls(dur=3.4,dmg=3,col='#d1f7ff',spd=220){let t=0,g=0,rate=0.22;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(24,ARENA.w-24);spawn({x,y:ARENA.y-18,vx:0,vy:spd,r:3,col,dmg});}},done(){return t>=dur;}};}
-function patHoming(dur=3.2,dmg=4,col='#ffd0e8',spd=230){let t=0,g=0,rate=0.5;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w),y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4,0.08);} },done(){return t>=dur;}};}
-function patRing(dur=3.6,dmg=4,col='#fff3b8',spd=230,n=12){let t=0,g=0,rate=.48;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2;spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg});}}},done(){return t>=dur;}};}
-function patSpiralAim(dur=3.8,dmg=4,col='#a6c7ff',spd=220,arms=3){let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.5;const rateR=(rad/(dur*1.4)), rateA=6.2;return{enter(){t=0;},update(dt){t+=dt;for(let i=0;i<arms;i++){const a=a0+t*rateA+i*(Math.PI*2/arms);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,spd,dmg,col,3,0.08);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};}
-/* Bee-themed */
-function patBeeZigZag(dur=3.6,dmg=3,col='#ffe87a',spd=240){let t=0,g=0,rate=0.16,side=90;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const top=Math.random()<0.5, x=ARENA.x+rand(20,ARENA.w-20);const b=spawn({x,y:top?ARENA.y-16:ARENA.y+ARENA.h+16,vx:0,vy:top?spd:-spd,r:3,col,dmg});b.swing=(Math.random()<0.5?-1:1)*side;}for(const b of bullets){if(b.swing){b.vx=b.swing*Math.sin((b.t||0)*6);}}},done(){return t>=dur;}};}
-function patBeeStingers(dur=3.2,dmg=5,col='#ffd166',spd=320){let t=0,g=0,rate=0.22;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(16,ARENA.h-16);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;const dir=left?1:-1;spawn({x,y,vx:dir*spd,vy:0,r:4,col,dmg});}},done(){return t>=dur;}};}
-function patHoneyDrip(dur=3.4,dmg=3,col='#ffea96',spd=210){let t=0,g=0,rate=0.2;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cols=6,step=ARENA.w/(cols+1),i=1+Math.floor(Math.random()*cols);const x=ARENA.x+i*step+rand(-8,8);spawn({x,y:ARENA.y-18,vx:0,vy:spd,r:4,col,dmg});}},done(){return t>=dur;}};}
+/* ===== Themed patterns (unique per boss) ===== */
+/* Doge: parry arcs + disciplined rings */
+function patDogeArcs(dur=3.4,dmg=4,spd=220){let t=0,g=0,rate=.42;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const shift=rand(-0.2,0.2);for(const a of [-0.9+shift,-0.5+shift,0.5+shift,0.9+shift]) spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col:'#fff3b8',dmg});}},done(){return t>=dur;}};}
+function patRing(dur=3.6,dmg=4,col='#fff3b8',spd=230,n=12){let t=0,g=0,rate=.48;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2;spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg});}}},done(){return t>=dur;}};}
+/* Cheems: sprinkles (cone), frosting rain, cherry homing */
+function patCone(dur=3.2,dmg=3,col='#ffc6e0',spd=205,count=5,spread=Math.PI/3){let t=0,g=0,rate=.2;const cx=ARENA.x+ARENA.w/2,y=ARENA.y+12;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<count;k++){const a=(-spread)+k*(2*spread/(count-1));spawn({x:cx,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg});}}},done(){return t>=dur;}};}
+function patFalls(dur=3.4,dmg=3,col='#ffe3f2',spd=215){let t=0,g=0,rate=.22;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(24,ARENA.w-24);spawn({x,y:ARENA.y-18,vx:0,vy:spd,r:3,col,dmg});}},done(){return t>=dur;}};}
+function patHoming(dur=3.2,dmg=4,col='#ffd0e8',spd=230){let t=0,g=0,rate=.5;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w),y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4,0.08);} },done(){return t>=dur;}};}
+/* Bell: tone spirals and resonance rings */
+function patSpiralAim(dur=3.6,dmg=4,col='#ffd166',spd=220,arms=3){let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.5;const rateR=(rad/(dur*1.4)), rateA=6.2;return{enter(){},update(dt){t+=dt;for(let i=0;i<arms;i++){const a=a0+t*rateA+i*(Math.PI*2/arms);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,spd,dmg,col,3,0.08);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};}
+/* Bee: zig-zag drones, stingers, honey drips */
+function patBeeZigZag(dur=3.6,dmg=3,col='#ffe87a',spd=240){let t=0,g=0,rate=.16,side=90;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const top=Math.random()<0.5, x=ARENA.x+rand(20,ARENA.w-20);const b=spawn({x,y:top?ARENA.y-16:ARENA.y+ARENA.h+16,vx:0,vy:top?spd:-spd,r:3,col,dmg});b.swing=(Math.random()<0.5?-1:1)*side;}for(const b of bullets){if(b.swing){b.vx=b.swing*Math.sin((b.t||0)*6);}}},done(){return t>=dur;}};}
+function patBeeStingers(dur=3.0,dmg=5,col='#ffd166',spd=320){let t=0,g=0,rate=.22;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(16,ARENA.h-16);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;spawn({x,y,vx:(left?1:-1)*spd,vy:0,r:4,col,dmg});}},done(){return t>=dur;}};}
+function patHoneyDrip(dur=3.2,dmg=3,col='#ffea96',spd=210){let t=0,g=0,rate=.2;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cols=6, step=ARENA.w/(cols+1), i=1+Math.floor(Math.random()*cols);const x=ARENA.x+i*step+rand(-8,8);spawn({x,y:ARENA.y-18,vx:0,vy:spd,r:4,col,dmg});}},done(){return t>=dur;}};}
+/* Skibidi Demon: glitch spiral, hot ring, aimed bursts */
+function patGlitchSpiral(dur=3.6,dmg=5,col='#ff7a7a',spd=225){return patSpiralAim(dur,dmg,col,spd,3);}
+function patHotRing(dur=3.2,dmg=5,col='#ff3b3b',spd=240){return patRing(dur,dmg,col,spd,12);}
 
 /* ===== Phase wrapper ===== */
 function phase(dur,...parts){let t=0;return{enter(){t=0;parts.forEach(p=>p.enter&&p.enter());},update(dt){t+=dt;parts.forEach(p=>p.update&&p.update(dt));},done(){return t>=dur;}};}
 
-/* ===== Boss roster ===== */
+/* ===== Boss roster (unique attacks + dialogues) ===== */
 const BOSSES=[
   { key:'doge', name:'Doge Paladin', hpMax:320, draw:drawDoge,
     intro:["much honor","very duel"], lines:["such focus","wow","amaze stance","parry pls","many form"],
-    mercyNeed:3, acts:[{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"so kind. very wow.";}},
-                       {name:'Pet',effect:s=>{s.mercy=(s.mercy||0)+1;s.anger=Math.max(0,(s.anger||0)-1);return"head pats accepted.";}},
-                       {name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"respect returned.";}},
-                       {name:'Taunt',effect:s=>{s.anger=(s.anger||0)+1;return"rude. attack calms later.";}} ],
-    attacks:()=>[ phase(3.2,patCone(3.2,3,'#fff3b8',210,5,Math.PI/2.8)), phase(3.2,patHoming(3.2,4,'#ffd0e8',230)), phase(3.4,patRing(3.4,4,'#fff3b8',230,10)) ] },
+    mercyNeed:3,
+    acts:[{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"so kind. very wow.";}},
+          {name:'Pet',effect:s=>{s.mercy=(s.mercy||0)+1;s.anger=Math.max(0,(s.anger||0)-1);return"head pats accepted.";}},
+          {name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"respect returned.";}},
+          {name:'Taunt',effect:s=>{s.anger=(s.anger||0)+1;return"rude. attack calms later.";}}],
+    attacks:()=>[ phase(3.4, patDogeArcs(3.4,4,220)), phase(3.2, patHoming(3.2,4,'#fff3b8',230)), phase(3.6, patRing(3.6,4,'#fff3b8',230,10)) ] },
   { key:'cheems', name:'Cheems Baker', hpMax:340, draw:drawCheems,
     intro:["bonk? bake.","sprinkle time."], lines:["cheems bake","yum… panic","frost ur fear","cherry go brr","nom nom"],
-    mercyNeed:3, acts:[{name:'Taste Test',effect:s=>{s.mercy=(s.mercy||0)+1;return"approval granted. less sprinkles.";}},
-                       {name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"pink pride intensifies.";}},
-                       {name:'Joke',effect:s=>{s.mercy=(s.mercy||0)+1;return"hee hee. calm frosting.";}},
-                       {name:'Insult',effect:s=>{s.anger=(s.anger||0)+1;return"ouch. extra sugar later.";}} ],
-    attacks:()=>[ phase(3.0,patCone(3.0,3,'#ffc6e0',205,5,Math.PI/3)), phase(3.2,patFalls(3.2,3,'#ffe3f2',215)), phase(3.2,patHoming(3.2,4,'#ffd0e8',230)) ] },
+    mercyNeed:3,
+    acts:[{name:'Taste Test',effect:s=>{s.mercy=(s.mercy||0)+1;return"approval granted. less sprinkles.";}},
+          {name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"pink pride intensifies.";}},
+          {name:'Joke',effect:s=>{s.mercy=(s.mercy||0)+1;return"hee hee. calm frosting.";}},
+          {name:'Insult',effect:s=>{s.anger=(s.anger||0)+1;return"ouch. extra sugar later.";}}],
+    attacks:()=>[ phase(3.0, patCone(3.0,3,'#ffc6e0',205,5,Math.PI/3)), phase(3.4, patFalls(3.4,3,'#ffe3f2',215)), phase(3.2, patHoming(3.2,4,'#ffd0e8',230)) ] },
   { key:'archon', name:'Bell Archon', hpMax:360, draw:drawBell,
     intro:["ding ding.","judgment comfy."], lines:["hold the note","resonate","no mald","center rings","gentle toll"],
-    mercyNeed:2, acts:[{name:'Listen',effect:s=>{s.mercy=(s.mercy||0)+1;return"you hear the silence between.";}},
-                       {name:'Hum',effect:s=>{s.mercy=(s.mercy||0)+1;return"your pitch aligns.";}},
-                       {name:'Apologize',effect:s=>{s.mercy=(s.mercy||0)+1;return"forgiven. a little.";}},
-                       {name:'Mock',effect:s=>{s.anger=(s.anger||0)+1;return"discordant. noted.";}} ],
-    attacks:()=>[ phase(3.0,patRing(3.0,4,'#fff3b8',240,12)), phase(3.2,patSpiralAim(3.2,4,'#ffd166',225,3)), phase(3.2,patHoming(3.2,4,'#fff3b8',235)) ] },
+    mercyNeed:2,
+    acts:[{name:'Listen',effect:s=>{s.mercy=(s.mercy||0)+1;return"you hear the silence between.";}},
+          {name:'Hum',effect:s=>{s.mercy=(s.mercy||0)+1;return"your pitch aligns.";}},
+          {name:'Apologize',effect:s=>{s.mercy=(s.mercy||0)+1;return"forgiven. a little.";}},
+          {name:'Mock',effect:s=>{s.anger=(s.anger||0)+1;return"discordant. noted.";}}],
+    attacks:()=>[ phase(3.0, patRing(3.0,4,'#ffe799',235,12)), phase(3.4, patSpiralAim(3.4,4,'#ffd166',220,3)), phase(3.2, patHoming(3.2,4,'#fff3b8',230)) ] },
   { key:'bee', name:'Baby Bee', hpMax:340, draw:drawBee,
     intro:["bzz... hello.","tiny but rapid."], lines:["bzz-bzz!","honey time.","sting operation.","follow me!","sweet and swift."],
-    mercyNeed:3, acts:[{name:'Waggle',effect:s=>{s.mercy=(s.mercy||0)+1;return"you waggle a dance. bee approves.";}},
-                       {name:'Offer Honey',effect:s=>{s.mercy=(s.mercy||0)+2;return"bee sips happily.";}},
-                       {name:'Calm Buzz',effect:s=>{s.mercy=(s.mercy||0)+1;return"buzz softens.";}},
-                       {name:'Swat',effect:s=>{s.anger=(s.anger||0)+1;return"rude! stingers bristle.";}} ],
-    attacks:()=>[ phase(3.2,patBeeZigZag(3.2,3,'#ffe87a',240)), phase(3.0,patBeeStingers(3.0,5,'#ffd166',320)), phase(3.2,patHoneyDrip(3.2,3,'#ffea96',220)) ] },
+    mercyNeed:3,
+    acts:[{name:'Waggle',effect:s=>{s.mercy=(s.mercy||0)+1;return"you waggle a dance. bee approves.";}},
+          {name:'Offer Honey',effect:s=>{s.mercy=(s.mercy||0)+2;return"bee sips happily.";}},
+          {name:'Calm Buzz',effect:s=>{s.mercy=(s.mercy||0)+1;return"buzz softens.";}},
+          {name:'Swat',effect:s=>{s.anger=(s.anger||0)+1;return"rude! stingers bristle.";}}],
+    attacks:()=>[ phase(3.2, patBeeZigZag(3.2,3,'#ffe87a',240)), phase(3.0, patBeeStingers(3.0,5,'#ffd166',320)), phase(3.2, patHoneyDrip(3.2,3,'#ffea96',210)) ] },
   { key:'skibidi', name:'67 Skibidi Demon', hpMax:420, draw:drawSkibidi,
     intro:["the feed distorts.","the lens turns."], lines:["faster.","louder.","wrong note.","keep up.","again."],
-    mercyNeed:4, acts:[{name:'Mute Feed',effect:s=>{s.mercy=(s.mercy||0)+1;return"signal dampened.";}},
-                       {name:'Pose',effect:s=>{s.mercy=(s.mercy||0)+1;return"it approves of the framing.";}},
-                       {name:'Wave',effect:s=>{s.mercy=(s.mercy||0)+1;return"acknowledged.";}},
-                       {name:'Boo',effect:s=>{s.anger=(s.anger||0)+1;return"distortion spikes.";}} ],
-    attacks:()=>[ phase(3.4,patSpiralAim(3.4,5,'#ff7a7a',225,3)), phase(3.2,patRing(3.2,5,'#ff3b3b',240,12)), phase(3.2,patHoming(3.2,5,'#ffa0a0',235)) ] }
+    mercyNeed:4,
+    acts:[{name:'Mute Feed',effect:s=>{s.mercy=(s.mercy||0)+1;return"signal dampened.";}},
+          {name:'Pose',effect:s=>{s.mercy=(s.mercy||0)+1;return"it approves of the framing.";}},
+          {name:'Wave',effect:s=>{s.mercy=(s.mercy||0)+1;return"acknowledged.";}},
+          {name:'Boo',effect:s=>{s.anger=(s.anger||0)+1;return"distortion spikes.";}}],
+    attacks:()=>[ phase(3.4, patGlitchSpiral(3.4,5,'#ff7a7a',225)), phase(3.2, patHotRing(3.2,5,'#ff3b3b',240)), phase(3.2, patHoming(3.2,5,'#ffa0a0',235)) ] }
 ];
+
+/* ===== Admin panel ===== */
+function buildAdminBossList(){
+  adBoss.innerHTML='';
+  BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value=String(i); o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o);});
+}
+function openAdmin(){
+  admin.style.display='flex';
+  buildAdminBossList();
+  adBoss.value=String(bossIndex);
+  adUser.value=username;
+  adHP.value=String(HEART.hpMax);
+}
+function closeAdmin(){ admin.style.display='none'; saveProgress(); }
+adUserSave.onclick=()=>{ username=(adUser.value||'Traveler').slice(0,16); nameLabel.textContent=username; saveProgress(); };
+adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updateHP(); };
+adSkip.onclick=()=>{ closeAdmin(); if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else initBoss(0); };
+adReset.onclick=()=>{ localStorage.removeItem(SAVE_KEY); SAVE={}; inventory=[{id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2}]; username='Traveler'; nameLabel.textContent=username; closeAdmin(); initBoss(0); };
+adClose.onclick=()=> closeAdmin();
+adBoss.onchange=()=>{ const v=parseInt(adBoss.value,10)||0; closeAdmin(); initBoss(v); };
+adHP.onchange=()=>{ let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=v; HEART.hp=v; updateHP(); saveProgress(); };
 
 /* ===== Flow ===== */
 function setBoss(idx){
@@ -312,7 +467,7 @@ function startAttack(){
 }
 function finishAttack(){
   showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
-  turn=TURN.PLAYER; mode='main';
+  turn=TURN.PLAYER; mode='main'; // ensure movement resumes next enemy turn
   say(BOSS.lines[(Math.floor(time*3))%(BOSS.lines.length||1)]||'...');
   attack=null;
 }
@@ -323,10 +478,20 @@ function playerFight(){ if(turn!==TURN.PLAYER||mode!=='main') return; const dmg=
 
 /* ===== ACT/MERCY/ITEM ===== */
 function openAct(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='act'; const opts=BOSS.acts.map((a,i)=>` ${i+1}. ${a.name}`).join('\n'); say(`ACT on ${BOSS.name}:\n${opts}`,true); }
-function handleActChoice(i){ const a=BOSS.acts[i||0]; if(!a){ say('No such act.'); return; } const line=a.effect(BOSS); routeState.act++; saveProgress(); say(line); if((BOSS.mercy||0)>=BOSS.mercyNeed) say(`${BOSS.name} seems ready to be spared.`); endPlayerTurn(); }
+function handleActChoice(i){
+  const a=BOSS.acts[i||0]; if(!a){ say('No such act.'); return; }
+  const line=a.effect(BOSS);
+  routeState.act++; saveProgress();
+  // ACT does stuff: buffs/specials per boss could be added here (keep fair)
+  say(line);
+  if((BOSS.mercy||0)>=BOSS.mercyNeed) say(`${BOSS.name} seems ready to be spared.`);
+  // Important: end turn and reset mode so heart moves next enemy phase
+  mode='main';
+  endPlayerTurn();
+}
 function openMercy(){ if(BOSS.mercy>=BOSS.mercyNeed){ routeState.mercy++; saveProgress(); victory(true);} else say(`${BOSS.name} isn't ready to be spared.`); }
 function openItem(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='item'; say(`ITEMS:\n${itemsList()}\n\nPick with 1-4`,true); }
-function handleItemChoice(i){ const msg=useItem(i); say(msg); endPlayerTurn(); }
+function handleItemChoice(i){ const msg=useItem(i); say(msg); mode='main'; endPlayerTurn(); }
 
 /* ===== End turns ===== */
 function endPlayerTurn(){
@@ -344,15 +509,6 @@ function victory(spared=false){
   const r=routeLean(); const rw=rewardForRoute(spared?'pacifist':r); giveItem(rw);
   say(`${spared?'You spared':'You defeated'} ${BOSS.name}. (${r.toUpperCase()} leaning)\nGained: ${rw.name}`);
   setTimeout(()=>{ if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else { say(r==='pacifist'?'Ending: Peace blooms.':'Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1500);} },1000);
-}
-
-/* ===== Secret summon ===== */
-function summonSecret67(){
-  if(turn!==TURN.PLAYER){ toast('Secret ready after this turn'); return; }
-  const idx=BOSSES.findIndex(b=>b.key==='skibidi'); if(idx<0) return;
-  toast('Secret boss summoned');
-  bullets.length=0; attack=null; attackSeq=null; attackIx=0; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
-  bossIndex=idx; saveProgress(); initBoss(bossIndex);
 }
 
 /* ===== Submenu dispatcher ===== */
@@ -417,17 +573,6 @@ function render(dt){
   // damage popup
   if(damagePopup){ const a=Math.max(0,1-damagePopup.t/0.9); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace'; ctx.fillText(damagePopup.text,damagePopup.x,damagePopup.y-damagePopup.t*60); ctx.restore(); }
 }
-
-/* ===== Keyboard shortcuts ===== */
-addEventListener('keydown',e=>{
-  if(turn!==TURN.PLAYER) return;
-  if(mode==='main'){
-    if(e.key==='z'||e.key==='Z'||e.key==='Enter') playerFight();
-    if(e.key==='a'||e.key==='A') openAct();
-    if(e.key==='i'||e.key==='I') openItem();
-    if(e.key==='m'||e.key==='M') openMercy();
-  }
-});
 
 /* ===== Start ===== */
 initBoss(bossIndex);
