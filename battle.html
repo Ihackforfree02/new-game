@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Undertale Gold — Meme Boss Rush</title>
+<title>Undertale Gold — Routes + ACT/MERCY/ITEM</title>
 <style>
 :root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
@@ -11,22 +11,23 @@ html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-mo
 #wrap{position:relative;width:960px;height:720px}
 canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
 /* HUD */
-#bossHUD{position:absolute;left:20px;top:22px;display:flex;flex-direction:column;gap:6px;z-index:3}
+#bossHUD{position:absolute;left:20px;top:18px;display:flex;flex-direction:column;gap:6px;z-index:3}
 #bossName{font-size:14px;letter-spacing:0.5px}
-#bossHP{height:10px;width:420px;background:#141414;border:1px solid #383838;position:relative}
+#bossHP{height:10px;width:440px;background:#141414;border:1px solid #383838;position:relative}
 #bossHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--hp);width:100%}
 #bossHPVal{font-size:12px;margin-top:2px}
-#playerHUD{position:absolute;right:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;z-index:3}
+#playerHUD{position:absolute;right:20px;top:18px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;z-index:3}
 #playerNameLabel{font-size:14px;color:#9be7c0;letter-spacing:0.5px}
 #pHP{height:10px;width:260px;background:#141414;border:1px solid #383838;position:relative}
 #pHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--emerald);width:100%}
 #pHPVal{font-size:12px;margin-top:2px}
 /* Arena */
 #box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;z-index:1}
-/* Dialogue */
+/* Dialogue / submenus */
 #bubble{position:absolute;left:50%;bottom:148px;transform:translateX(-50%);max-width:905px;min-height:124px;display:block;z-index:4}
 .bub{background:var(--ui);border:2px solid #fff;padding:16px 20px}
 #bubbleText{white-space:pre-line;line-height:1.6;font-size:16px}
+#submenuHint{font-size:12px;opacity:.8;margin-top:6px}
 /* Bottom UI */
 #uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3;transition:opacity .18s ease, transform .18s ease}
 #uiBar.hidden{opacity:0;pointer-events:none;transform:translate(-50%,6px)}
@@ -35,21 +36,13 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 .uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .uiLabel{font-size:20px;letter-spacing:1px}
 #uiCenter{font-size:14px}
-/* Tip */
+/* Tips */
 #tips{position:absolute;left:50%;top:84px;transform:translateX(-50%);font-size:12px;color:#c8c8c8;opacity:.85}
-/* Admin panel */
-#admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:8}
-#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:560px;color:#ffd166;max-width:95%}
-.adRow{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:10px;flex-wrap:wrap}
-.adBtn{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
-.adInput,.adSelect{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
-.adInput{width:160px}
-.adSelect{width:220px}
-.adHelp{color:#bbb;font-size:12px}
 </style>
 </head>
 <body>
 <div id="stage"><div id="wrap">
+  <!-- HUD -->
   <div id="bossHUD">
     <div id="bossName">Doge Paladin</div>
     <div id="bossHP"><div id="bossHPFill"></div></div>
@@ -61,11 +54,17 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="pHPVal">50/50</div>
   </div>
 
+  <!-- Canvas + Arena -->
   <canvas id="cv" width="960" height="720"></canvas>
   <div id="box"></div>
 
-  <div id="bubble"><div class="bub"><div id="bubbleText"></div></div></div>
+  <!-- Dialogue + submenu -->
+  <div id="bubble"><div class="bub">
+    <div id="bubbleText"></div>
+    <div id="submenuHint" style="display:none">Choose: 1-4 • Back: X/Backspace • Confirm: Z/Enter</div>
+  </div></div>
 
+  <!-- Bottom UI -->
   <div id="uiBar">
     <div class="uiMenu" id="uiMenu">
       <div class="uiBtn" data-act="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
@@ -76,111 +75,94 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="uiCenter">Your turn.</div>
   </div>
 
-  <div id="tips">Move: Arrow/WASD — Confirm: Z/Enter — Cancel: X/Backspace — Admin: type 67 three times</div>
-
-  <div id="admin">
-    <div id="adminPanel">
-      <div style="font-weight:700;margin-bottom:8px">Admin panel</div>
-      <div class="adRow">
-        <label>Boss</label>
-        <select id="adBoss" class="adSelect"></select>
-      </div>
-      <div class="adRow">
-        <label>Difficulty</label>
-        <select id="adDiff" class="adSelect"><option>Normal</option><option>Hard</option><option>Insane</option></select>
-      </div>
-      <div class="adRow">
-        <label>Player HP</label>
-        <input id="adHP" class="adInput" type="number" min="1" max="99" value="50"/>
-        <button id="adHeal" class="adBtn">Heal to full</button>
-      </div>
-      <div class="adRow">
-        <label>Hitbox overlay</label>
-        <button id="adHitbox" class="adBtn">Toggle</button>
-        <span class="adHelp">Shows a ring around the heart</span>
-      </div>
-      <div class="adRow">
-        <label>Progress</label>
-        <button id="adSkip" class="adBtn">Skip to next</button>
-        <button id="adReset" class="adBtn">Reset progress</button>
-      </div>
-      <div class="adRow">
-        <label>Secret</label>
-        <button id="adSummon67" class="adBtn">Spawn 67 Skibidi Demon</button>
-      </div>
-      <div class="adRow" style="justify-content:flex-end">
-        <button id="adClose" class="adBtn">Close</button>
-      </div>
-      <small class="adHelp">Open by typing 67 three times</small>
-    </div>
-  </div>
+  <div id="tips">Move: Arrow/WASD — Confirm: Z/Enter — Back: X/Backspace — Routes: Pacifist (ACT/MERCY), Genocide (FIGHT), Neutral (mix)</div>
 </div></div>
 
 <script>
 "use strict";
 
-/* Responsive fill (no auto fullscreen) */
+/* Responsive fill (no forced fullscreen) */
 const stage=document.getElementById('stage');
 function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${s})`;}
 addEventListener('resize',resizeStage,{passive:true}); resizeStage();
 
 /* Elements */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-const boxEl=document.getElementById('box');
-const bossNameEl=document.getElementById('bossName');
-const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getElementById('bossHPVal');
-const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal');
-const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
+const bossNameEl=document.getElementById('bossName'), bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getElementById('bossHPVal');
+const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal'), nameLabel=document.getElementById('playerNameLabel');
+const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText'), submenuHint=document.getElementById('submenuHint');
 const uiMenu=document.getElementById('uiMenu'), uiBar=document.getElementById('uiBar'), uiCenter=document.getElementById('uiCenter');
-const admin=document.getElementById('admin');
-const adBoss=document.getElementById('adBoss'); const adDiff=document.getElementById('adDiff');
-const adHP=document.getElementById('adHP'); const adHitbox=document.getElementById('adHitbox');
-const adHeal=document.getElementById('adHeal'); const adSkip=document.getElementById('adSkip');
-const adReset=document.getElementById('adReset'); const adSummon67=document.getElementById('adSummon67'); const adClose=document.getElementById('adClose');
+const boxEl=document.getElementById('box');
 
-/* Save */
-const SAVE_KEY='utg_meme_v1';
+/* Save basics */
+const SAVE_KEY='utg_routes_v1';
 function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}catch{return {};}}
-function writeSave(s){try{localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch{}}
+function writeSave(d){try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch{}}
 let SAVE=loadSave();
 
-/* Difficulty */
-const DIFFS={ Normal:{spd:1.0,rate:1.0,dmg:1.0,lead:0.05},
-              Hard:{spd:1.2,rate:1.2,dmg:1.2,lead:0.075},
-              Insane:{spd:1.4,rate:1.4,dmg:1.4,lead:0.1}};
-let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal; adDiff.value=(Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF))||'Normal';
-
-/* State */
+/* Player + arena */
 const ARENA={x:240,y:420,w:480,h:180};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:Math.max(1,SAVE.hp||50),hpMax:Math.max(1,SAVE.hp||50),_px:0,_py:0,_pdt:1/60};
+let username=(SAVE.username||'Traveler').slice(0,16);
+nameLabel.textContent=username;
+
+/* Game state */
 let time=0, turn='player', showArena=false, paused=false;
-let attack=null, attackSeq=null, attackIx=0, phaseT=0;
-let bullets=[], damagePopup=null, hitboxOverlay=!!SAVE.hitbox;
+let attack=null, attackSeq=null, attackIx=0, phaseT=0, bullets=[], damagePopup=null;
 let bossIndex=(typeof SAVE.bossIndex==='number')?SAVE.bossIndex:0;
-let TURN_LINES=0;
+let BOSS=null;
+let mode='main'; // 'main' | 'act' | 'item' | 'confirm'
+let selectedIndex=0;
 
-/* Helpers */
-function centerHeart(){HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2;}
-function bossBar(){bossHPFill.style.width=(420*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
+/* Route state */
+const routeState={fight: SAVE.fight||0, act: SAVE.act||0, mercy: SAVE.mercy||0};
+function routeLean(){
+  if(routeState.fight>=routeState.act+routeState.mercy+3) return 'genocide';
+  if(routeState.mercy+routeState.act>=routeState.fight+3) return 'pacifist';
+  return 'neutral';
+}
+function saveProgress(){
+  writeSave({bossIndex, hp:HEART.hpMax, username, fight:routeState.fight, act:routeState.act, mercy:routeState.mercy});
+}
+
+/* Inventory */
+let inventory = SAVE.inventory || [
+  {id:'dew', name:'Dew Petal', desc:'+12 HP', type:'heal', amount:12, count:2},
+];
+function saveInventory(){ const d=loadSave(); d.inventory=inventory; writeSave(d); }
+
+/* Rewards after each boss by route */
+function rewardForRoute(r){
+  if(r==='pacifist') return {id:'tea', name:'Calming Tea', desc:'+16 HP', type:'heal', amount:16, count:1};
+  if(r==='genocide') return {id:'rage', name:'Rage Shard', desc:'+4 ATK this run', type:'buff', atk:4, count:1};
+  return {id:'tonic', name:'Tonic', desc:'+14 HP', type:'heal', amount:14, count:1};
+}
+let tempBuff={atk:0}; // session buff
+
+/* UI helpers */
+function say(t, showHint=false){bubble.style.display='block'; bubbleText.textContent=t; submenuHint.style.display=showHint?'block':'none';}
+function hideSay(){bubble.style.display='none'; submenuHint.style.display='none';}
+function bossBar(){bossNameEl.textContent=BOSS.name; bossHPFill.style.width=(440*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`;}
 function updateHP(){pHPFill.style.width=(260*Math.max(0,HEART.hp/HEART.hpMax))+'px'; pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
-function say(t){bubble.style.display='block'; bubbleText.textContent=t;}
-function hideSay(){bubble.style.display='none';}
-function nextLine(){if(!BOSS.lines?.length) return ''; const s=BOSS.lines[TURN_LINES % BOSS.lines.length]; TURN_LINES++; return s;}
-function saveProgress(){SAVE={bossIndex, difficulty:adDiff.value, hp:HEART.hpMax, hitbox:hitboxOverlay}; writeSave(SAVE);}
+function centerHeart(){HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2;}
 
-/* Input + secret */
-const down=new Set(); let secretBuf='', secretCount=0;
+/* Input */
+const down=new Set();
 addEventListener('keydown',e=>{
-  down.add(e.key);
-  if((e.key==='z'||e.key==='Z'||e.key==='Enter') && turn==='player'){ say('You strike.'); bossHit(24); setTimeout(()=>{turn='enemy'; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideSay(); startAttack();},150); }
-  if((e.key==='x'||e.key==='X'||e.key==='Backspace') && turn==='player'){ say('You steady yourself.'); }
-  // 67×3
-  if(e.key==='6'||e.key==='7'){ secretBuf=(secretBuf+e.key).slice(-2); if(secretBuf==='67'){secretCount++; secretBuf='';} if(secretCount>=3){ openAdmin(); secretCount=0; } } else { secretBuf=''; secretCount=0; }
+  if(mode!=='act' && mode!=='item'){ down.add(e.key); }
+  // Confirm on main: FIGHT/ACT/ITEM/MERCY via Z/Enter happens via UI click too
+  if((e.key==='x'||e.key==='X'||e.key==='Backspace')){
+    if(mode==='act' || mode==='item'){ mode='main'; say('Your turn.'); submenuHint.style.display='none'; }
+  }
+  if(mode==='act' || mode==='item'){
+    if('1234'.includes(e.key)) handleSubmenuSelect(parseInt(e.key,10)-1);
+    if(e.key==='Enter' || e.key==='z' || e.key==='Z') handleSubmenuSelect(selectedIndex);
+  }
 });
 addEventListener('keyup',e=>down.delete(e.key));
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
 
-/* Drawing: heart */
+/* Drawing */
 function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
   const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
@@ -188,319 +170,355 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);
   ctx.restore();
 }
-
-/* Idle animation helpers */
-function blinkTimer(freq=3){return Math.sin(time*freq)>0.8;} // true near tops
-function wag(v=4){return Math.sin(time*6)*v;}
 function bob(v=3){return Math.sin(time*2.2)*v;}
+function blink(freq=4){return Math.sin(time*freq)>0.8;}
 
-/* Boss sprites with idle animations */
-/* 1) Doge Paladin */
-function drawDoge(ctx,t){
-  const x=480, y=250 + bob(2);
-  const blink = blinkTimer(4);
-  ctx.save();
-  // aura
-  ctx.globalAlpha=0.2; ctx.fillStyle='#fff3b8'; ctx.beginPath(); ctx.arc(x,y,56+Math.sin(t*2)*2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  // helm
-  ctx.fillStyle='#e8c764'; ctx.fillRect(x-20,y-6,40,26);
-  // ears (wag)
-  ctx.fillStyle='#caa95a'; ctx.beginPath(); ctx.moveTo(x-22,y-6); ctx.lineTo(x-34,y-18+wag(2)); ctx.lineTo(x-10,y-8); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x+22,y-6); ctx.lineTo(x+34,y-18-wag(2)); ctx.lineTo(x+10,y-8); ctx.closePath(); ctx.fill();
-  // face
-  ctx.fillStyle='#f6dfa2'; ctx.beginPath(); ctx.arc(x,y+6,16,0,Math.PI*2); ctx.fill();
-  // eyes (blink)
-  ctx.fillStyle='#2b1a0f';
-  if(!blink){ ctx.fillRect(x-7,y,4,5); ctx.fillRect(x+3,y,4,5); }
-  else { ctx.fillRect(x-7,y+2,4,1); ctx.fillRect(x+3,y+2,4,1); }
-  // cape sway
-  ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(x-18,y+18); ctx.quadraticCurveTo(x-40,y+26+wag(3), x-10,y+40); ctx.lineTo(x+10,y+40); ctx.quadraticCurveTo(x+40,y+26-wag(3), x+18,y+18); ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
-/* 2) Cheems Baker (cupcake meme cousin) */
-function drawCheemsCupcake(ctx,t){
-  const x=480, y=250 + bob(2);
-  const blink = blinkTimer(3.5);
-  ctx.save();
-  ctx.globalAlpha=0.22; ctx.fillStyle='#ffd6ea'; ctx.beginPath(); ctx.arc(x,y,58+Math.sin(t*2)*2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  // cup
-  ctx.fillStyle='#f0a3c2'; ctx.beginPath(); ctx.moveTo(x-42,y+34); ctx.lineTo(x+42,y+34); ctx.lineTo(x+34,y+56); ctx.lineTo(x-34,y+56); ctx.closePath(); ctx.fill();
-  // frosting
-  ctx.fillStyle='#ffe0f0'; ctx.beginPath(); ctx.moveTo(x,y-28); ctx.bezierCurveTo(x-36,y-20,x-36,y,x,y+6); ctx.bezierCurveTo(x+36,y,x+36,y-20,x,y-28); ctx.closePath(); ctx.fill();
-  // face
-  ctx.fillStyle='#2b0f1a';
-  if(!blink){ ctx.fillRect(x-10,y-12,5,6); ctx.fillRect(x+5,y-12,5,6); } else { ctx.fillRect(x-10,y-10,5,2); ctx.fillRect(x+5,y-10,5,2); }
-  // cherry bob
-  ctx.fillStyle='#ff4d6d'; ctx.beginPath(); ctx.arc(x,y-34+Math.sin(t*4),7,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-/* 3) Golden Goon (golden toilet meme) */
-function drawGoldenToilet(ctx,t){
-  const x=480, y=250 + bob(2.2);
-  ctx.save();
-  ctx.globalAlpha=0.22; ctx.fillStyle='#ffe58a'; ctx.beginPath(); ctx.arc(x,y,60,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  // tank + crown
-  ctx.fillStyle='#f6df87'; ctx.fillRect(x-20,y-28,40,20); ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(x-16,y-28); ctx.lineTo(x-8,y-38); ctx.lineTo(x,y-28); ctx.lineTo(x+8,y-38); ctx.lineTo(x+16,y-28); ctx.closePath(); ctx.fill();
-  // bowl
-  ctx.fillStyle='#e7c75a'; ctx.fillRect(x-28,y-4,56,26);
-  ctx.beginPath(); ctx.arc(x,y+36,28,Math.PI,0); ctx.lineTo(x+28,y+48); ctx.lineTo(x-28,y+48); ctx.closePath(); ctx.fill();
-  // flush handle wiggle
-  ctx.fillStyle='#fff3b8'; ctx.fillRect(x+18,y-20+wag(1),4,8);
-  ctx.restore();
-}
-/* 4) Nyan Blade (nyan rainbow cat) */
-function drawNyan(ctx,t){
-  const x=480, y=240 + bob(3);
-  const blink = blinkTimer(4.5);
-  ctx.save();
-  // rainbow trail
-  for(let i=0;i<6;i++){
-    ctx.globalAlpha=0.2; ctx.fillStyle=['#f00','#f80','#ff0','#0f0','#0af','#80f'][i];
-    ctx.fillRect(x-140-i*16, y-8+i*3, 120, 4);
-  }
-  ctx.globalAlpha=1;
-  // poptart body
-  ctx.fillStyle='#fbd3a7'; ctx.fillRect(x-22,y-10,44,28);
-  ctx.fillStyle='#f39ac1'; ctx.fillRect(x-20,y-8,40,24);
-  // cat head
-  ctx.fillStyle='#b0b9c6'; ctx.fillRect(x+18,y-6,18,16);
-  // eyes
-  ctx.fillStyle='#222';
-  if(!blink){ ctx.fillRect(x+22,y-2,3,3); ctx.fillRect(x+30,y-2,3,3); } else { ctx.fillRect(x+22,y,3,1); ctx.fillRect(x+30,y,3,1); }
-  // tiny blade shimmer
-  ctx.strokeStyle='#fff3b8'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x-30,y+22); ctx.lineTo(x+30,y+22+Math.sin(t*8)); ctx.stroke();
-  ctx.restore();
-}
-/* 5) Pepe Sage (wise frog) */
-function drawPepe(ctx,t){
-  const x=480, y=248 + bob(2);
-  const blink = blinkTimer(3.2);
-  ctx.save();
-  ctx.globalAlpha=0.2; ctx.fillStyle='#bff7b5'; ctx.beginPath(); ctx.arc(x,y,54,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  ctx.fillStyle='#6bbf59'; ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#2a4d24';
-  if(!blink){ ctx.fillRect(x-10,y-4,5,5); ctx.fillRect(x+5,y-4,5,5); } else { ctx.fillRect(x-10,y-2,5,1); ctx.fillRect(x+5,y-2,5,1); }
-  // robe
-  ctx.fillStyle='#8ecf7f'; ctx.beginPath(); ctx.moveTo(x-18,y+10); ctx.lineTo(x+18,y+10); ctx.lineTo(x+8,y+36); ctx.lineTo(x-8,y+36); ctx.closePath(); ctx.fill();
-  // staff sway
-  ctx.strokeStyle='#d7f5d0'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-24,y+6); ctx.lineTo(x-24+wag(1.5),y+36); ctx.stroke();
-  ctx.restore();
-}
-/* 6) Bell Archon (ding meme judge) */
-function drawBellArchon(ctx,t){
-  const x=480, y=230 + bob(2.6);
-  ctx.save();
-  ctx.globalAlpha=0.25; ctx.fillStyle='#fff3b8'; ctx.beginPath(); ctx.arc(x,y,62,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  ctx.fillStyle='#ffe18a'; ctx.beginPath(); ctx.ellipse(x,y,12,20,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#ffd166'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(x,y+18,32,Math.PI,0); ctx.stroke();
-  // halo shimmer
-  ctx.strokeStyle='#fff3b8'; ctx.lineWidth=2; ctx.globalAlpha=0.6; ctx.beginPath(); ctx.arc(x,y-16,18+Math.sin(t*4),0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
-  ctx.restore();
-}
-/* Secret) 67 Skibidi Demon */
-function drawSkibidi(ctx,t){
-  const x=480, y=245 + bob(3);
-  ctx.save();
-  ctx.globalAlpha=0.26; ctx.fillStyle='#ffb9b9'; ctx.beginPath(); ctx.arc(x,y,60,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  // camera head
-  ctx.fillStyle='#222'; ctx.fillRect(x-18,y-36,36,20);
-  ctx.fillStyle='#ff2d2d'; ctx.fillRect(x-6,y-30,12,8);
-  // body
-  ctx.fillStyle='#444'; ctx.fillRect(x-10,y-10,20,44);
-  // twitch limbs
-  ctx.strokeStyle='#999'; ctx.lineWidth=3;
-  for(const s of [-1,1]){ ctx.beginPath(); ctx.moveTo(x+s*8,y+4); ctx.lineTo(x+s*(24+Math.sin(t*12+s)*2),y+20+Math.sin(t*16+s)*6); ctx.stroke(); }
-  ctx.restore();
-}
+/* Three simple meme bosses (sample set, fair patterns) */
+function drawDoge(ctx,t){const x=480,y=250+bob(2),b=blink(4);ctx.save();ctx.globalAlpha=.2;ctx.fillStyle='#fff3b8';ctx.beginPath();ctx.arc(x,y,56,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#e8c764';ctx.fillRect(x-20,y-6,40,26);ctx.fillStyle='#f6dfa2';ctx.beginPath();ctx.arc(x,y+6,16,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2b1a0f';if(!b){ctx.fillRect(x-7,y,4,5);ctx.fillRect(x+3,y,4,5);}else{ctx.fillRect(x-7,y+2,4,1);ctx.fillRect(x+3,y+2,4,1);}ctx.restore();}
+function drawCheems(ctx,t){const x=480,y=250+bob(2),b=blink(3.5);ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#ffd6ea';ctx.beginPath();ctx.arc(x,y,58,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#f0a3c2';ctx.beginPath();ctx.moveTo(x-40,y+34);ctx.lineTo(x+40,y+34);ctx.lineTo(x+34,y+56);ctx.lineTo(x-34,y+56);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe0f0';ctx.beginPath();ctx.moveTo(x,y-28);ctx.bezierCurveTo(x-36,y-20,x-36,y,x,y+6);ctx.bezierCurveTo(x+36,y,x+36,y-20,x,y-28);ctx.closePath();ctx.fill();ctx.fillStyle='#2b0f1a';if(!b){ctx.fillRect(x-10,y-12,5,6);ctx.fillRect(x+5,y-12,5,6);}else{ctx.fillRect(x-10,y-10,5,2);ctx.fillRect(x+5,y-10,5,2);}ctx.restore();}
+function drawBell(ctx,t){const x=480,y=230+bob(2.6);ctx.save();ctx.globalAlpha=.25;ctx.fillStyle='#fff3b8';ctx.beginPath();ctx.arc(x,y,62,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#ffe18a';ctx.beginPath();ctx.ellipse(x,y,12,20,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=6;ctx.beginPath();ctx.arc(x,y+18,32,Math.PI,0);ctx.stroke();ctx.restore();}
 
 /* Spawn helpers */
 function spawn(b){b.t=0; bullets.push(b); return b;}
-function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
+function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=0.05){
   const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60);
   const vy0=(HEART.y-(HEART._py||HEART.y))/(HEART._pdt||1/60);
   const dx=HEART.x-fx, dy=HEART.y-fy, L=Math.hypot(dx,dy)||1;
-  const vx=(dx/L)*speed*DIFF.spd + vx0*lead, vy=(dy/L)*speed*DIFF.spd + vy0*lead;
+  const vx=(dx/L)*speed + vx0*lead, vy=(dy/L)*speed + vy0*lead;
   return spawn({x:fx,y:fy,vx,vy,r,col,dmg});
 }
 function rand(a,b){return Math.random()*(b-a)+a;}
 
-/* Beatable patterns (lower speed/rate, clear gaps) */
-function patConeSpray(dur=3.8,dmg=4,col='#ffc6e0',spd=190){let t=0,g=0,rate=Math.max(0.12,0.2/DIFF.rate);const cx=ARENA.x+ARENA.w/2,y=ARENA.y+10;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const count=4;for(let k=0;k<count;k++){const a=(-Math.PI/3)+k*(Math.PI/6)+(Math.random()*0.06-0.03);spawn({x:cx,y, vx:Math.cos(a)*(spd+30*DIFF.spd), vy:Math.sin(a)*(spd+30*DIFF.spd), r:3, col, dmg});}}},done(){return t>=dur;}};}
-function patSweepBeads(dur=4.6,dmg=3,col='#ffe799',spd=230){let t=0,g=0,a=Math.random()*Math.PI*2,dir=Math.random()<0.5?-1:1,emit=Math.max(0.06,0.1/DIFF.rate);const p={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;a+=dir*(1.0*DIFF.spd)*dt;if(g>=emit){g=0;const lx=p.x+Math.cos(a)*(ARENA.w/2-12),ly=p.y+Math.sin(a)*(ARENA.h/2-12);spawnAimed(lx,ly,spd,dmg,col,3);} },done(){return t>=dur;}};}
-function patSideDash(dur=3.6,dmg=6,col='#ffd166',spd=320){let t=0,g=0,gap=Math.max(0.09,0.16/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+18+Math.random()*(ARENA.h-36);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;const dir=left?1:-1;spawn({x,y,vx:dir*(spd+40*DIFF.spd),vy:0,r:4,col,dmg});}},done(){return t>=dur;}};}
-function patFalls(dur=4.0,dmg=5,col='#d1f7ff',spd=200){let t=0,g=0,rate=Math.max(0.18,0.28/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(20,ARENA.w-20);spawn({x,y:ARENA.y-18,vx:0,vy:spd,r:3,col,dmg});}},done(){return t>=dur;}};}
-function patRing(dur=4.0,dmg=6,col='#fff3b8',spd=230,n=12){let t=0,g=0,rate=.55;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2;spawn({x:c.x,y:c.y,vx:Math.cos(a)*(spd+40*DIFF.spd),vy:Math.sin(a)*(spd+40*DIFF.spd),r:3,col,dmg});}}},done(){return t>=dur;}};}
-function patSpiralAim(dur=4.2,dmg=5,col='#a6c7ff',spd=200){let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.52;const rateR=(rad/(dur*1.5))*DIFF.rate, rateA=5.6*DIFF.spd;return{enter(){t=0;},update(dt){t+=dt;for(let i=0;i<3;i++){const a=a0+t*rateA+i*(Math.PI*2/3);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,spd,dmg,col,3);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};}
-function patHoming(dur=4.0,dmg=6,col='#fff3b8',spd=210){let t=0,g=0,rate=Math.max(0.32,0.6/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w), y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4);} },done(){return t>=dur;}};}
-function phase(dur,...ps){let t=0;return{enter(){t=0;ps.forEach(p=>p.enter&&p.enter());},update(dt){t+=dt;ps.forEach(p=>p.update&&p.update(dt));},done(){return t>=dur;}};}
+/* Beatable patterns */
+function patCone(dur=3.6,dmg=3,col='#fff3b8',spd=180,count=4,spread=Math.PI/3){
+  let t=0,g=0,rate=0.22;
+  const cx=ARENA.x+ARENA.w/2,y=ARENA.y+10;
+  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<count;k++){const a=(-spread)+k*(2*spread/(count-1));spawn({x:cx,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg});}}},done(){return t>=dur;}};
+}
+function patFalls(dur=3.8,dmg=3,col='#d1f7ff',spd=180){
+  let t=0,g=0,rate=0.28;
+  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(24,ARENA.w-24);spawn({x,y:ARENA.y-18,vx:0,vy:spd,r:3,col,dmg});}},done(){return t>=dur;}};
+}
+function patHoming(dur=3.6,dmg=4,col='#ffd0e8',spd=190){
+  let t=0,g=0,rate=0.58;
+  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w),y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4,0.06);} },done(){return t>=dur;}};
+}
+function phase(dur,...parts){let t=0;return{enter(){t=0;parts.forEach(p=>p.enter&&p.enter());},update(dt){t+=dt;parts.forEach(p=>p.update&&p.update(dt));},done(){return t>=dur;}};}
 
-/* Boss roster (all meme-based) */
+/* Boss data with ACT/MERCY logic */
 const BOSSES=[
-  { key:'doge', name:'Doge Paladin', hpMax:340, draw:drawDoge,
+  {
+    key:'doge', name:'Doge Paladin', hpMax:320, draw:drawDoge,
     intro:["much honor","very duel"],
     lines:["such focus","wow","amaze stance","parry pls","many form"],
-    attacks:()=>[ phase(3.8, patConeSpray(3.8,4,'#fff3b8',190)),
-                  phase(4.2, patSweepBeads(4.2,3,'#ffd166',230)),
-                  phase(3.6, patSideDash(3.6,6,'#ffd166',320)),
-                  phase(4.2, patSpiralAim(4.2,5,'#a6c7ff',200)),
-                  phase(6.0, patRing(6.0,5,'#fff3b8',230,10)) ] },
-  { key:'cheems', name:'Cheems Baker', hpMax:360, draw:drawCheemsCupcake,
+    mercyNeed:3, mercy:0, anger:0,
+    acts:[
+      {name:'Compliment', effect: (s)=>{ s.mercy++; return "so kind. very wow."; }},
+      {name:'Pet',        effect: (s)=>{ s.mercy++; s.anger=Math.max(0,s.anger-1); return "head pats accepted."; }},
+      {name:'Bow',        effect: (s)=>{ s.mercy++; return "respect returned."; }},
+      {name:'Taunt',      effect: (s)=>{ s.anger++; return "rude. attack calms later."; }}
+    ],
+    attacks:()=>[
+      phase(3.2, patCone(3.2,3,'#fff3b8',170,4,Math.PI/3)),
+      phase(3.4, patFalls(3.4,3,'#d1f7ff',175)),
+      phase(3.6, patHoming(3.6,4,'#ffd0e8',185))
+    ]
+  },
+  {
+    key:'cheems', name:'Cheems Baker', hpMax:340, draw:drawCheems,
     intro:["bonk? bake.","sprinkle time."],
     lines:["cheems bake","yum… panic","frost ur fear","cherry go brr","nom nom"],
-    attacks:()=>[ phase(3.6, patConeSpray(3.6,4,'#ffc6e0',180)),
-                  phase(3.8, patFalls(3.8,5,'#ffe3f2',180)),
-                  phase(3.4, patSideDash(3.4,6,'#ff88b7',300)),
-                  phase(3.8, patHoming(3.8,5,'#ffd0e8',190)),
-                  phase(5.8, patSpiralAim(5.8,5,'#ffc6e0',185)) ] },
-  { key:'goldloo', name:'Golden Goon', hpMax:380, draw:drawGoldenToilet,
-    intro:["gold flush.","throne online."],
-    lines:["down the drain","swirl test","plunge time","flush moment","polished."],
-    attacks:()=>[ phase(4.0, patRing(4.0,6,'#fff28a',220,12)),
-                  phase(4.2, patFalls(4.2,5,'#d1f7ff',200)),
-                  phase(4.0, patSideDash(4.0,6,'#e7c75a',330)),
-                  phase(4.6, patSpiralAim(4.6,6,'#ffe18a',205)),
-                  phase(6.0, patSweepBeads(6.0,4,'#fff3b8',220)) ] },
-  { key:'nyan', name:'Nyan Blade', hpMax:380, draw:drawNyan,
-    intro:["nyan~","rainbow slash!"],
-    lines:["nya!","sparkle cut","meow dodge","rainbow go","pop pop"],
-    attacks:()=>[ phase(3.8, patConeSpray(3.8,4,'#ffb6c1',195)),
-                  phase(4.2, patSweepBeads(4.2,3,'#bde0fe',235)),
-                  phase(3.8, patHoming(3.8,6,'#cdeffd',205)),
-                  phase(4.4, patSpiralAim(4.4,5,'#f39ac1',200)),
-                  phase(6.0, patRing(6.0,5,'#fff',230,8)) ] },
-  { key:'pepe', name:'Pepe Sage', hpMax:400, draw:drawPepe,
-    intro:["wisdom croaks.","breathe, child."],
-    lines:["inhale… exhale","feel the pond","do not tilt","you can","ribbit."],
-    attacks:()=>[ phase(4.0, patRing(4.0,5,'#c7f9cc',220,10)),
-                  phase(4.2, patSpiralAim(4.2,5,'#a1e8af',195)),
-                  phase(3.8, patHoming(3.8,5,'#d7f5d0',200)),
-                  phase(5.8, patSweepBeads(5.8,3,'#bff7b5',220)) ] },
-  { key:'archon', name:'Bell Archon', hpMax:420, draw:drawBellArchon,
+    mercyNeed:3, mercy:0, anger:0,
+    acts:[
+      {name:'Taste Test', effect:(s)=>{ s.mercy++; return "approval granted. less sprinkles."; }},
+      {name:'Compliment', effect:(s)=>{ s.mercy++; return "pink pride intensifies."; }},
+      {name:'Joke',       effect:(s)=>{ s.mercy++; return "hee hee. calm frosting."; }},
+      {name:'Insult',     effect:(s)=>{ s.anger++; return "ouch. extra sugar incoming (later)."; }}
+    ],
+    attacks:()=>[
+      phase(3.0, patCone(3.0,3,'#ffc6e0',165,4,Math.PI/3)),
+      phase(3.4, patFalls(3.4,3,'#ffe3f2',170)),
+      phase(3.4, patHoming(3.4,4,'#ffd0e8',180))
+    ]
+  },
+  {
+    key:'archon', name:'Bell Archon', hpMax:360, draw:drawBell,
     intro:["ding ding.","judgment comfy."],
     lines:["hold the note","resonate","no mald","center rings","gentle toll"],
-    attacks:()=>[ phase(4.0, patRing(4.0,6,'#ffe799',230,12)),
-                  phase(4.6, patSweepBeads(4.6,4,'#fff3b8',235)),
-                  phase(4.0, patSideDash(4.0,6,'#ffe18a',320)),
-                  phase(6.2, patSpiralAim(6.2,5,'#ffd166',205)) ] },
-  { key:'skibidi', name:'67 Skibidi Demon', hpMax:460, draw:drawSkibidi,
-    intro:["feed glitches.","dance for me."],
-    lines:["faster.","louder.","wrong note.","keep up.","again."],
-    attacks:()=>[ phase(4.4, patSpiralAim(4.4,7,'#ff7a7a',220)),
-                  phase(4.0, patRing(4.0,7,'#ff3b3b',240,12)),
-                  phase(4.2, patHoming(4.2,8,'#ffa0a0',220)),
-                  phase(6.6, patSweepBeads(6.6,6,'#ffb9b9',240)) ] } // still hard but fair
+    mercyNeed:2, mercy:0, anger:0,
+    acts:[
+      {name:'Listen',    effect:(s)=>{ s.mercy++; return "you hear the silence between."; }},
+      {name:'Hum',       effect:(s)=>{ s.mercy++; return "your pitch aligns."; }},
+      {name:'Apologize', effect:(s)=>{ s.mercy++; return "forgiven. a little."; }},
+      {name:'Mock',      effect:(s)=>{ s.anger++; return "discordant. noted."; }}
+    ],
+    attacks:()=>[
+      phase(3.2, patCone(3.2,3,'#fff3b8',170,6,Math.PI/2.6)),
+      phase(3.4, patFalls(3.4,3,'#ffe799',175)),
+      phase(3.6, patHoming(3.6,4,'#fff3b8',185))
+    ]
+  }
 ];
 
-/* Admin list */
-function buildAdminBossList(){
-  adBoss.innerHTML='';
-  BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value=String(i); o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o);});
-  const secret=document.createElement('option'); secret.value='secret67'; secret.textContent='Secret: 67 Skibidi Demon'; adBoss.appendChild(secret);
-}
-
 /* Flow */
-let BOSS=null;
-function setBoss(ix){
-  if(ix==='secret67'){ bossIndex=BOSSES.findIndex(b=>b.key==='skibidi'); }
-  else bossIndex=Math.max(0,Math.min(BOSSES.length-1, parseInt(ix,10)||0));
-  const d=BOSSES[bossIndex];
-  BOSS={name:d.name,hpMax:d.hpMax,hp:d.hpMax,draw:d.draw,makeAttacks:d.attacks,intro:d.intro,lines:d.lines||[]};
-  bossBar(); attackIx=0; attackSeq=BOSS.makeAttacks(); TURN_LINES=0; uiCenter.textContent='Your turn'; saveProgress();
+function setBoss(idx){
+  bossIndex=Math.max(0,Math.min(BOSSES.length-1, parseInt(idx,10)||0));
+  const base=BOSSES[bossIndex];
+  // clone stateful parts
+  BOSS={
+    key:base.key, name:base.name, hpMax:base.hpMax, hp:base.hpMax,
+    draw:base.draw, intro:base.intro.slice(), lines:base.lines.slice(),
+    mercyNeed:base.mercyNeed, mercy:0, anger:0,
+    acts:base.acts.map(a=>({name:a.name, effect:a.effect})),
+    attacks:base.attacks
+  };
+  attackIx=0; attackSeq=BOSS.attacks();
+  bossBar();
 }
-function initBoss(ix){
-  setBoss(ix);
-  HEART.hp=HEART.hpMax=Math.max(1,SAVE.hp||50); updateHP(); HEART.i=0; centerHeart();
+function initBoss(idx){
+  setBoss(idx);
+  HEART.hp=HEART.hpMax=Math.max(1, SAVE.hp||50);
+  tempBuff.atk=0;
+  updateHP(); HEART.i=0; centerHeart();
   turn='player'; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
   say((BOSS.intro||[]).join('\n'));
+  mode='main';
 }
-function bossHit(d){BOSS.hp=Math.max(0,BOSS.hp-d); bossBar(); damagePopup={x:480,y:200,t:0,text:String(d)};}
-function startAttack(){bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block'; attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter();}
-function finishAttack(){turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden'); say(nextLine());}
-function defeat(){ say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
-function victory(){ say('Victory. Next meme awaits.'); setTimeout(()=>{ if(bossIndex+1<BOSSES.length-1) initBoss(bossIndex+1); else if(bossIndex+1===BOSSES.length-1) initBoss(bossIndex+1); else initBoss(0); },850); }
+function startAttack(){
+  bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
+  attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter();
+}
+function finishAttack(){
+  turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
+  uiBar.classList.remove('hidden'); say(BOSS.lines[(Math.floor(time*3))%BOSS.lines.length]||'...');
+  mode='main';
+}
+function defeat(){
+  say('You fall. The hall dims.');
+  setTimeout(()=>initBoss(bossIndex),900);
+}
+function victory(spared=false){
+  const r=routeLean();
+  const rw=rewardForRoute(spared?'pacifist':r);
+  giveItem(rw);
+  const msg=spared?`You spared ${BOSS.name}. (${r.toUpperCase()} leaning)\nGained item: ${rw.name}`:`You defeated ${BOSS.name}. (${r.toUpperCase()} leaning)\nGained item: ${rw.name}`;
+  say(msg);
+  setTimeout(()=>{ if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else {
+    // simple endings
+    const rl=routeLean();
+    say(rl==='pacifist'?'Ending: Peace blooms.':'Ending: You carried your choices.');
+    setTimeout(()=>initBoss(0),1500);
+  } },1200);
+}
+
+/* Items */
+function itemsList(){
+  if(inventory.length===0) return "No items.";
+  return inventory.map((it,i)=>` ${i+1}. ${it.name} (${it.count}) — ${it.desc}`).join('\n');
+}
+function useItem(i){
+  if(i<0||i>=inventory.length) return "Invalid.";
+  const it=inventory[i];
+  if(!it || it.count<=0) return "Empty.";
+  if(it.type==='heal'){
+    HEART.hp=Math.min(HEART.hpMax, HEART.hp + (it.amount||10));
+    updateHP();
+    it.count--; if(it.count<=0) inventory.splice(i,1);
+    saveInventory();
+    return `You used ${it.name}. +${it.amount} HP`;
+  }else if(it.type==='buff'){
+    tempBuff.atk=(tempBuff.atk||0)+ (it.atk||2);
+    it.count--; if(it.count<=0) inventory.splice(i,1);
+    saveInventory();
+    return `You used ${it.name}. ATK +${it.atk}`;
+  }
+  return "Nothing happened.";
+}
+function giveItem(it){
+  const f=inventory.find(x=>x.id===it.id);
+  if(f) f.count+=it.count;
+  else inventory.push(JSON.parse(JSON.stringify(it)));
+  saveInventory();
+}
+
+/* ACT and MERCY logic */
+function openAct(){
+  mode='act';
+  const opts=BOSS.acts.map((a,i)=>` ${i+1}. ${a.name}`).join('\n');
+  say(`ACT on ${BOSS.name}:\n${opts}`, true);
+}
+function handleActChoice(i){
+  const a=BOSS.acts[i]; if(!a) { say('No such act.'); return; }
+  const line=a.effect(BOSS);
+  routeState.act++; saveProgress();
+  // acts calm anger; if anger high, next attacks may be slightly denser — we keep it simple and cosmetic
+  say(line);
+  // Check spare
+  if(BOSS.mercy>=BOSS.mercyNeed){
+    say(`${BOSS.name} seems ready to be spared.`);
+  }
+  endPlayerTurn();
+}
+function openMercy(){
+  if(BOSS.mercy>=BOSS.mercyNeed){
+    routeState.mercy++; saveProgress();
+    victory(true);
+  }else{
+    say(`${BOSS.name} isn't ready to be spared.`);
+  }
+}
+function openItem(){
+  mode='item';
+  say(`ITEMS:\n${itemsList()}\n\nPick with 1-4`, true);
+}
+function handleItemChoice(i){
+  const msg=useItem(i);
+  say(msg);
+  // Using an item uses the turn but doesn't change route directly
+  endPlayerTurn();
+}
+
+/* Combat actions */
+function playerFight(){
+  const base=24;
+  const dmg=base + (tempBuff.atk||0);
+  routeState.fight++; saveProgress();
+  say(`${username} strikes for ${dmg}.`);
+  bossHit(dmg);
+  endPlayerTurn();
+}
+function bossHit(dmg){
+  BOSS.hp=Math.max(0,BOSS.hp - dmg);
+  bossBar();
+  damagePopup={x:480,y:200,t:0,text:String(dmg)};
+}
+
+/* Turn transitions */
+function endPlayerTurn(){
+  setTimeout(()=>{ turn='enemy'; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideSay(); startAttack(); },150);
+}
+
+/* Submenu handler */
+function handleSubmenuSelect(i){
+  if(mode==='act') handleActChoice(i);
+  else if(mode==='item') handleItemChoice(i);
+}
+
+/* UI clicks */
+uiMenu.addEventListener('click',e=>{
+  const btn=e.target.closest('.uiBtn'); if(!btn||turn!=='player'||mode!=='main') return;
+  const act=btn.dataset.act;
+  if(act==='FIGHT'){ playerFight(); }
+  else if(act==='ACT'){ openAct(); }
+  else if(act==='ITEM'){ openItem(); }
+  else if(act==='MERCY'){ openMercy(); }
+});
 
 /* Loop */
 let last=performance.now();
-function loop(now){const dt=Math.min(0.033,(now-last)/1000); last=now; if(!paused){update(dt); render(dt);} requestAnimationFrame(loop);}
+function loop(now){
+  const dt=Math.min(0.033,(now-last)/1000); last=now;
+  if(!paused){ update(dt); render(dt); }
+  requestAnimationFrame(loop);
+}
 requestAnimationFrame(loop);
 
-/* Update / Render */
+/* Update */
 function update(dt){
   time+=dt;
+
   if(turn==='enemy'){
-    let dx=0,dy=0; if(key('ArrowLeft')||key('a'))dx-=1; if(key('ArrowRight')||key('d'))dx+=1; if(key('ArrowUp')||key('w'))dy-=1; if(key('ArrowDown')||key('s'))dy+=1;
+    phaseT+=dt;
+
+    // movement
+    let dx=0,dy=0; if(key('ArrowLeft')||key('a')) dx-=1; if(key('ArrowRight')||key('d')) dx+=1; if(key('ArrowUp')||key('w')) dy-=1; if(key('ArrowDown')||key('s')) dy+=1;
     const L=Math.hypot(dx,dy)||1;
     HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
     HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
-    HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y; HEART.i=Math.max(0,HEART.i-dt);
+    HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
+    HEART.i=Math.max(0,HEART.i-dt);
 
-    attack&&attack.update(dt);
+    // attack update
+    attack && attack.update(dt);
 
-    for(const b of bullets){b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt;}
-    bullets=bullets.filter(b=>b.x>ARENA.x-180 && b.x<ARENA.x+ARENA.w+180 && b.y>ARENA.y-180 && b.y<ARENA.y+ARENA.h+200);
+    // bullets update
+    for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
+    bullets=bullets.filter(b=>b.x>ARENA.x-160 && b.x<ARENA.x+ARENA.w+160 && b.y>ARENA.y-160 && b.y<ARENA.y+ARENA.h+180);
 
+    // collisions
     for(const b of bullets){
-      const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-      if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){
-        const dmg=Math.max(1,Math.floor((b.dmg||5)*DIFF.dmg));
-        HEART.hp=Math.max(0,HEART.hp-dmg); updateHP(); HEART.i=0.85;
+      const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
+      if(dx*dx+dy*dy<=rr*rr && HEART.i<=0){
+        const dmg=Math.max(1,Math.floor(b.dmg||3));
+        HEART.hp=Math.max(0,HEART.hp - dmg);
+        updateHP();
+        HEART.i=0.85;
       }
     }
 
-    if(attack && attack.done()) finishAttack();
-    if(HEART.hp<=0){turn='defeat'; defeat();}
+    // end phase
+    if(attack && attack.done()){
+      finishAttack();
+    }
+
+    // defeat
+    if(HEART.hp<=0){
+      turn='defeat';
+      defeat();
+    }
   }
 
-  if(BOSS && BOSS.hp<=0 && turn!=='victory'){turn='victory'; showArena=false; boxEl.style.display='none'; victory();}
+  // victory check
+  if(BOSS && BOSS.hp<=0 && turn!=='victory'){
+    turn='victory'; showArena=false; boxEl.style.display='none';
+    victory(false);
+  }
 
-  if(damagePopup){damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null;}
+  // popup fade
+  if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
 }
+
+/* Render */
 function render(dt){
+  // background
   ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
   ctx.fillStyle='#1a130f'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
-  BOSS?.draw?.(ctx,time,0);
+  // boss sprite
+  BOSS && BOSS.draw && BOSS.draw(ctx,time,0);
 
+  // enemy turn arena
   if(turn==='enemy' && showArena){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
-    for(const b of bullets){ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill();}
+    for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
     ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
     drawHeart(ctx,HEART.x-6,HEART.y-6,'#ffd166',0.8);
-    if(hitboxOverlay){ ctx.globalAlpha=1; ctx.strokeStyle='#00ff99'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(HEART.x,HEART.y,HEART.r,0,Math.PI*2); ctx.stroke();}
     ctx.restore();
   }
 
-  if(damagePopup){ const a=Math.max(0,1-damagePopup.t/0.9); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace'; ctx.fillText(damagePopup.text,damagePopup.x,damagePopup.y-damagePopup.t*60); ctx.restore();}
+  // damage popup
+  if(damagePopup){
+    const a=Math.max(0,1-damagePopup.t/0.9);
+    ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace';
+    ctx.fillText(damagePopup.text, damagePopup.x, damagePopup.y - damagePopup.t*60);
+    ctx.restore();
+  }
 }
-
-/* UI actions */
-uiMenu.addEventListener('click',e=>{
-  const btn=e.target.closest('.uiBtn'); if(!btn||turn!=='player') return;
-  const act=btn.dataset.act;
-  if(act==='FIGHT'){ say('You strike.'); bossHit(24); setTimeout(()=>{turn='enemy'; uiBar.classList.add('hidden'); hideSay(); startAttack(); uiCenter.textContent='Enemy turn';},150); }
-  else if(act==='ACT'){ say('You nod with meme energy.'); }
-  else if(act==='ITEM'){ HEART.hp=Math.min(HEART.hpMax, HEART.hp+10); updateHP(); say('+10 HP'); }
-  else if(act==='MERCY'){ say('They’re not ready yet.'); }
-});
-
-/* Admin */
-function openAdmin(){ admin.style.display='flex'; buildAdminBossList(); adBoss.value=String(bossIndex); adDiff.value=(Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF))||'Normal'; adHP.value=String(HEART.hpMax); }
-function closeAdmin(){ admin.style.display='none'; saveProgress(); }
-adHitbox.onclick=()=>{hitboxOverlay=!hitboxOverlay; saveProgress();};
-adHeal.onclick=()=>{HEART.hp=HEART.hpMax; updateHP();};
-adSkip.onclick=()=>{closeAdmin(); if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else initBoss(0);};
-adReset.onclick=()=>{localStorage.removeItem(SAVE_KEY); SAVE={}; closeAdmin(); initBoss(0);};
-adSummon67.onclick=()=>{closeAdmin(); setBoss('secret67'); HEART.hp=HEART.hpMax; updateHP(); centerHeart(); say("You tuned the wrong frequency.");};
-adClose.onclick=()=>closeAdmin();
-adBoss.onchange=()=>{const v=adBoss.value; closeAdmin(); initBoss(v==='secret67'?'secret67':parseInt(v,10));};
-adDiff.onchange=()=>{DIFF=DIFFS[adDiff.value]||DIFFS.Normal; saveProgress();};
-adHP.onchange=()=>{let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=v; HEART.hp=v; updateHP(); saveProgress();};
 
 /* Start */
 initBoss(bossIndex);
+updateHP();
 
-/* Utils */
-function key(k){return down.has(k)||down.has(k.toUpperCase());}
+/* Keyboard shortcuts for actions (optional) */
+addEventListener('keydown',e=>{
+  if(turn!=='player') return;
+  if(mode==='main'){
+    if(e.key==='z' || e.key==='Z' || e.key==='Enter'){ playerFight(); }
+    if(e.key==='a' || e.key==='A'){ openAct(); }
+    if(e.key==='i' || e.key==='I'){ openItem(); }
+    if(e.key==='m' || e.key==='M'){ openMercy(); }
+  }
+});
 </script>
 </body>
 </html>
