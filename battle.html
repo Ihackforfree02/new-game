@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Undertale Gold — Duelist → Goonest Gooner</title>
+<title>Undertale Gold — Boss Rush (admin, secret, evolving dialogue)</title>
 <style>
-:root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff}
+:root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
-#stage{position:fixed;left:50%;top:50%;transform-origin:top left;will-change:transform}
+#stage{position:fixed;left:50%;top:50%;transform-origin:top left}
 #wrap{position:relative;width:960px;height:720px}
 canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
 
@@ -26,7 +26,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 /* Arena */
 #box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;z-index:1}
 
-/* Dialogue (bigger) */
+/* Dialogue */
 #bubble{position:absolute;left:50%;bottom:148px;transform:translateX(-50%);max-width:905px;min-height:124px;display:block;z-index:4}
 .bub{background:var(--ui);border:2px solid #fff;padding:16px 20px}
 #bubbleText{white-space:pre-line;line-height:1.6;font-size:16px}
@@ -43,14 +43,16 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 /* Tips */
 #tips{position:absolute;left:50%;top:84px;transform:translateX(-50%);font-size:12px;color:#c8c8c8;opacity:.85}
 
-/* Admin panel (secret 67×3) */
+/* Admin panel */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:8}
-#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:520px;color:#ffd166}
-.adRow{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:560px;color:#ffd166;max-width:95%}
+.adRow{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:10px;flex-wrap:wrap}
 .adBtn{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
 .adBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-.adInput{width:160px;background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
-.adSelect{width:180px;background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
+.adInput, .adSelect{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
+.adInput{width:160px}
+.adSelect{width:220px}
+.adHelp{color:#bbb;font-size:12px}
 </style>
 </head>
 <body>
@@ -85,7 +87,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="uiCenter">Your turn.</div>
   </div>
 
-  <div id="tips">Move: Arrow keys / WASD — Confirm: Z/Enter — Cancel: X/Backspace</div>
+  <div id="tips">Move: Arrow keys / WASD — Confirm: Z/Enter — Cancel: X/Backspace — Secret: type 67 three times</div>
 
   <!-- Admin panel -->
   <div id="admin">
@@ -93,37 +95,38 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
       <div style="font-weight:700;margin-bottom:8px">Admin panel</div>
       <div class="adRow">
         <label>Boss control</label>
-        <select id="adBoss" class="adSelect">
-          <option value="0">Golden Duelist</option>
-          <option value="1">Goonest Gooner</option>
-        </select>
+        <select id="adBoss" class="adSelect"></select>
       </div>
       <div class="adRow">
         <label>Difficulty</label>
         <select id="adDiff" class="adSelect">
-          <option>Normal</option>
-          <option>Hard</option>
-          <option>Insane</option>
+          <option>Normal</option><option>Hard</option><option>Insane</option>
         </select>
       </div>
       <div class="adRow">
         <label>Player HP</label>
         <input id="adHP" type="number" class="adInput" min="1" max="99" value="50"/>
+        <button id="adHeal" class="adBtn">Heal to full</button>
       </div>
       <div class="adRow">
         <label>Hitbox overlay</label>
         <button id="adHitbox" class="adBtn">Toggle</button>
+        <span class="adHelp">Shows a ring around the heart</span>
       </div>
       <div class="adRow">
-        <label>Actions</label>
-        <div>
-          <button id="adHeal" class="adBtn">Heal to full</button>
-          <button id="adSkip" class="adBtn">Skip to next boss</button>
-          <button id="adClose" class="adBtn">Close</button>
-        </div>
+        <label>Progress</label>
+        <button id="adSkip" class="adBtn">Skip to next boss</button>
+        <button id="adReset" class="adBtn">Reset progress</button>
       </div>
-      <div class="adBtns" style="margin-top:6px">
-        <small style="color:#bbb">Opened by typing 67 three times</small>
+      <div class="adRow">
+        <label>Secret</label>
+        <button id="adSummon67" class="adBtn">Spawn 67 Skibidi Demon</button>
+      </div>
+      <div class="adRow" style="justify-content:flex-end">
+        <button id="adClose" class="adBtn">Close</button>
+      </div>
+      <div class="adBtns">
+        <small class="adHelp">Open this panel by typing 67 three times</small>
       </div>
     </div>
   </div>
@@ -132,14 +135,9 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 <script>
 "use strict";
 
-/* ===== Responsive: fill screen, preserve aspect ===== */
+/* ===== Responsive ===== */
 const stage=document.getElementById('stage');
-function resizeStage(){
-  const W=960,H=720;
-  const sx=innerWidth/W, sy=innerHeight/H;
-  const s=Math.min(sx,sy);
-  stage.style.transform=`translate(-50%, -50%) scale(${s})`;
-}
+function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${s})`;}
 addEventListener('resize',resizeStage,{passive:true}); resizeStage();
 
 /* ===== Elements ===== */
@@ -152,7 +150,6 @@ const bubble=document.getElementById('bubble'), bubbleText=document.getElementBy
 const uiMenu=document.getElementById('uiMenu');
 const uiBar=document.getElementById('uiBar');
 const uiCenter=document.getElementById('uiCenter');
-
 const admin=document.getElementById('admin');
 const adBoss=document.getElementById('adBoss');
 const adDiff=document.getElementById('adDiff');
@@ -160,141 +157,74 @@ const adHP=document.getElementById('adHP');
 const adHitbox=document.getElementById('adHitbox');
 const adHeal=document.getElementById('adHeal');
 const adSkip=document.getElementById('adSkip');
+const adReset=document.getElementById('adReset');
+const adSummon67=document.getElementById('adSummon67');
 const adClose=document.getElementById('adClose');
+
+/* ===== Save system ===== */
+const SAVE_KEY='utg_save_v2';
+function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}catch{return {};}}
+function writeSave(obj){try{localStorage.setItem(SAVE_KEY,JSON.stringify(obj));}catch{}}
+let SAVE=loadSave();
+
+/* ===== Difficulty ===== */
+const DIFFS={ Normal:{spd:1.00, rate:1.00, dmg:1.00, lead:0.06},
+              Hard:{spd:1.25, rate:1.30, dmg:1.25, lead:0.085},
+              Insane:{spd:1.5, rate:1.6, dmg:1.5, lead:0.11}};
+let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal;
+adDiff.value=(Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF))||'Normal';
 
 /* ===== State ===== */
 const ARENA={x:240,y:420,w:480,h:180};
-const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:50,hpMax:50,_px:0,_py:0,_pdt:1/60};
+const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:Math.max(1, SAVE.hp||50),hpMax:Math.max(1,SAVE.hp||50),_px:0,_py:0,_pdt:1/60};
 let time=0, paused=false, turn='player', showArena=false;
-let attack=null, phaseT=0, attackIx=0;
-let bullets=[], scene={flinch:0,shake:0}; let damagePopup=null; let slashes=[];
-let bossIndex=0; // 0: Duelist, 1: Goonest Gooner
-let hitboxOverlay=false;
+let attack=null, phaseT=0, attackIx=0, attackSeq=null;
+let bullets=[], scene={flinch:0,shake:0}; let damagePopup=null;
+let bossIndex = (typeof SAVE.bossIndex==='number') ? SAVE.bossIndex : 0; // resume
+let hitboxOverlay = !!SAVE.hitbox;
+let TURN_LINES=0;
 
-/* ===== Difficulty ===== */
-const DIFFS={
-  Normal:{spd:1.00, rate:1.00, dmg:1.00, lead:0.06},
-  Hard:{spd:1.25, rate:1.30, dmg:1.25, lead:0.085},
-  Insane:{spd:1.5, rate:1.6, dmg:1.5, lead:0.11}
-};
-let DIFF=DIFFS.Normal;
-
-/* ===== Secret: 67 three times opens admin ===== */
-let secretBuffer='', secretCount=0;
-addEventListener('keydown',e=>{
-  if(e.key==='6'||e.key==='7'){
-    secretBuffer=(secretBuffer+e.key).slice(-2);
-    if(secretBuffer==='67'){secretCount++; secretBuffer='';}
-    if(secretCount>=3){ openAdmin(); secretCount=0; }
-  } else {
-    secretBuffer=''; secretCount=0;
-  }
-});
-
-/* ===== Bars ===== */
+/* ===== Helpers ===== */
+function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
 function bossBar(){bossHPFill.style.width=(420*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
 function updatePlayerHP(){pHPFill.style.width=(260*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
-updatePlayerHP();
-
-/* ===== Dialogue ===== */
-let lastDialog='';
-function showBubble(t){lastDialog=t; bubble.style.display='block'; bubbleText.textContent=t;}
+function showBubble(t){bubble.style.display='block'; bubbleText.textContent=t;}
 function hideBubble(){bubble.style.display='none';}
-function restoreBubble(){ if(lastDialog){ bubbleText.textContent=lastDialog; bubble.style.display='block'; } }
+function nextLine(){ // evolving dialogue per player turn
+  if(!BOSS||!BOSS.lines||!BOSS.lines.length) return '';
+  const line=BOSS.lines[TURN_LINES % BOSS.lines.length]; TURN_LINES++; return line;
+}
+function saveProgress(){ SAVE={bossIndex, difficulty:adDiff.value, hp:HEART.hpMax, hitbox:hitboxOverlay}; writeSave(SAVE); }
 
-/* ===== Input ===== */
+/* ===== Input & secret ===== */
 const down=new Set();
+let secretBuf='', secretCount=0;
 addEventListener('keydown',e=>{
   down.add(e.key);
   if((e.key==='z'||e.key==='Z'||e.key==='Enter') && turn==='player'){
     showBubble('You strike.');
     bossHit(24);
-    setTimeout(()=>{
-      turn='enemy';
-      uiCenter.textContent='Enemy turn';
-      uiBar.classList.add('hidden'); // hide entire bar during attacks
-      hideBubble();
-      startAttack();
-    },200);
+    setTimeout(()=>{ turn='enemy'; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideBubble(); startAttack(); },160);
   }
-  if((e.key==='x'||e.key==='X'||e.key==='Backspace') && turn==='player'){
-    showBubble('You steady yourself.');
-  }
+  if((e.key==='x'||e.key==='X'||e.key==='Backspace') && turn==='player'){ showBubble('You steady yourself.'); }
+  // Secret 67×3
+  if(e.key==='6' || e.key==='7'){ secretBuf=(secretBuf+e.key).slice(-2); if(secretBuf==='67'){secretCount++; secretBuf='';} if(secretCount>=3){ openAdmin(); secretCount=0; } } else { secretBuf=''; secretCount=0; }
 });
 addEventListener('keyup',e=>down.delete(e.key));
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
 
-/* ===== Drawing: Duelist (mantis) ===== */
-function drawMantis(ctx,t,flinch=0){
-  const x=480, y=260 + Math.sin(t*5.6)*2.8;
-  ctx.save();
-  ctx.globalAlpha=0.2; ctx.fillStyle='#fff1b6'; ctx.beginPath(); ctx.arc(x,y,54+Math.sin(t*2.8)*2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  if(flinch>0){ctx.globalAlpha=0.65;ctx.fillStyle='#fffbe0';ctx.beginPath();ctx.arc(x,y,50,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-  ctx.fillStyle='#b8902f';
-  ctx.beginPath(); ctx.moveTo(x-18,y+2); ctx.quadraticCurveTo(x-52,y+18+Math.sin(t*2)*2, x-10,y+42); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x+18,y+2); ctx.quadraticCurveTo(x+52,y+18+Math.cos(t*2)*2, x+10,y+42); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#e5bf4d'; ctx.fillRect(x-6,y-10,12,44);
-  ctx.fillStyle='#d8b44a'; for(let i=0;i<4;i++){ ctx.fillRect(x-5,y+28+i*6,10,4); }
-  ctx.fillStyle='#e5bf4d'; ctx.beginPath(); ctx.moveTo(x,y-38); ctx.lineTo(x-12,y-14); ctx.lineTo(x+12,y-14); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#ffd166'; ctx.fillRect(x-2,y-44,4,10);
-  ctx.fillStyle='#e5bf4d'; ctx.beginPath(); ctx.moveTo(x-6,y-14); ctx.lineTo(x-11,y-6); ctx.lineTo(x-3,y-10); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x+6,y-14); ctx.lineTo(x+11,y-6); ctx.lineTo(x+3,y-10); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#0c0c12'; ctx.fillRect(x-8,y-26,5,5); ctx.fillRect(x+3,y-26,5,5);
-  ctx.strokeStyle='#ffd166'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(x-3,y-32); ctx.quadraticCurveTo(x-20,y-46+Math.sin(t*5)*2, x-26,y-58); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x+3,y-32); ctx.quadraticCurveTo(x+20,y-46+Math.cos(t*5)*2, x+26,y-58); ctx.stroke();
-  ctx.strokeStyle='#ffd166'; ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(x-6,y+2); ctx.lineTo(x-28,y+8+Math.sin(t*3)*8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x-28,y+8+Math.sin(t*3)*8); ctx.lineTo(x-42,y-2+Math.sin(t*3)*6); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x+6,y+2); ctx.lineTo(x+28,y+8+Math.cos(t*3)*8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x+28,y+8+Math.cos(t*3)*8); ctx.lineTo(x+42,y-2+Math.cos(t*3)*6); ctx.stroke();
-  ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-4,y+20); ctx.lineTo(x-18,y+36); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x+4,y+20); ctx.lineTo(x+18,y+36); ctx.stroke();
-  ctx.restore();
-}
-
-/* ===== Drawing: Goonest Gooner (cupcake) ===== */
-function drawCupcake(ctx,t,flinch=0){
-  const x=480, y=250 + Math.sin(t*3)*2;
-  ctx.save();
-  // glow
-  ctx.globalAlpha=0.22; ctx.fillStyle='#ffd6ea'; ctx.beginPath(); ctx.arc(x,y,58+Math.sin(t*2)*2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  if(flinch>0){ctx.globalAlpha=0.6; ctx.fillStyle='#fff0f7'; ctx.beginPath(); ctx.arc(x,y,52,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;}
-  // base wrapper
-  ctx.fillStyle='#f0a3c2';
-  ctx.beginPath();
-  ctx.moveTo(x-42,y+34); ctx.lineTo(x+42,y+34); ctx.lineTo(x+34,y+56); ctx.lineTo(x-34,y+56); ctx.closePath();
-  ctx.fill();
-  // frosting
-  ctx.fillStyle='#ffe0f0';
-  ctx.beginPath();
-  ctx.moveTo(x,y-28);
-  ctx.bezierCurveTo(x-36,y-20, x-36,y, x,y+6);
-  ctx.bezierCurveTo(x+36,y, x+36,y-20, x,y-28);
-  ctx.closePath(); ctx.fill();
-  // swirl
-  ctx.fillStyle='#ffd0e8';
-  ctx.beginPath(); ctx.arc(x-10,y-6,8,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x+12,y-4,6,0,Math.PI*2); ctx.fill();
-  // cherry on top
-  ctx.fillStyle='#ff4d6d'; ctx.beginPath(); ctx.arc(x,y-34,7,0,Math.PI*2); ctx.fill();
-  // eyes
-  ctx.fillStyle='#2b0f1a'; ctx.fillRect(x-10,y-12,5,6); ctx.fillRect(x+5,y-12,5,6);
-  // sprinkle confetti flicker
-  ctx.fillStyle='#ffb3d1'; for(let i=0;i<5;i++){ctx.fillRect(x-24+i*12, y+Math.sin(t*4+i)*2, 2, 4);}
-  ctx.restore();
-}
+/* ===== Draw: sprites ===== */
+function drawMantis(ctx,t){const x=480,y=260+Math.sin(t*5.6)*2.8;ctx.save();ctx.globalAlpha=.2;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,54+Math.sin(t*2.8)*2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#b8902f';ctx.beginPath();ctx.moveTo(x-18,y+2);ctx.quadraticCurveTo(x-52,y+18+Math.sin(t*2)*2,x-10,y+42);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x+18,y+2);ctx.quadraticCurveTo(x+52,y+18+Math.cos(t*2)*2,x+10,y+42);ctx.closePath();ctx.fill();ctx.fillStyle='#e5bf4d';ctx.fillRect(x-6,y-10,12,44);ctx.fillStyle='#d8b44a';for(let i=0;i<4;i++)ctx.fillRect(x-5,y+28+i*6,10,4);ctx.fillStyle='#ffd166';ctx.fillRect(x-2,y-44,4,10);ctx.strokeStyle='#ffd166';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x-6,y+2);ctx.lineTo(x-28,y+8+Math.sin(t*3)*8);ctx.stroke();ctx.beginPath();ctx.moveTo(x+6,y+2);ctx.lineTo(x+28,y+8+Math.cos(t*3)*8);ctx.stroke();ctx.restore();}
+function drawCupcake(ctx,t){const x=480,y=250+Math.sin(t*3)*2;ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#ffd6ea';ctx.beginPath();ctx.arc(x,y,58+Math.sin(t*2)*2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#f0a3c2';ctx.beginPath();ctx.moveTo(x-42,y+34);ctx.lineTo(x+42,y+34);ctx.lineTo(x+34,y+56);ctx.lineTo(x-34,y+56);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe0f0';ctx.beginPath();ctx.moveTo(x,y-28);ctx.bezierCurveTo(x-36,y-20,x-36,y,x,y+6);ctx.bezierCurveTo(x+36,y,x+36,y-20,x,y-28);ctx.closePath();ctx.fill();ctx.fillStyle='#ff4d6d';ctx.beginPath();ctx.arc(x,y-34,7,0,Math.PI*2);ctx.fill();ctx.restore();}
+function drawGoldenToilet(ctx,t){const x=480,y=250+Math.sin(t*2.4)*2;ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#ffe58a';ctx.beginPath();ctx.arc(x,y,60,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#e7c75a';ctx.fillRect(x-28,y-4,56,26);ctx.fillStyle='#f6df87';ctx.fillRect(x-20,y-28,40,20);ctx.fillStyle='#e7c75a';ctx.beginPath();ctx.arc(x,y+36,28,Math.PI,0);ctx.lineTo(x+28,y+48);ctx.lineTo(x-28,y+48);ctx.closePath();ctx.fill();ctx.restore();}
+function drawGlitch(ctx,t){const x=480,y=240+Math.sin(t*3)*3;ctx.save();ctx.globalAlpha=.24;ctx.fillStyle='#a7f3ff';ctx.beginPath();ctx.arc(x,y,60,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#d7fbff';ctx.fillRect(x-12,y-10,24,42);ctx.fillStyle='#c1f6ff';for(let i=0;i<8;i++){const w=40+Math.sin(t*10+i)*20;ctx.fillRect(x-w/2,y-30+i*8,w,2);}ctx.restore();}
+function drawBellArchon(ctx,t){const x=480,y=230+Math.sin(t*2)*3;ctx.save();ctx.globalAlpha=.25;ctx.fillStyle='#fff3b8';ctx.beginPath();ctx.arc(x,y,62,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#ffe18a';ctx.beginPath();ctx.ellipse(x,y,12,20,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=6;ctx.beginPath();ctx.arc(x,y+18,32,Math.PI,0);ctx.stroke();ctx.restore();}
+function drawSkibidi(ctx,t){const x=480,y=245+Math.sin(t*5)*3;ctx.save();ctx.globalAlpha=.26;ctx.fillStyle='#ffb9b9';ctx.beginPath();ctx.arc(x,y,60,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#222';ctx.fillRect(x-18,y-36,36,20);ctx.fillStyle='#ff2d2d';ctx.fillRect(x-6,y-30,12,8);ctx.fillStyle='#444';ctx.fillRect(x-10,y-10,20,44);ctx.restore();}
 
 /* ===== Heart ===== */
-function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
-  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
-  const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
-  ctx.fillStyle=color;const s=3;
-  for(let r=0;r<m.length;r++) for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);
-  ctx.restore();
-}
+function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const s=3;for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++)if(m[r][c])ctx.fillRect((c-4)*s,(r-3)*s,s,s);ctx.restore();}
 
-/* ===== Spawn helpers (per-bullet damage + aim-leading) ===== */
+/* ===== Spawn helpers ===== */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 function spawnAimed(fromx,fromy,speed,dmg,color='#fff',radius=3,leadMul=DIFF.lead){
   const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60);
@@ -303,267 +233,128 @@ function spawnAimed(fromx,fromy,speed,dmg,color='#fff',radius=3,leadMul=DIFF.lea
   const vx=(dx/L)*speed*DIFF.spd + vx0*leadMul, vy=(dy/L)*speed*DIFF.spd + vy0*leadMul;
   return spawn({x:fromx,y:fromy,vx,vy,r:radius,col:color,dmg});
 }
+function rand(a,b){return Math.random()*(b-a)+a;}
 
-/* ===== Duelist patterns (harder) ===== */
-function patSpearDash(duration=4, dmg=6){
-  let t=0, gap=Math.max(0.06,0.12/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+12+Math.random()*(ARENA.h-24);
-      const x=left?ARENA.x-24:ARENA.x+ARENA.w+24; const dir=left?1:-1;
-      spawn({x,y,vx:dir*(380+70*DIFF.spd),vy:0,r:4,col:'#ffd166',dmg});}
-  }, done(){return t>=duration;}};
-}
-function patPlungeLines(duration=4, dmg=4){
-  let t=0, gap=Math.max(0.09,0.16/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=gap){g=0;const cols=7; const step=ARENA.w/(cols+1); const i=1+Math.floor(Math.random()*cols);
-      const x=ARENA.x+i*step + (Math.random()*18-9);
-      spawn({x,y:ARENA.y-22,vx:0,vy:(310+60*DIFF.spd),r:4,col:'#ffb347',dmg});}
-  }, done(){return t>=duration;}};
-}
-function patArcRing(duration=4, dmg=5){
-  let t=0, rate=Math.max(0.18,0.42/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2;
-      const angles=[-0.95,-0.55,0.55,0.95, 0];
-      for(const a of angles){spawn({x:cx,y:cy,vx:Math.cos(a)*(250+50*DIFF.spd),vy:Math.sin(a)*(250+50*DIFF.spd),r:3,col:'#a6c7ff',dmg});}}
-  }, done(){return t>=duration;}};
-}
-function patHomingLanterns(duration=4, dmg=7){
-  let t=0, rate=Math.max(0.28,0.6/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=rate){g=0;const x=ARENA.x+Math.random()*ARENA.w, y=ARENA.y-10;
-      spawnAimed(x,y,230,dmg,'#fff3b8',4);}
-  }, done(){return t>=duration;}};
-}
-function patSweepBeads(duration=5, dmg=3){
-  let t=0, a=Math.random()*Math.PI*2, dir=Math.random()<0.5?-1:1, emit=Math.max(0.05,0.09/DIFF.rate), g=0;
-  const pivot={x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2};
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt; a+=dir*(1.25*DIFF.spd)*dt;
-    if(g>=emit){g=0;const lx=pivot.x+Math.cos(a)*(ARENA.w/2-12), ly=pivot.y+Math.sin(a)*(ARENA.h/2-12);
-      spawnAimed(lx,ly,240,dmg,'#ffe799',3);}
-  }, done(){return t>=duration;}};
-}
-function duelistPressure(duration=7){
-  const A=patArcRing(duration,5), B=patSpearDash(duration,6), C=patHomingLanterns(duration,7);
-  return {enter(){A.enter();B.enter();C.enter();}, update(dt){A.update(dt);B.update(dt);C.update(dt);}, done(){return false;}};
-}
+/* ===== Pattern library ===== */
+/* Duelist */
+function patSpearDash(dur=4,dmg=6){let t=0,g=0,gap=Math.max(0.06,0.12/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+12+Math.random()*(ARENA.h-24);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;const dir=left?1:-1;spawn({x,y,vx:dir*(380+70*DIFF.spd),vy:0,r:4,col:'#ffd166',dmg});}},done(){return t>=dur;}};}
+function patArcRing(dur=4,dmg=5){let t=0,g=0,rate=Math.max(0.18,0.42/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;const ang=[-0.95,-0.55,0.55,0.95,0];for(const a of ang){spawn({x:cx,y:cy,vx:Math.cos(a)*(250+50*DIFF.spd),vy:Math.sin(a)*(250+50*DIFF.spd),r:3,col:'#a6c7ff',dmg});}}},done(){return t>=dur;}};}
+function patPlungeLines(dur=4,dmg=4){let t=0,g=0,gap=Math.max(0.09,0.16/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const cols=7,step=ARENA.w/(cols+1);const i=1+Math.floor(Math.random()*cols);const x=ARENA.x+i*step+(Math.random()*18-9);spawn({x,y:ARENA.y-22,vx:0,vy:(310+60*DIFF.spd),r:4,col:'#ffb347',dmg});}},done(){return t>=dur;}};}
+function patHomingLanterns(dur=4,dmg=7){let t=0,g=0,rate=Math.max(0.28,0.6/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+Math.random()*ARENA.w,y=ARENA.y-10;spawnAimed(x,y,230,dmg,'#fff3b8',4);}},done(){return t>=dur;}};}
+function patSweepBeads(dur=5,dmg=3){let t=0,g=0,a=Math.random()*Math.PI*2,dir=Math.random()<0.5?-1:1,emit=Math.max(0.05,0.09/DIFF.rate);const pivot={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;a+=dir*(1.25*DIFF.spd)*dt;if(g>=emit){g=0;const lx=pivot.x+Math.cos(a)*(ARENA.w/2-12),ly=pivot.y+Math.sin(a)*(ARENA.h/2-12);spawnAimed(lx,ly,240,dmg,'#ffe799',3);}},done(){return t>=dur;}};}
+function duelistPressure(dur=7){const A=patArcRing(dur,5),B=patSpearDash(dur,6),C=patHomingLanterns(dur,7);return{enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}};}
 
-/* ===== Cupcake patterns (harder than Duelist) ===== */
-function patSprinkleSpray(duration=4.2, dmg=5){
-  // Cone sprays from top center with slight randomness
-  let t=0, rate=Math.max(0.06,0.12/DIFF.rate), g=0;
-  const cx=ARENA.x+ARENA.w/2, y=ARENA.y+10;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=rate){g=0;const count=5; for(let k=0;k<count;k++){const a=(-Math.PI/3) + k*(Math.PI/6) + (Math.random()*0.12-0.06);
-      spawn({x:cx,y, vx:Math.cos(a)*(260+70*DIFF.spd), vy:Math.sin(a)*(260+70*DIFF.spd), r:3, col:'#ffc6e0', dmg});}}
-  }, done(){return t>=duration;}};
-}
-function patFrostingWaves(duration=4.5, dmg=6){
-  // Sinusoidal horizontal waves sweeping across arena
-  let t=0, rate=Math.max(0.1,0.2/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=rate){g=0; const top=Math.random()<0.5; const y=top?ARENA.y+12:ARENA.y+ARENA.h-12;
-      const dir=top?1:-1; const speed=(180+80*DIFF.spd)*dir;
-      for(let x=ARENA.x+20; x<ARENA.x+ARENA.w-20; x+=50){
-        spawn({x,y: y+Math.sin((x+t*6)*0.1)*8, vx:0, vy: (top?260:-260), r:3, col:'#ffe3f2', dmg});
-      }
-    }
-  }, done(){return t>=duration;}};
-}
-function patCupcakeDash(duration=4, dmg=8){
-  // Very fast short dashes across the arena
-  let t=0, gap=Math.max(0.04,0.1/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=gap){g=0; const left=Math.random()<0.5; const y=ARENA.y+12+Math.random()*(ARENA.h-24);
-      const x=left?ARENA.x-26:ARENA.x+ARENA.w+26; const dir=left?1:-1;
-      spawn({x,y, vx:dir*(420+90*DIFF.spd), vy:0, r:4, col:'#ff88b7', dmg});
-    }
-  }, done(){return t>=duration;}};
-}
-function patCherryBombs(duration=4.5, dmg=7){
-  // Homing cherries that pop into smaller blasts
-  let t=0, rate=Math.max(0.28,0.6/DIFF.rate), g=0;
-  return {enter(){t=0;g=0;}, update(dt){
-    t+=dt; g+=dt;
-    if(g>=rate){g=0; const x=ARENA.x+Math.random()*ARENA.w, y=ARENA.y-10;
-      const b=spawnAimed(x,y,235,dmg,'#ff4d6d',5,DIFF.lead*1.1);
-      b.pop=0;
-    }
-    // pop logic
-    for(const b of bullets){
-      if(b.col==='#ff4d6d'){ b.pop=(b.pop||0)+dt; if(b.pop>0.75){
-        b.pop=-999; // mark popped
-        // spawn mini bursts
-        for(let k=0;k<6;k++){
-          const a=Math.random()*Math.PI*2;
-          spawn({x:b.x,y:b.y, vx:Math.cos(a)*(200+60*DIFF.spd), vy:Math.sin(a)*(200+60*DIFF.spd), r:3, col:'#ffd0e8', dmg:Math.max(3,Math.floor(dmg*0.6))});
-        }
-      }}
-    }
-    bullets=bullets.filter(b=>b.pop!==-999);
-  }, done(){return t>=duration;}};
-}
-function patIcingSpiral(duration=5, dmg=6){
-  // Tightening spiral of icing shots
-  let t=0, a0=Math.random()*Math.PI*2, rad=Math.max(ARENA.w,ARENA.h)*0.6;
-  const rateR=(rad/(duration*1.4))*DIFF.rate, rateA=6.4*DIFF.spd;
-  return {enter(){t=0;}, update(dt){
-    t+=dt; const steps=3+Math.floor(2*DIFF.rate);
-    for(let i=0;i<steps;i++){
-      const a=a0+t*rateA+i*(Math.PI*2/steps);
-      const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;
-      const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;
-      spawnAimed(x,y,240,dmg,'#ffc6e0',3,DIFF.lead*1.05);
-    }
-    rad=Math.max(28,rad-rateR*dt);
-  }, done(){return t>=duration;}};
-}
-function goonerPressure(duration=7.2){
-  const A=patCupcakeDash(duration,8), B=patCherryBombs(duration,7), C=patIcingSpiral(duration,6);
-  return {enter(){A.enter();B.enter();C.enter();}, update(dt){A.update(dt);B.update(dt);C.update(dt);}, done(){return false;}};
-}
+/* Goonest Gooner — nerfed further */
+function patSprinkleSprayEasy(dur=3.6,dmg=4){let t=0,g=0,rate=Math.max(0.12,0.2/DIFF.rate);const cx=ARENA.x+ARENA.w/2,y=ARENA.y+10;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const count=3;for(let k=0;k<count;k++){const a=(-Math.PI/3)+k*(Math.PI/6)+(Math.random()*0.06-0.03);spawn({x:cx,y, vx:Math.cos(a)*(180+30*DIFF.spd), vy:Math.sin(a)*(180+30*DIFF.spd), r:3, col:'#ffc6e0', dmg});}}},done(){return t>=dur;}};}
+function patFrostingWavesEasy(dur=3.8,dmg=5){let t=0,g=0,rate=Math.max(0.16,0.26/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const top=Math.random()<0.5;const y=top?ARENA.y+16:ARENA.y+ARENA.h-16;for(let x=ARENA.x+36;x<ARENA.x+ARENA.w-36;x+=64){spawn({x,y:y+Math.sin((x+t*3.2)*0.08)*5,vx:0,vy:(top?180:-180),r:3,col:'#ffe3f2',dmg});}}},done(){return t>=dur;}};}
+function patCupcakeDashEasy(dur=3.4,dmg=6){let t=0,g=0,gap=Math.max(0.1,0.18/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+18+Math.random()*(ARENA.h-36);const x=left?ARENA.x-26:ARENA.x+ARENA.w+26;const dir=left?1:-1;spawn({x,y,vx:dir*(320+50*DIFF.spd),vy:0,r:4,col:'#ff88b7',dmg});}},done(){return t>=dur;}};}
+function patCherryBombsEasy(dur=3.8,dmg=6){let t=0,g=0,rate=Math.max(0.4,0.8/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+Math.random()*ARENA.w,y=ARENA.y-10;const b=spawnAimed(x,y,180,dmg,'#ff4d6d',5,DIFF.lead*0.85);b.pop=0;}for(const b of bullets){if(b.col==='#ff4d6d'){b.pop=(b.pop||0)+dt;if(b.pop>1.0){b.pop=-999;for(let k=0;k<3;k++){const a=Math.random()*Math.PI*2;spawn({x:b.x,y:b.y,vx:Math.cos(a)*160,vy:Math.sin(a)*160,r:3,col:'#ffd0e8',dmg:Math.max(2,Math.floor(dmg*0.5))});}}}} bullets=bullets.filter(b=>b.pop!==-999);},done(){return t>=dur;}};}
+function patIcingSpiralEasy(dur=4.4,dmg=5){let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.54;const rateR=(rad/(dur*1.5))*DIFF.rate, rateA=5.4*DIFF.spd;return{enter(){t=0;},update(dt){t+=dt;const steps=3;for(let i=0;i<steps;i++){const a=a0+t*rateA+i*(Math.PI*2/steps);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,180,dmg,'#ffc6e0',3,DIFF.lead*0.85);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};}
+function goonerPressureEasy(dur=6.0){const A=patCupcakeDashEasy(dur,6),B=patCherryBombsEasy(dur,6),C=patIcingSpiralEasy(dur,5);return{enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}};}
 
-/* ===== Attack phase wrapper ===== */
-function phase(duration, ...parts){
-  let t=0;
-  return {
-    enter(){t=0; parts.forEach(p=>p.enter&&p.enter());},
-    update(dt){t+=dt; parts.forEach(p=>p.update&&p.update(dt));},
-    done(){return t>=duration;}
-  };
-}
+/* Golden Goon — golden toilet */
+function patFlushWave(dur=4.0,dmg=6){let t=0,g=0,rate=.5;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<12;k++){const a=(k/12)*Math.PI*2;spawn({x:cx,y:cy,vx:Math.cos(a)*(220+40*DIFF.spd),vy:Math.sin(a)*(220+40*DIFF.spd),r:3,col:'#fff28a',dmg});}}},done(){return t>=dur;}};}
+function patWaterJet(dur=4.2,dmg=5){let t=0,g=0,rate=.22;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(20,ARENA.w-20);spawn({x,y:ARENA.y-18,vx:0,vy:260,r:3,col:'#d1f7ff',dmg});}},done(){return t>=dur;}};}
+function patPlungerDash(dur=4.0,dmg=7){let t=0,g=0,gap=.12;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(16,ARENA.h-16);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;const dir=left?1:-1;spawn({x,y,vx:dir*(360+70*DIFF.spd),vy:0,r:4,col:'#e7c75a',dmg});}},done(){return t>=dur;}};}
+function patSwirlVortex(dur=4.6,dmg=6){let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.56;const rateR=(rad/(dur*1.3))*DIFF.rate,rateA=6.0*DIFF.spd;return{enter(){t=0;},update(dt){t+=dt;for(let i=0;i<4;i++){const a=a0+t*rateA+i*(Math.PI*2/4);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,220,dmg,'#ffe18a',3,DIFF.lead*1.0);}rad=Math.max(28,rad-rateR*dt);},done(){return t>=dur;}};}
+function patTPSpirals(dur=4.0,dmg=5){let t=0,g=0,rate=.45;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<8;k++){const a=(k/8)*Math.PI*2+rand(-0.05,0.05);spawn({x:cx,y:cy,vx:Math.cos(a)*210,vy:Math.sin(a)*210,r:3,col:'#fff',dmg});}}},done(){return t>=dur;}};}
+function goonPressure(dur=6.6){const A=patFlushWave(dur,6),B=patPlungerDash(dur,7),C=patWaterJet(dur,5);return{enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}};}
 
-/* ===== Boss data ===== */
+/* Experimental Error (glitch) */
+function patDataStream(dur=4.4,dmg=5){let t=0,g=0,rate=Math.max(0.1,0.2/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<5;k++){const a=rand(0,Math.PI*2);spawn({x:cx,y:cy,vx:Math.cos(a)*(240+50*DIFF.spd),vy:Math.sin(a)*(240+50*DIFF.spd),r:3,col:'#b5e9f2',dmg});}}},done(){return t>=dur;}};}
+function patGravityWell(dur=4.8,dmg=6){let t=0,g=0,rate=0.9;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+rand(40,ARENA.w-40),cy=ARENA.y+rand(40,ARENA.h-40);const well=spawn({x:cx,y:cy,vx:0,vy:0,r:6,col:'#8de0ed',dmg});well.pull=0;}for(const b of bullets){if(b.pull!=null){b.pull+=dt;for(const m of bullets){if(m===b||m.pull!=null)continue;const dx=b.x-m.x,dy=b.y-m.y,d=Math.hypot(dx,dy)||1;if(d<140){m.vx+=dx/d*40*dt;m.vy+=dy/d*40*dt;}}if(b.pull>1.2){b.pull=-999;}}} bullets=bullets.filter(b=>b.pull!==-999);},done(){return t>=dur;}};}
+function patVoid404(dur=4.2,dmg=7){let t=0,g=0,rate=0.6;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const side=Math.random()<0.5?ARENA.x-20:ARENA.x+ARENA.w+20;const y=ARENA.y+rand(10,ARENA.h-10);spawnAimed(side,y,230,dmg,'#a7f3ff',4,DIFF.lead*1.2);} },done(){return t>=dur;}};}
+function glitchPressure(dur=7.0){const A=patDataStream(dur,5),B=patGravityWell(dur,6),C=patVoid404(dur,7);return{enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}};}
+
+/* Bell Archon (radiant bell judge) */
+function patRingWave(dur=4.0,dmg=6){let t=0,g=0,rate=.5;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<16;k++){const a=(k/16)*Math.PI*2;spawn({x:cx,y:cy,vx:Math.cos(a)*(240+50*DIFF.spd),vy:Math.sin(a)*(240+50*DIFF.spd),r:3,col:'#ffe799',dmg});}}},done(){return t>=dur;}};}
+function patTollBeads(dur=4.6,dmg=5){let t=0,a=Math.random()*Math.PI*2,dir=Math.random()<0.5?-1:1,g=0,emit=.09;const pivot={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;a+=dir*(1.2*DIFF.spd)*dt;if(g>=emit){g=0;const lx=pivot.x+Math.cos(a)*(ARENA.w/2-12),ly=pivot.y+Math.sin(a)*(ARENA.h/2-12);spawnAimed(lx,ly,240,dmg,'#fff3b8',3);} },done(){return t>=dur;}};}
+function patChimeCuts(dur=4.2,dmg=7){let t=0,g=0,rate=.6;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const sides=[[ARENA.x-18,rand(ARENA.y,ARENA.y+ARENA.h)],[ARENA.x+ARENA.w+18,rand(ARENA.y,ARENA.y+ARENA.h)],[rand(ARENA.x,ARENA.x+ARENA.w),ARENA.y-18]];const [x,y]=sides[Math.floor(Math.random()*sides.length)];spawnAimed(x,y,260,dmg,'#fff7c4',4,DIFF.lead*1.1);} },done(){return t>=dur;}};}
+function bellPressure(dur=7.2){const A=patRingWave(dur,6),B=patTollBeads(dur,5),C=patChimeCuts(dur,7);return{enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}};}
+
+/* Skibidi Demon (very hard) */
+function patSkibidiSpiral(dur=4.6,dmg=7){let t=0,a0=rand(0,Math.PI*2),rad=Math.max(ARENA.w,ARENA.h)*0.6;const rateR=(rad/(dur*1.2))*DIFF.rate,rateA=7.0*DIFF.spd;return{enter(){t=0;},update(dt){t+=dt;const steps=4;for(let i=0;i<steps;i++){const a=a0+t*rateA+i*(Math.PI*2/steps);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,260,dmg,'#ff7a7a',3,DIFF.lead*1.15);}rad=Math.max(26,rad-rateR*dt);},done(){return t>=dur;}};}
+function patSkibidiBeam(dur=4.0,dmg=8){let t=0,g=0,rate=Math.max(0.2,0.4/DIFF.rate);return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2;for(let k=0;k<10;k++){const a=(k/10)*Math.PI*2+rand(-0.05,0.05);spawn({x:cx,y:cy,vx:Math.cos(a)*(270+60*DIFF.spd),vy:Math.sin(a)*(270+60*DIFF.spd),r:3,col:'#ff3b3b',dmg});}}},done(){return t>=dur;}};}
+function patSkibidiTP(dur=4.4,dmg=9){let t=0,g=0,rate=0.5;return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const edges=[[ARENA.x-18,rand(ARENA.y,ARENA.y+ARENA.h)],[ARENA.x+ARENA.w+18,rand(ARENA.y,ARENA.y+ARENA.h)],[rand(ARENA.x,ARENA.x+ARENA.w),ARENA.y-18]];const [x,y]=edges[Math.floor(Math.random()*edges.length)];spawnAimed(x,y,280,dmg,'#ffa0a0',4,DIFF.lead*1.2);} },done(){return t>=dur;}};}
+function skibidiPressure(dur=7.4){const A=patSkibidiSpiral(dur,7),B=patSkibidiBeam(dur,8),C=patSkibidiTP(dur,9);return{enter(){A.enter();B.enter();C.enter();},update(dt){A.update(dt);B.update(dt);C.update(dt);},done(){return false;}};}
+
+/* ===== Phase wrapper ===== */
+function phase(duration, ...parts){let t=0;return{enter(){t=0;parts.forEach(p=>p.enter&&p.enter());},update(dt){t+=dt;parts.forEach(p=>p.update&&p.update(dt));},done(){return t>=duration;}};}
+
+/* ===== Bosses ===== */
 const BOSSES=[
-  {
-    key:'duelist',
-    name:'Golden Duelist',
-    hpMax:340,
+  { key:'duelist', name:'Golden Duelist', hpMax:360, draw:drawMantis,
     intro:["A golden hall. A mantis descends.","It bows. The trial begins."],
-    draw:drawMantis,
-    attacks:()=>[
-      phase(4.2, patSpearDash(4.2,6)),
-      phase(4.2, patArcRing(4.2,5)),
-      phase(4.2, patPlungeLines(4.2,4)),
-      phase(5.0, patSweepBeads(5.0,3)),
-      phase(7.0, duelistPressure(7.0))
-    ]
-  },
-  {
-    key:'gooner',
-    name:'Goonest Gooner',
-    hpMax:380,
-    intro:["The air sweetens. Paper cups rustle.","A voice giggles: 'Hope you like sprinkles.'"],
-    draw:drawCupcake,
-    attacks:()=>[
-      phase(4.2, patSprinkleSpray(4.2,5)),
-      phase(4.5, patFrostingWaves(4.5,6)),
-      phase(4.0, patCupcakeDash(4.0,8)),
-      phase(4.5, patCherryBombs(4.5,7)),
-      phase(5.2, patIcingSpiral(5.2,6)),
-      phase(7.2, goonerPressure(7.2))
-    ]
-  }
+    lines:["Blade to blade. Breathe.","Ritual is mercy.","Your footwork betrays you.","Again.","Show me the center."],
+    attacks:()=>[phase(4.2, patSpearDash(4.2,6)),phase(4.2, patArcRing(4.2,5)),phase(4.2, patPlungeLines(4.2,4)),phase(5.0, patSweepBeads(5.0,3)),phase(7.0, duelistPressure(7.0))] },
+  { key:'gooner', name:'Goonest Gooner', hpMax:380, draw:drawCupcake,
+    intro:["The air sweetens. Paper cups rustle.","'Hope you like sprinkles.'"],
+    lines:["Too sweet? Too slow!","Mind the frosting.","Cherry time.","Dash of sugar.","Melt in your doom."],
+    attacks:()=>[phase(3.6, patSprinkleSprayEasy(3.6,4)),phase(3.8, patFrostingWavesEasy(3.8,5)),phase(3.4, patCupcakeDashEasy(3.4,6)),phase(3.8, patCherryBombsEasy(3.8,6)),phase(4.4, patIcingSpiralEasy(4.4,5)),phase(6.0, goonerPressureEasy(6.0))] },
+  { key:'goldGoon', name:'Golden Goon', hpMax:400, draw:drawGoldenToilet,
+    intro:["A throne gleams. Water hums.","'Flush your fear.'"],
+    lines:["Swirl, swirl...","Hold your breath.","Plunger justice.","Golden standard.","Down the drain."],
+    attacks:()=>[phase(4.0, patFlushWave(4.0,6)),phase(4.2, patWaterJet(4.2,5)),phase(4.0, patPlungerDash(4.0,7)),phase(4.6, patSwirlVortex(4.6,6)),phase(4.0, patTPSpirals(4.0,5)),phase(6.6, goonPressure(6.6))] },
+  { key:'error', name:'Experimental Error', hpMax:420, draw:drawGlitch,
+    intro:["Glitches cohere into a shape.","[???: ...help... run... /help]"],
+    lines:["404 mercy not found.","Stability: 37%.","I will not fracture you.","Rerouting...","Run diagnostic: survive."],
+    attacks:()=>[phase(4.4, patDataStream(4.4,5)),phase(4.8, patGravityWell(4.8,6)),phase(4.2, patVoid404(4.2,7)),phase(7.0, glitchPressure(7.0))] },
+  { key:'archon', name:'Bell Archon', hpMax:440, draw:drawBellArchon,
+    intro:["A bell tolls inside your ribs.","Judgment rings true."],
+    lines:["Hear the interval.","Stand in the silence.","Every swing finds center.","Mercy is a note unsung.","Resonate."],
+    attacks:()=>[phase(4.0, patRingWave(4.0,6)),phase(4.6, patTollBeads(4.6,5)),phase(4.2, patChimeCuts(4.2,7)),phase(7.2, bellPressure(7.2))] },
+  { key:'skibidi', name:'67 Skibidi Demon', hpMax:480, draw:drawSkibidi,
+    intro:["The feed distorts. The lens turns.","It wants a performance."],
+    lines:["Keep dancing.","Louder.","Frame drop: you.","Glitch at your peril.","Encore."],
+    attacks:()=>[phase(4.6, patSkibidiSpiral(4.6,7)),phase(4.0, patSkibidiBeam(4.0,8)),phase(4.4, patSkibidiTP(4.4,9)),phase(7.4, skibidiPressure(7.4))] }
 ];
 
-let BOSS=null;
+/* ===== Admin list ===== */
+function buildAdminBossList(){
+  adBoss.innerHTML='';
+  BOSSES.forEach((b,i)=>{const opt=document.createElement('option'); opt.value=String(i); opt.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(opt);});
+  const secret = document.createElement('option'); secret.value='secret67'; secret.textContent='Secret: 67 Skibidi Demon'; adBoss.appendChild(secret);
+}
 
 /* ===== Flow ===== */
+let BOSS=null;
 function setBoss(idx){
-  bossIndex=idx;
+  if(idx==='secret67'){ bossIndex=BOSSES.findIndex(b=>b.key==='skibidi'); }
+  else bossIndex = Math.max(0, Math.min(BOSSES.length-1, parseInt(idx,10)||0));
+  if(bossIndex<0) bossIndex=BOSSES.length-1;
   const data=BOSSES[bossIndex];
-  BOSS={name:data.name, hpMax:data.hpMax, hp:data.hpMax, draw:data.draw, makeAttacks:data.attacks, intro:data.intro};
-  bossNameEl.textContent=BOSS.name;
-  bossBar();
-  attackIx=0;
-  attackSeq = BOSS.makeAttacks();
+  BOSS={name:data.name, hpMax:data.hpMax, hp:data.hpMax, draw:data.draw, makeAttacks:data.attacks, intro:data.intro, lines:data.lines||[]};
+  bossNameEl.textContent=BOSS.name; bossBar();
+  attackIx=0; attackSeq=BOSS.makeAttacks();
+  TURN_LINES=0;
+  saveProgress();
 }
-
-function bossHit(dmg){
-  BOSS.hp=Math.max(0,BOSS.hp-dmg);
-  bossBar();
-  damagePopup={x:480,y:200,t:0,text:String(dmg)};
-}
-
-function endPlayerTurn(){
-  setTimeout(()=>{
-    turn='enemy';
-    uiCenter.textContent='Enemy turn';
-    uiBar.classList.add('hidden');
-    hideBubble();
-    startAttack();
-  },180);
-}
-
-let attackSeq=null;
-function startAttack(){
-  bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
-  attack = attackSeq[attackIx];
-  attackIx = (attackIx+1) % attackSeq.length;
-  attack.enter();
-}
-function finishAttack(){
-  turn='player';
-  uiCenter.textContent='Your turn';
-  showArena=false; boxEl.style.display='none';
-  uiBar.classList.remove('hidden');
-  restoreBubble();
-}
-function defeat(){
-  showBubble('You fall. The hall dims.');
-  setTimeout(()=>initBoss(bossIndex),1100); // reset same boss to full HP
-}
-function victory(){
-  showBubble('The rite ends. The hall exhales.');
-  setTimeout(()=>{
-    if(bossIndex+1 < BOSSES.length){
-      initBoss(bossIndex+1); // progress to next boss
-    }else{
-      initBoss(0); // loop or end
-    }
-  },1000);
-}
-
-function centerHeart(){
-  HEART.x=ARENA.x+ARENA.w/2;
-  HEART.y=ARENA.y+ARENA.h/2;
-}
-
-/* ===== Init ===== */
+function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
+function endPlayerTurn(){ setTimeout(()=>{ turn='enemy'; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideBubble(); startAttack(); },160); }
+function startAttack(){ bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block'; attack = attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter(); }
+function finishAttack(){ turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden'); showBubble(nextLine()); }
+function defeat(){ showBubble('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),1000); }
+function victory(){ showBubble('The rite ends. The hall exhales.'); setTimeout(()=>{ if(bossIndex+1<BOSSES.length-1){ initBoss(bossIndex+1); } else if(bossIndex+1===BOSSES.length-1){ initBoss(bossIndex+1); } else { initBoss(0); } },900); }
 function initBoss(idx){
   setBoss(idx);
-  HEART.hp=HEART.hpMax=50; updatePlayerHP();
-  HEART.i=0; centerHeart(); // ensure center-spawn every time
-  turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
-  uiBar.classList.remove('hidden');
+  HEART.hp=HEART.hpMax = Math.max(1,SAVE.hp||50);
+  updatePlayerHP(); HEART.i=0; centerHeart();
+  turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
   showBubble((BOSS.intro||[]).join('\n'));
 }
 
-initBoss(0);
-
 /* ===== Loop ===== */
 let last=performance.now();
-function loop(now){
-  const dt=Math.min(0.033,(now-last)/1000); last=now;
-  if(!paused){ update(dt); render(dt); }
-  requestAnimationFrame(loop);
-}
+function loop(now){ const dt=Math.min(0.033,(now-last)/1000); last=now; if(!paused){ update(dt); render(dt);} requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
-/* ===== Update ===== */
+/* ===== Update/Render ===== */
 function update(dt){
   time+=dt;
-
   if(turn==='enemy'){
     phaseT+=dt;
-
-    // movement (WASD/Arrows)
-    let dx=0,dy=0;
-    if(key('ArrowLeft')||key('a')) dx-=1;
-    if(key('ArrowRight')||key('d')) dx+=1;
-    if(key('ArrowUp')||key('w')) dy-=1;
-    if(key('ArrowDown')||key('s')) dy+=1;
+    // movement
+    let dx=0,dy=0; if(key('ArrowLeft')||key('a')) dx-=1; if(key('ArrowRight')||key('d')) dx+=1; if(key('ArrowUp')||key('w')) dy-=1; if(key('ArrowDown')||key('s')) dy+=1;
     const L=Math.hypot(dx,dy)||1;
     HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
     HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
@@ -575,101 +366,83 @@ function update(dt){
 
     // bullets
     for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
-    bullets=bullets.filter(b=>b.x>ARENA.x-160 && b.x<ARENA.x+ARENA.w+160 && b.y>ARENA.y-160 && b.y<ARENA.y+ARENA.h+180);
+    bullets=bullets.filter(b=>b.x>ARENA.x-180 && b.x<ARENA.x+ARENA.w+180 && b.y>ARENA.y-180 && b.y<ARENA.y+ARENA.h+200);
 
-    // collisions (per-bullet damage scaled by difficulty)
+    // collisions
     for(const b of bullets){
       const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
       if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){
         const dmg=Math.max(1,Math.floor((b.dmg||5)*DIFF.dmg));
-        HEART.hp=Math.max(0,HEART.hp - dmg);
+        HEART.hp=Math.max(0, HEART.hp - dmg);
         updatePlayerHP();
         HEART.i=0.85;
       }
     }
 
     // end phase
-    if(attack && attack.done()){
-      finishAttack();
-    }
+    if(attack && attack.done()) finishAttack();
 
     // defeat
-    if(HEART.hp<=0){
-      turn='defeat';
-      defeat();
-    }
+    if(HEART.hp<=0){ turn='defeat'; defeat(); }
   }
 
   // victory check
-  if(BOSS && BOSS.hp<=0 && turn!=='victory'){
-    turn='victory'; showArena=false; boxEl.style.display='none';
-    victory();
-  }
+  if(BOSS && BOSS.hp<=0 && turn!=='victory'){ turn='victory'; showArena=false; boxEl.style.display='none'; victory(); }
 
   // popup decay
   if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
 }
 
-/* ===== Render ===== */
 function render(dt){
-  // background
   ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
-  ctx.fillStyle='#1a130f';
-  for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
+  ctx.fillStyle='#1a130f'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
-  // boss sprite
-  if(BOSS && typeof BOSS.draw==='function'){ BOSS.draw(ctx,time,scene.flinch); }
+  if(BOSS && typeof BOSS.draw==='function'){ BOSS.draw(ctx,time,0); }
 
-  // arena on enemy turn
   if(turn==='enemy' && showArena){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
-
-    // bullets
     for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
-
-    // heart
     ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
     drawHeart(ctx,HEART.x-6,HEART.y-6,'#ffd166',0.8);
     if(hitboxOverlay){ ctx.globalAlpha=1; ctx.strokeStyle='#00ff99'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(HEART.x,HEART.y,HEART.r,0,Math.PI*2); ctx.stroke(); }
     ctx.restore();
   }
 
-  // damage popup
-  if(damagePopup){
-    const a=Math.max(0,1-damagePopup.t/0.9);
-    ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace';
-    ctx.fillText(damagePopup.text, damagePopup.x, damagePopup.y - damagePopup.t*60);
-    ctx.restore();
-  }
+  if(damagePopup){ const a=Math.max(0,1-damagePopup.t/0.9); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace'; ctx.fillText(damagePopup.text, damagePopup.x, damagePopup.y - damagePopup.t*60); ctx.restore();}
 }
 
-/* ===== Player actions (UI) ===== */
+/* ===== UI actions ===== */
 uiMenu.addEventListener('click', e=>{
   const btn=e.target.closest('.uiBtn'); if(!btn||turn!=='player') return;
   const act=btn.dataset.act;
   if(act==='FIGHT'){ showBubble('You strike.'); bossHit(24); endPlayerTurn(); }
   else if(act==='ACT'){ showBubble('You focus your stance.'); }
-  else if(act==='ITEM'){ showBubble('Your pockets are empty.'); }
+  else if(act==='ITEM'){ showBubble('You sip a dew petal. +8 HP'); HEART.hp=Math.min(HEART.hpMax, HEART.hp+8); updatePlayerHP(); }
   else if(act==='MERCY'){ showBubble('They refuse to yield.'); }
 });
 
-/* ===== Admin panel logic ===== */
+/* ===== Admin panel ===== */
 function openAdmin(){
   admin.style.display='flex';
+  buildAdminBossList();
   adBoss.value=String(bossIndex);
   adDiff.value=(Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF))||'Normal';
-  adHP.value=String(HEART.hp);
+  adHP.value=String(HEART.hpMax);
 }
-function closeAdmin(){ admin.style.display='none'; }
-
-adHitbox.onclick=()=>{ hitboxOverlay=!hitboxOverlay; };
+function closeAdmin(){ admin.style.display='none'; saveProgress(); }
+adHitbox.onclick=()=>{ hitboxOverlay=!hitboxOverlay; saveProgress(); };
 adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerHP(); };
-adSkip.onclick=()=>{ closeAdmin(); victory(); };
+adSkip.onclick=()=>{ closeAdmin(); if(bossIndex+1<BOSSES.length-1) initBoss(bossIndex+1); else initBoss(BOSSES.length-1); };
+adReset.onclick=()=>{ localStorage.removeItem(SAVE_KEY); SAVE={}; closeAdmin(); initBoss(0); };
+adSummon67.onclick=()=>{ closeAdmin(); setBoss('secret67'); HEART.hp=HEART.hpMax; updatePlayerHP(); centerHeart(); showBubble("You tuned the wrong frequency."); turn='player'; uiBar.classList.remove('hidden'); };
 adClose.onclick=()=> closeAdmin();
+adBoss.onchange=()=>{ const v=adBoss.value; closeAdmin(); initBoss(v==='secret67'?'secret67':parseInt(v,10)); };
+adDiff.onchange=()=>{ DIFF=DIFFS[adDiff.value]||DIFFS.Normal; saveProgress(); };
+adHP.onchange=()=>{ let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=v; HEART.hp=v; updatePlayerHP(); saveProgress(); };
 
-adBoss.onchange=()=>{ const idx=parseInt(adBoss.value,10)||0; closeAdmin(); initBoss(idx); };
-adDiff.onchange=()=>{ const sel=adDiff.value; DIFF=DIFFS[sel]||DIFFS.Normal; };
-adHP.onchange=()=>{ let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=Math.max(HEART.hpMax, v); HEART.hp=v; updatePlayerHP(); };
+/* ===== Start ===== */
+function startFromSave(){ buildAdminBossList(); if(bossIndex<0 || bossIndex>=BOSSES.length) bossIndex=0; initBoss(bossIndex); }
+startFromSave();
 
 /* ===== Utility ===== */
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
