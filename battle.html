@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Undertale Gold — Mantis Trial (hard attacks)</title>
+<title>Undertale Gold — Duelist → Shade Lord</title>
 <style>
 :root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
@@ -39,6 +39,9 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 .uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .uiLabel{font-size:20px;letter-spacing:1px}
 #uiCenter{font-size:14px}
+
+/* Optional: small tips line */
+#tips{position:absolute;left:50%;top:84px;transform:translateX(-50%);font-size:12px;color:#c8c8c8;opacity:.8}
 </style>
 </head>
 <body>
@@ -72,6 +75,8 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     </div>
     <div id="uiCenter">Your turn.</div>
   </div>
+
+  <div id="tips">Move: Arrow keys / WASD — Confirm: Z/Enter — Cancel: X/Backspace</div>
 </div></div>
 
 <script>
@@ -102,11 +107,45 @@ const uiCenter=document.getElementById('uiCenter');
 const ARENA={x:240,y:420,w:480,h:180};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:50,hpMax:50,_px:0,_py:0,_pdt:1/60};
 let time=0, paused=false, turn='player', showArena=false;
-let attack=null, phaseT=0;
+let attack=null, phaseT=0, attackIx=0;
 let bullets=[], scene={flinch:0,shake:0}; let damagePopup=null; let slashes=[];
-const BOSS={name:'Golden Duelist', hpMax:320, hp:320};
+let bossIndex=0; // 0: Golden Duelist, 1: Shade Lord
+
+/* ===== Boss data ===== */
+const BOSSES=[
+  {
+    key:'duelist',
+    name:'Golden Duelist',
+    hpMax:320,
+    intro:["A golden hall. A mantis descends.","It bows. The trial begins."],
+    draw:drawMantis,
+    attacks:()=>[
+      phase(4, patSpearDash(4,6)),      // fast dashes (6 dmg)
+      phase(4, patArcRing(4,5)),        // arc ring (5 dmg)
+      phase(4, patPlungeLines(4,4)),    // plunges (4 dmg)
+      phase(5, patSweepingBeads(5,3)),  // sweeping beads (3 dmg)
+      phase(7, patPressureMix(7))       // mixed spiral/homing/dash (varied 5-7 dmg)
+    ]
+  },
+  {
+    key:'shade',
+    name:'Shade Lord',
+    hpMax:360,
+    intro:["The lights dim. A cloak of dusk unfurls.","A whisper: 'Endure'."],
+    draw:drawShadeLord,
+    attacks:()=>[
+      phase(4.5, patVoidSlash(4.5,7)),      // slow heavy slashes (7 dmg)
+      phase(4,   patShadowHoming(4,6)),     // homing shades (6 dmg)
+      phase(4.5, patColumnFalls(4.5,5)),    // falling columns (5 dmg)
+      phase(5,   patOrbitals(5,4)),         // orbitals that shoot (4 dmg)
+      phase(7,   patShadePressure(7))       // pressure mix (varied 5-8 dmg)
+    ]
+  }
+];
+let BOSS=null;
+
+/* ===== Bars ===== */
 function bossBar(){bossHPFill.style.width=(380*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
-bossBar();
 function updatePlayerHP(){pHPFill.style.width=(260*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
 updatePlayerHP();
 
@@ -131,92 +170,75 @@ addEventListener('keydown',e=>{
       startAttack();
     },220);
   }
+  if((e.key==='x'||e.key==='X'||e.key==='Backspace') && turn==='player'){
+    showBubble('You steady yourself.');
+  }
 });
 addEventListener('keyup',e=>down.delete(e.key));
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
 
-/* ===== Mantis sprite (more mantis-like) ===== */
+/* ===== Draw: Mantis (Golden Duelist) ===== */
 function drawMantis(ctx,t,flinch=0){
   const x=480, y=260 + Math.sin(t*5.6)*2.8;
   ctx.save();
-
-  // halo glow
-  ctx.globalAlpha=0.2; ctx.fillStyle='#fff1b6'; ctx.beginPath(); ctx.arc(x,y,54+Math.sin(t*2.8)*2,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-
-  // flinch flash
+  // halo
+  ctx.globalAlpha=0.2; ctx.fillStyle='#fff1b6'; ctx.beginPath(); ctx.arc(x,y,54+Math.sin(t*2.8)*2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
   if(flinch>0){ctx.globalAlpha=0.65;ctx.fillStyle='#fffbe0';ctx.beginPath();ctx.arc(x,y,50,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-
-  // wings/elytra plates
+  // wings
   ctx.fillStyle='#b8902f';
-  ctx.beginPath(); // left plate
-  ctx.moveTo(x-18,y+2);
-  ctx.quadraticCurveTo(x-52,y+18+Math.sin(t*2)*2, x-10,y+42);
-  ctx.closePath(); ctx.fill();
-
-  ctx.beginPath(); // right plate
-  ctx.moveTo(x+18,y+2);
-  ctx.quadraticCurveTo(x+52,y+18+Math.cos(t*2)*2, x+10,y+42);
-  ctx.closePath(); ctx.fill();
-
-  // thorax
-  ctx.fillStyle='#e5bf4d';
-  ctx.fillRect(x-6,y-10,12,44);
-
-  // abdomen segments
-  ctx.fillStyle='#d8b44a';
-  for(let i=0;i<4;i++){ ctx.fillRect(x-5,y+28+i*6,10,4); }
-
+  ctx.beginPath(); ctx.moveTo(x-18,y+2); ctx.quadraticCurveTo(x-52,y+18+Math.sin(t*2)*2, x-10,y+42); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+18,y+2); ctx.quadraticCurveTo(x+52,y+18+Math.cos(t*2)*2, x+10,y+42); ctx.closePath(); ctx.fill();
+  // thorax/abdomen
+  ctx.fillStyle='#e5bf4d'; ctx.fillRect(x-6,y-10,12,44);
+  ctx.fillStyle='#d8b44a'; for(let i=0;i<4;i++){ ctx.fillRect(x-5,y+28+i*6,10,4); }
   // head + crest
-  ctx.fillStyle='#e5bf4d';
-  ctx.beginPath();
-  ctx.moveTo(x,y-38);
-  ctx.lineTo(x-12,y-14);
-  ctx.lineTo(x+12,y-14);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillStyle='#e5bf4d'; ctx.beginPath(); ctx.moveTo(x,y-38); ctx.lineTo(x-12,y-14); ctx.lineTo(x+12,y-14); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#ffd166'; ctx.fillRect(x-2,y-44,4,10);
-
   // mandibles
   ctx.fillStyle='#e5bf4d';
   ctx.beginPath(); ctx.moveTo(x-6,y-14); ctx.lineTo(x-11,y-6); ctx.lineTo(x-3,y-10); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(x+6,y-14); ctx.lineTo(x+11,y-6); ctx.lineTo(x+3,y-10); ctx.closePath(); ctx.fill();
-
-  // eyes
-  ctx.fillStyle='#0c0c12';
-  ctx.fillRect(x-8,y-26,5,5);
-  ctx.fillRect(x+3,y-26,5,5);
-
-  // antennae
+  // eyes + antennae
+  ctx.fillStyle='#0c0c12'; ctx.fillRect(x-8,y-26,5,5); ctx.fillRect(x+3,y-26,5,5);
   ctx.strokeStyle='#ffd166'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(x-3,y-32); ctx.quadraticCurveTo(x-20,y-46+Math.sin(t*5)*2, x-26,y-58); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x+3,y-32); ctx.quadraticCurveTo(x+20,y-46+Math.cos(t*5)*2, x+26,y-58); ctx.stroke();
-
-  // raptorial forelegs (sickle arms)
+  // raptorial legs
   ctx.strokeStyle='#ffd166'; ctx.lineWidth=4;
-  ctx.beginPath(); // left upper
-  ctx.moveTo(x-6,y+2);
-  ctx.lineTo(x-28,y+8+Math.sin(t*3)*8);
-  ctx.stroke();
-  ctx.beginPath(); // left blade
-  ctx.moveTo(x-28,y+8+Math.sin(t*3)*8);
-  ctx.lineTo(x-42,y-2+Math.sin(t*3)*6);
-  ctx.stroke();
-
-  ctx.beginPath(); // right upper
-  ctx.moveTo(x+6,y+2);
-  ctx.lineTo(x+28,y+8+Math.cos(t*3)*8);
-  ctx.stroke();
-  ctx.beginPath(); // right blade
-  ctx.moveTo(x+28,y+8+Math.cos(t*3)*8);
-  ctx.lineTo(x+42,y-2+Math.cos(t*3)*6);
-  ctx.stroke();
-
+  ctx.beginPath(); ctx.moveTo(x-6,y+2); ctx.lineTo(x-28,y+8+Math.sin(t*3)*8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-28,y+8+Math.sin(t*3)*8); ctx.lineTo(x-42,y-2+Math.sin(t*3)*6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+6,y+2); ctx.lineTo(x+28,y+8+Math.cos(t*3)*8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+28,y+8+Math.cos(t*3)*8); ctx.lineTo(x+42,y-2+Math.cos(t*3)*6); ctx.stroke();
   // hind legs
-  ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(x-4,y+20); ctx.lineTo(x-18,y+36); ctx.stroke();
+  ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-4,y+20); ctx.lineTo(x-18,y+36); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x+4,y+20); ctx.lineTo(x+18,y+36); ctx.stroke();
+  ctx.restore();
+}
 
+/* ===== Draw: Shade Lord ===== */
+function drawShadeLord(ctx,t,flinch=0){
+  const x=480, y=250 + Math.sin(t*3.4)*2;
+  ctx.save();
+  // shadow aura
+  ctx.globalAlpha=0.22; ctx.fillStyle='#2e2b3d'; ctx.beginPath(); ctx.arc(x,y,58+Math.sin(t*2)*2,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+  // flinch
+  if(flinch>0){ctx.globalAlpha=0.55;ctx.fillStyle='#ccb7ff'; ctx.beginPath(); ctx.arc(x,y,52,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;}
+  // cloak
+  ctx.fillStyle='#4a3d66'; ctx.beginPath();
+  ctx.moveTo(x-36,y-8); ctx.quadraticCurveTo(x,y-26, x+36,y-8);
+  ctx.lineTo(x+24,y+36); ctx.lineTo(x-24,y+36); ctx.closePath(); ctx.fill();
+  // mask
+  ctx.fillStyle='#d9d1f0'; ctx.beginPath(); ctx.arc(x,y-18,12,0,Math.PI*2); ctx.fill();
+  // eyes
+  ctx.fillStyle='#0a0812'; ctx.fillRect(x-8,y-22,5,5); ctx.fillRect(x+3,y-22,5,5);
+  // tendrils
+  ctx.strokeStyle='#8e7ac6'; ctx.lineWidth=3;
+  for(let k=0;k<3;k++){
+    ctx.beginPath();
+    ctx.moveTo(x + (k-1)*8, y+8);
+    ctx.quadraticCurveTo(x+(k-1)*10, y+24+Math.sin(t*2+k)*6, x+(k-1)*20, y+42);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -229,9 +251,7 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.restore();
 }
 
-/* ===== New attack system (per-attack damage) =====
-   Each pattern spawns bullets with {x,y,vx,vy,r,col,dmg}.
-*/
+/* ===== Spawn helpers (per-bullet damage) ===== */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 function spawnAimed(fromx,fromy,speed,dmg,color='#fff',radius=3){
   const dx=HEART.x-fromx, dy=HEART.y-fromy, L=Math.hypot(dx,dy)||1;
@@ -239,7 +259,7 @@ function spawnAimed(fromx,fromy,speed,dmg,color='#fff',radius=3){
   return spawn({x:fromx,y:fromy,vx,vy,r:radius,col:color,dmg});
 }
 
-/* Patterns: each returns an object {enter, update, done} and uses its own dmg */
+/* ===== Duelist patterns ===== */
 function patSpearDash(duration=4, dmg=6){
   let t=0, gap=0.12, g=0;
   return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
@@ -264,13 +284,6 @@ function patArcRing(duration=4, dmg=5){
       for(const a of angles){spawn({x:cx,y:cy,vx:Math.cos(a)*250,vy:Math.sin(a)*250,r:3,col:'#a6c7ff',dmg});}}
   }, done(){return t>=duration;}};
 }
-function patHomingLanterns(duration=4, dmg=7){
-  let t=0, rate=0.6, g=0;
-  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
-    if(g>=rate){g=0;const x=ARENA.x+Math.random()*ARENA.w, y=ARENA.y-10;
-      spawnAimed(x,y,230,dmg,'#fff3b8',4);}
-  }, done(){return t>=duration;}};
-}
 function patSweepingBeads(duration=5, dmg=3){
   let t=0, a=Math.random()*Math.PI*2, dir=Math.random()<0.5?-1:1, emit=0.09, g=0;
   const pivot={x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2};
@@ -279,20 +292,82 @@ function patSweepingBeads(duration=5, dmg=3){
       spawnAimed(lx,ly,240,dmg,'#ffe799',3);}
   }, done(){return t>=duration;}};
 }
-function patPressureMix(duration=7){ // mixed with varied damage
-  const A=patSpiralPull(7,5), B=patSpearDash(7,6), C=patHomingLanterns(7,7);
-  return {enter(){A.enter();B.enter();C.enter();}, update(dt){A.update(dt);B.update(dt);C.update(dt);}, done(){return false;}};
-}
-function patSpiralPull(duration=5, dmg=5){
-  let t=0, a0=Math.random()*Math.PI*2, rad=Math.max(ARENA.w,ARENA.h)*0.58;
-  const rateR=(rad/(duration*1.5)), rateA=6.1;
-  return {enter(){t=0;}, update(dt){t+=dt;const steps=3;
-    for(let i=0;i<steps;i++){const a=a0+t*rateA+i*(Math.PI*2/steps); const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad; const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad; spawnAimed(x,y,225,dmg,'#a6c7ff',3);}
-    rad=Math.max(30,rad-rateR*dt);
+function patHomingLanterns(duration=4, dmg=7){
+  let t=0, rate=0.6, g=0;
+  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
+    if(g>=rate){g=0;const x=ARENA.x+Math.random()*ARENA.w, y=ARENA.y-10;
+      spawnAimed(x,y,230,dmg,'#fff3b8',4);}
   }, done(){return t>=duration;}};
 }
+function patPressureMix(duration=7){
+  const A=patArcRing(duration,5), B=patSpearDash(duration,6), C=patHomingLanterns(duration,7);
+  return {enter(){A.enter();B.enter();C.enter();}, update(dt){A.update(dt);B.update(dt);C.update(dt);}, done(){return false;}};
+}
 
-/* Attack phase wrapper */
+/* ===== Shade Lord patterns ===== */
+function patVoidSlash(duration=4.5, dmg=7){
+  // Big slow crescent waves from center
+  let t=0, rate=0.55, g=0, phase=0;
+  return {enter(){t=0;g=0;phase=0;}, update(dt){
+    t+=dt; g+=dt;
+    if(g>=rate){g=0;phase++;
+      const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2;
+      const dir = (phase%2===0)?1:-1;
+      for(let k=0;k<8;k++){
+        const a = (k/8)*Math.PI*2 + (dir>0?0.3:-0.3);
+        spawn({x:cx,y:cy,vx:Math.cos(a)*210,vy:Math.sin(a)*210,r:4,col:'#c7b5ff',dmg});
+      }
+    }
+  }, done(){return t>=duration;}};
+}
+function patShadowHoming(duration=4, dmg=6){
+  let t=0, rate=0.5, g=0;
+  return {enter(){t=0;g=0;}, update(dt){
+    t+=dt; g+=dt;
+    if(g>=rate){g=0; const sides=[[ARENA.x-18, ARENA.y+Math.random()*ARENA.h],[ARENA.x+ARENA.w+18, ARENA.y+Math.random()*ARENA.h],[ARENA.x+Math.random()*ARENA.w, ARENA.y-18]];
+      const [x,y]=sides[Math.floor(Math.random()*sides.length)];
+      spawnAimed(x,y,220,dmg,'#b49aed',4);
+    }
+  }, done(){return t>=duration;}};
+}
+function patColumnFalls(duration=4.5, dmg=5){
+  // Thicker falling columns that create lingering orbs
+  let t=0, rate=0.38, g=0;
+  return {enter(){t=0;g=0;}, update(dt){
+    t+=dt; g+=dt;
+    if(g>=rate){g=0; const cols=5, step=ARENA.w/(cols+1), i=1+Math.floor(Math.random()*cols);
+      const x=ARENA.x + i*step + (Math.random()*14-7);
+      spawn({x,y:ARENA.y-22,vx:0,vy:300,r:5,col:'#9b86d6',dmg});
+      // trailing orb
+      spawn({x,y:ARENA.y-22-20,vx:0,vy:240,r:3,col:'#d8cdfa',dmg:Math.max(3,Math.floor(dmg*0.6))});
+    }
+  }, done(){return t>=duration;}};
+}
+function patOrbitals(duration=5, dmg=4){
+  // Orbiting balls around center that occasionally shoot at you
+  let t=0, a0=Math.random()*Math.PI*2, shoot=0;
+  const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2, R=Math.min(ARENA.w,ARENA.h)*0.42;
+  let orbs=[];
+  return {enter(){t=0; shoot=0; orbs=[]; for(let i=0;i<5;i++){orbs.push({ang:a0+i*(Math.PI*2/5)});} },
+    update(dt){
+      t+=dt; shoot+=dt;
+      for(const o of orbs){o.ang += 1.6*dt;}
+      if(shoot>=0.5){shoot=0;
+        for(const o of orbs){
+          const ox=cx+Math.cos(o.ang)*R, oy=cy+Math.sin(o.ang)*R;
+          spawnAimed(ox,oy,240,dmg,'#cab6ff',3);
+        }
+      }
+    },
+    done(){return t>=duration;}
+  };
+}
+function patShadePressure(duration=7){
+  const A=patVoidSlash(duration,7), B=patShadowHoming(duration,6), C=patOrbitals(duration,4);
+  return {enter(){A.enter();B.enter();C.enter();}, update(dt){A.update(dt);B.update(dt);C.update(dt);}, done(){return false;}};
+}
+
+/* ===== Attack phase wrapper ===== */
 function phase(duration, ...parts){
   let t=0;
   return {
@@ -302,49 +377,74 @@ function phase(duration, ...parts){
   };
 }
 
-/* Build a sequence for the Mantis Duelist */
-function makeMantisSequence(){
-  return [
-    phase(4, patSpearDash(4,6)),
-    phase(4, patArcRing(4,5)),
-    phase(4, patPlungeLines(4,4)),
-    phase(5, patSweepingBeads(5,3)),
-    phase(7, patPressureMix(7))
-  ];
-}
-
 /* ===== Flow ===== */
-function startAttack(){
-  bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
-  if(!attackSeq){ attackSeq = makeMantisSequence(); }
-  attack = attackSeq[attackIx]; attackIx = (attackIx+1)%attackSeq.length;
-  attack.enter();
-}
-function finishAttack(){
-  turn='player';
-  uiCenter.textContent='Your turn';
-  showArena=false; boxEl.style.display='none';
-  uiBar.classList.remove('hidden'); // show the entire bar again
-  restoreBubble();
+function setBoss(idx){
+  bossIndex=idx;
+  const data=BOSSES[bossIndex];
+  BOSS={name:data.name, hpMax:data.hpMax, hp:data.hpMax, draw:data.draw, makeAttacks:data.attacks};
+  bossNameEl.textContent=BOSS.name;
+  bossBar();
+  // build fresh attack sequence
+  attackIx=0;
+  attackSeq = BOSS.makeAttacks();
 }
 function bossHit(dmg){
   BOSS.hp=Math.max(0,BOSS.hp-dmg);
   bossBar();
   damagePopup={x:480,y:200,t:0,text:String(dmg)};
 }
+function endPlayerTurn(){
+  setTimeout(()=>{
+    turn='enemy';
+    uiCenter.textContent='Enemy turn';
+    uiBar.classList.add('hidden');
+    hideBubble();
+    startAttack();
+  },220);
+}
+let attackSeq=null;
+function startAttack(){
+  bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
+  attack = attackSeq[attackIx];
+  attackIx = (attackIx+1) % attackSeq.length;
+  attack.enter();
+}
+function finishAttack(){
+  turn='player';
+  uiCenter.textContent='Your turn';
+  showArena=false; boxEl.style.display='none';
+  uiBar.classList.remove('hidden');
+  restoreBubble();
+}
+function defeat(){
+  // Reset current boss to full and restart from this boss
+  showBubble('You fall. The hall dims.');
+  setTimeout(()=>initBoss(bossIndex),1100);
+}
+function victory(){
+  // Next boss or ending
+  showBubble('The rite ends. The hall exhales.');
+  setTimeout(()=>{
+    if(bossIndex+1 < BOSSES.length){
+      initBoss(bossIndex+1);
+    }else{
+      initBoss(0); // loop back or show final screen
+    }
+  },1000);
+}
 
-/* ===== Init ===== */
-let attackSeq=null, attackIx=0;
-function initBattle(){
-  HEART.hp=50; updatePlayerHP();
-  HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; HEART.i=0;
-  BOSS.hp=BOSS.hpMax; bossBar();
-  attackSeq = makeMantisSequence(); attackIx=0;
+function initBoss(idx){
+  setBoss(idx);
+  HEART.hp=50; HEART.i=0;
+  HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2;
+  updatePlayerHP();
   turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
   uiBar.classList.remove('hidden');
-  showBubble("A golden hall. A mantis descends.\nIt bows. The trial begins.");
+  showBubble(BOSSES[bossIndex].intro.join('\n'));
 }
-initBattle();
+
+/* ===== Init ===== */
+initBoss(0);
 
 /* ===== Loop ===== */
 let last=performance.now();
@@ -370,7 +470,8 @@ function update(dt){
     if(key('ArrowDown')||key('s')) dy+=1;
     const L=Math.hypot(dx,dy)||1;
     HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
-    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
+    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.x+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt)); // note: ARENA.x + ARENA.h is intentional? Fix:
+    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y));
     HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
     HEART.i=Math.max(0,HEART.i-dt);
 
@@ -379,13 +480,13 @@ function update(dt){
 
     // bullets
     for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
-    bullets=bullets.filter(b=>b.x>ARENA.x-120 && b.x<ARENA.x+ARENA.w+120 && b.y>ARENA.y-140 && b.y<ARENA.y+ARENA.h+160);
+    bullets=bullets.filter(b=>b.x>ARENA.x-140 && b.x<ARENA.x+ARENA.w+140 && b.y>ARENA.y-140 && b.y<ARENA.y+ARENA.h+160);
 
-    // collisions (use bullet-specific damage)
+    // collisions
     for(const b of bullets){
-      const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-      if(dx*dx+dy*dy<=rr*rr && HEART.i<=0){
-        const dmg = Math.max(1, Math.floor(b.dmg||5));
+      const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
+      if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){
+        const dmg=Math.max(1,Math.floor(b.dmg||5));
         HEART.hp=Math.max(0,HEART.hp - dmg);
         updatePlayerHP();
         HEART.i=0.85;
@@ -399,12 +500,18 @@ function update(dt){
 
     // defeat
     if(HEART.hp<=0){
-      turn='defeat'; showBubble('You fall. The hall dims.');
-      setTimeout(()=>initBattle(),1100);
+      turn='defeat';
+      defeat();
     }
   }
 
-  // popup fade
+  // victory check
+  if(BOSS && BOSS.hp<=0 && turn!=='victory'){
+    turn='victory'; showArena=false; boxEl.style.display='none';
+    victory();
+  }
+
+  // popup decay
   if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
 }
 
@@ -415,8 +522,8 @@ function render(dt){
   ctx.fillStyle='#1a130f';
   for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
-  // mantis boss sprite
-  drawMantis(ctx,time,scene.flinch);
+  // current boss sprite
+  if(BOSS && typeof BOSS.draw==='function'){ BOSS.draw(ctx,time,scene.flinch); }
 
   // arena on enemy turn
   if(turn==='enemy' && showArena){
@@ -439,6 +546,9 @@ function render(dt){
     ctx.restore();
   }
 }
+
+/* ===== Utility: input poll ===== */
+function key(k){return down.has(k)||down.has(k.toUpperCase());}
 </script>
 </body>
 </html>
