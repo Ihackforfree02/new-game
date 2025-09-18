@@ -2,38 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Undertale Gold — working baseline</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Undertale Gold — Mantis Trial (stable)</title>
 <style>
 :root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
-#stage{position:fixed;left:50%;top:50%;transform-origin:top left}
+#stage{position:fixed;left:50%;top:50%;transform-origin:top left;will-change:transform}
 #wrap{position:relative;width:960px;height:720px}
 canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;background:#070606}
 
 /* HUD */
 #bossHUD{position:absolute;left:20px;top:22px;display:flex;flex-direction:column;gap:6px;z-index:3}
-#bossName{font-size:13px}
-#bossHP{height:10px;width:360px;background:#141414;border:1px solid #383838;position:relative}
+#bossName{font-size:14px;letter-spacing:0.5px}
+#bossHP{height:10px;width:380px;background:#141414;border:1px solid #383838;position:relative}
 #bossHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--hp);width:100%}
 #bossHPVal{font-size:12px;margin-top:2px}
 #playerHUD{position:absolute;right:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;z-index:3}
-#playerNameLabel{font-size:13px;color:#9be7c0}
-#pHP{height:10px;width:220px;background:#141414;border:1px solid #383838;position:relative}
+#playerNameLabel{font-size:14px;color:#9be7c0;letter-spacing:0.5px}
+#pHP{height:10px;width:240px;background:#141414;border:1px solid #383838;position:relative}
 #pHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--emerald);width:100%}
 #pHPVal{font-size:12px;margin-top:2px}
 
 /* Arena */
 #box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;z-index:1}
 
-/* Dialogue */
-#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);max-width:880px;min-height:84px;display:block;z-index:4}
-.bub{background:var(--ui);border:2px solid #fff;padding:10px 14px}
-#bubbleText{white-space:pre-line;line-height:1.45}
+/* Dialogue (bigger) */
+#bubble{position:absolute;left:50%;bottom:144px;transform:translateX(-50%);max-width:900px;min-height:120px;display:block;z-index:4}
+.bub{background:var(--ui);border:2px solid #fff;padding:14px 18px}
+#bubbleText{white-space:pre-line;line-height:1.6;font-size:16px}
 
-/* Bottom UI */
+/* Bottom UI (menu hides during enemy turn) */
 #uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3}
-.uiMenu{display:flex;gap:36px}
+.uiMenu{display:flex;gap:36px;transition:opacity .15s ease, transform .15s ease}
+.uiMenu.hidden{opacity:0;pointer-events:none;transform:translateY(6px)}
 .uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer}
 .uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .uiLabel{font-size:20px;letter-spacing:1px}
@@ -76,40 +77,153 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 <script>
 "use strict";
 
-/* Responsive */
+/* ===== Responsive: fill screen, preserve aspect ===== */
 const stage=document.getElementById('stage');
-function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${s})`;}
-addEventListener('resize',resizeStage); resizeStage();
+function resizeStage(){
+  const W=960,H=720;
+  const sx=innerWidth/W, sy=innerHeight/H;
+  const s=Math.min(sx,sy);
+  stage.style.transform=`translate(-50%, -50%) scale(${s})`;
+}
+addEventListener('resize',resizeStage,{passive:true}); resizeStage();
 
-/* Elements */
+/* ===== Elements ===== */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const boxEl=document.getElementById('box');
 const bossNameEl=document.getElementById('bossName');
 const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getElementById('bossHPVal');
 const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
+const uiMenu=document.getElementById('uiMenu');
 const uiCenter=document.getElementById('uiCenter');
 
-/* State */
+/* ===== State ===== */
 const ARENA={x:240,y:420,w:480,h:180};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:20,hpMax:20,_px:0,_py:0,_pdt:1/60};
 let time=0, paused=false, turn='player', showArena=false;
 let attack=null, phaseT=0;
 let bullets=[], scene={flinch:0,shake:0}; let damagePopup=null; let slashes=[];
-
 const BOSS={name:'Golden Duelist', hpMax:300, hp:300, damage:7};
-function bossBar(){bossHPFill.style.width=(360*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
+function bossBar(){bossHPFill.style.width=(380*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
 bossBar();
-function updatePlayerHP(){pHPFill.style.width=(220*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
+function updatePlayerHP(){pHPFill.style.width=(240*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
 updatePlayerHP();
 
-/* Dialogue helpers */
+/* ===== Dialogue ===== */
 let lastDialog='';
 function showBubble(t){lastDialog=t; bubble.style.display='block'; bubbleText.textContent=t;}
 function hideBubble(){bubble.style.display='none';}
 function restoreBubble(){ if(lastDialog){ bubbleText.textContent=lastDialog; bubble.style.display='block'; } }
 
-/* Heart */
+/* ===== Input ===== */
+const down=new Set();
+addEventListener('keydown',e=>{
+  down.add(e.key);
+  if((e.key==='z'||e.key==='Z'||e.key==='Enter') && turn==='player'){
+    showBubble('You strike.');
+    bossHit(20);
+    // transition to enemy turn: hide menu until attack ends
+    setTimeout(()=>{
+      turn='enemy';
+      uiCenter.textContent='Enemy turn';
+      uiMenu.classList.add('hidden');       // hide menu during attack
+      hideBubble();
+      startAttack();
+    },220);
+  }
+});
+addEventListener('keyup',e=>down.delete(e.key));
+function key(k){return down.has(k)||down.has(k.toUpperCase());}
+
+/* ===== Mantis sprite (more mantis-like) ===== */
+function drawMantis(ctx,t,flinch=0){
+  const x=480, y=260 + Math.sin(t*5.6)*2.8;
+  ctx.save();
+
+  // halo glow
+  ctx.globalAlpha=0.2; ctx.fillStyle='#fff1b6'; ctx.beginPath(); ctx.arc(x,y,54+Math.sin(t*2.8)*2,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // flinch flash
+  if(flinch>0){ctx.globalAlpha=0.65;ctx.fillStyle='#fffbe0';ctx.beginPath();ctx.arc(x,y,50,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
+
+  // wings/elytra plates
+  ctx.fillStyle='#b8902f';
+  ctx.beginPath(); // left plate
+  ctx.moveTo(x-18,y+2);
+  ctx.quadraticCurveTo(x-52,y+18+Math.sin(t*2)*2, x-10,y+42);
+  ctx.closePath(); ctx.fill();
+
+  ctx.beginPath(); // right plate
+  ctx.moveTo(x+18,y+2);
+  ctx.quadraticCurveTo(x+52,y+18+Math.cos(t*2)*2, x+10,y+42);
+  ctx.closePath(); ctx.fill();
+
+  // thorax
+  ctx.fillStyle='#e5bf4d';
+  ctx.fillRect(x-6,y-10,12,44);
+
+  // abdomen segmenting
+  ctx.fillStyle='#d8b44a';
+  for(let i=0;i<4;i++){ ctx.fillRect(x-5,y+28+i*6,10,4); }
+
+  // head (triangular with crest)
+  ctx.fillStyle='#e5bf4d';
+  ctx.beginPath();
+  ctx.moveTo(x,y-38);
+  ctx.lineTo(x-12,y-14);
+  ctx.lineTo(x+12,y-14);
+  ctx.closePath();
+  ctx.fill();
+
+  // crest
+  ctx.fillStyle='#ffd166';
+  ctx.fillRect(x-2,y-44,4,10);
+
+  // mandibles
+  ctx.fillStyle='#e5bf4d';
+  ctx.beginPath(); ctx.moveTo(x-6,y-14); ctx.lineTo(x-11,y-6); ctx.lineTo(x-3,y-10); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+6,y-14); ctx.lineTo(x+11,y-6); ctx.lineTo(x+3,y-10); ctx.closePath(); ctx.fill();
+
+  // eyes
+  ctx.fillStyle='#0c0c12';
+  ctx.fillRect(x-8,y-26,5,5);
+  ctx.fillRect(x+3,y-26,5,5);
+
+  // antennae
+  ctx.strokeStyle='#ffd166'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x-3,y-32); ctx.quadraticCurveTo(x-20,y-46+Math.sin(t*5)*2, x-26,y-58); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+3,y-32); ctx.quadraticCurveTo(x+20,y-46+Math.cos(t*5)*2, x+26,y-58); ctx.stroke();
+
+  // raptorial forelegs (sickle arms)
+  ctx.strokeStyle='#ffd166'; ctx.lineWidth=4;
+  ctx.beginPath(); // left upper
+  ctx.moveTo(x-6,y+2);
+  ctx.lineTo(x-28,y+8+Math.sin(t*3)*8);
+  ctx.stroke();
+  ctx.beginPath(); // left blade
+  ctx.moveTo(x-28,y+8+Math.sin(t*3)*8);
+  ctx.lineTo(x-42,y-2+Math.sin(t*3)*6);
+  ctx.stroke();
+
+  ctx.beginPath(); // right upper
+  ctx.moveTo(x+6,y+2);
+  ctx.lineTo(x+28,y+8+Math.cos(t*3)*8);
+  ctx.stroke();
+  ctx.beginPath(); // right blade
+  ctx.moveTo(x+28,y+8+Math.cos(t*3)*8);
+  ctx.lineTo(x+42,y-2+Math.cos(t*3)*6);
+  ctx.stroke();
+
+  // hind legs
+  ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x-4,y+20); ctx.lineTo(x-18,y+36); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+4,y+20); ctx.lineTo(x+18,y+36); ctx.stroke();
+
+  ctx.restore();
+}
+
+/* ===== Heart ===== */
 function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
   const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
@@ -118,32 +232,17 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.restore();
 }
 
-/* Simple boss sprite */
-function drawDuelist(ctx,t,flinch=0){
-  const x=480,y=258+Math.sin(t*6)*3;
-  ctx.save();
-  if(flinch>0){ctx.globalAlpha=0.6;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-  ctx.shadowColor='#ffd166';ctx.shadowBlur=10;
-  ctx.fillStyle='#b8902f';
-  ctx.beginPath();ctx.moveTo(x-22,y+6);ctx.lineTo(x-50,y+28+Math.sin(t*2)*2);ctx.lineTo(x-12,y+40);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(x+22,y+6);ctx.lineTo(x+50,y+28+Math.cos(t*2)*2);ctx.lineTo(x+12,y+40);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#e5bf4d';ctx.fillRect(x-5,y-8,10,40);ctx.fillRect(x-4,y+30,8,12);
-  ctx.beginPath();ctx.ellipse(x,y+50,12,10,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-12,y-12);ctx.lineTo(x+12,y-12);ctx.closePath();ctx.fill();
-  ctx.restore();
-}
-
-/* Attack (reliable) */
+/* ===== Attack pattern (stable demo) ===== */
 function makeAttack(duration=4){
   let t=0, g=0;
   return {
     enter(){t=0; g=0;},
     update(dt){
       t+=dt; g+=dt;
-      if(g>0.15){ g=0;
+      if(g>0.14){ g=0;
         const y=ARENA.y+Math.random()*ARENA.h;
         const left=Math.random()<0.5;
-        const x=left?ARENA.x-20:ARENA.x+ARENA.w+20;
+        const x=left?ARENA.x-22:ARENA.x+ARENA.w+22;
         const dir=left?1:-1;
         bullets.push({x,y,vx:dir*360,vy:0,r:4,col:'#ffd166',t:0});
       }
@@ -152,41 +251,35 @@ function makeAttack(duration=4){
   };
 }
 
-/* Flow */
+/* ===== Flow ===== */
 function startAttack(){
   bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
   attack=makeAttack(4); attack.enter();
 }
 function finishAttack(){
-  turn='player'; uiCenter.textContent='Your turn';
+  turn='player';
+  uiCenter.textContent='Your turn';
   showArena=false; boxEl.style.display='none';
+  uiMenu.classList.remove('hidden'); // show menu after attack ends
   restoreBubble();
 }
-function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
+function bossHit(dmg){
+  BOSS.hp=Math.max(0,BOSS.hp-dmg);
+  bossBar();
+  damagePopup={x:480,y:200,t:0,text:String(dmg)};
+}
 
-/* Init */
+/* ===== Init ===== */
 function initBattle(){
   HEART.hp=20; updatePlayerHP();
   HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; HEART.i=0;
   turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
-  showBubble("The hall brightens as blades cross the air.\nA bow. A trial.");
+  uiMenu.classList.remove('hidden');
+  showBubble("The hall brightens as blades cross the air.\nIt bows. The trial begins.");
 }
 initBattle();
 
-/* Input */
-const down=new Set();
-addEventListener('keydown',e=>{
-  down.add(e.key);
-  if((e.key==='z'||e.key==='Z'||e.key==='Enter') && turn==='player'){
-    showBubble('You strike.');
-    bossHit(20);
-    setTimeout(()=>{turn='enemy'; uiCenter.textContent='Enemy turn'; hideBubble(); startAttack();},220);
-  }
-});
-addEventListener('keyup',e=>down.delete(e.key));
-function key(k){return down.has(k)||down.has(k.toUpperCase());}
-
-/* Loop */
+/* ===== Loop ===== */
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.033,(now-last)/1000); last=now;
@@ -195,7 +288,7 @@ function loop(now){
 }
 requestAnimationFrame(loop);
 
-/* Update */
+/* ===== Update ===== */
 function update(dt){
   time+=dt;
 
@@ -223,8 +316,8 @@ function update(dt){
 
     // collisions
     for(const b of bullets){
-      const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-      if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){ HEART.hp=Math.max(0,HEART.hp-7); updatePlayerHP(); HEART.i=0.85; }
+      const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
+      if(dx*dx+dy*dy<=rr*rr && HEART.i<=0){ HEART.hp=Math.max(0,HEART.hp-7); updatePlayerHP(); HEART.i=0.85; }
     }
 
     // end phase
@@ -241,20 +334,24 @@ function update(dt){
   if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
 }
 
-/* Render */
+/* ===== Render ===== */
 function render(dt){
   // background
   ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
   ctx.fillStyle='#1a130f';
   for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
-  // boss sprite
-  drawDuelist(ctx,time,scene.flinch);
+  // mantis boss sprite
+  drawMantis(ctx,time,scene.flinch);
 
   // arena on enemy turn
   if(turn==='enemy' && showArena){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
+
+    // bullets
     for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
+
+    // heart
     ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
     drawHeart(ctx,HEART.x-6,HEART.y-6,'#ffd166',0.8);
     ctx.restore();
