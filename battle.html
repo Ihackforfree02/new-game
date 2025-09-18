@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Undertale Gold — Mantis Trial (stable)</title>
+<title>Undertale Gold — Mantis Trial (hard attacks)</title>
 <style>
 :root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
@@ -19,7 +19,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #bossHPVal{font-size:12px;margin-top:2px}
 #playerHUD{position:absolute;right:20px;top:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;z-index:3}
 #playerNameLabel{font-size:14px;color:#9be7c0;letter-spacing:0.5px}
-#pHP{height:10px;width:240px;background:#141414;border:1px solid #383838;position:relative}
+#pHP{height:10px;width:260px;background:#141414;border:1px solid #383838;position:relative}
 #pHPFill{position:absolute;left:0;top:0;bottom:0;background:var(--emerald);width:100%}
 #pHPVal{font-size:12px;margin-top:2px}
 
@@ -27,14 +27,14 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #box{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;z-index:1}
 
 /* Dialogue (bigger) */
-#bubble{position:absolute;left:50%;bottom:144px;transform:translateX(-50%);max-width:900px;min-height:120px;display:block;z-index:4}
-.bub{background:var(--ui);border:2px solid #fff;padding:14px 18px}
+#bubble{position:absolute;left:50%;bottom:148px;transform:translateX(-50%);max-width:905px;min-height:124px;display:block;z-index:4}
+.bub{background:var(--ui);border:2px solid #fff;padding:16px 20px}
 #bubbleText{white-space:pre-line;line-height:1.6;font-size:16px}
 
-/* Bottom UI (menu hides during enemy turn) */
-#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3}
-.uiMenu{display:flex;gap:36px;transition:opacity .15s ease, transform .15s ease}
-.uiMenu.hidden{opacity:0;pointer-events:none;transform:translateY(6px)}
+/* Bottom UI (entire bar hides during enemy turn) */
+#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3;transition:opacity .18s ease, transform .18s ease}
+#uiBar.hidden{opacity:0;pointer-events:none;transform:translate(-50%,6px)}
+.uiMenu{display:flex;gap:36px}
 .uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer}
 .uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .uiLabel{font-size:20px;letter-spacing:1px}
@@ -52,7 +52,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
   <div id="playerHUD">
     <div id="playerNameLabel">Traveler</div>
     <div id="pHP"><div id="pHPFill"></div></div>
-    <div id="pHPVal">20/20</div>
+    <div id="pHPVal">50/50</div>
   </div>
 
   <!-- Canvas + Arena -->
@@ -95,18 +95,19 @@ const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getEl
 const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiMenu=document.getElementById('uiMenu');
+const uiBar=document.getElementById('uiBar');
 const uiCenter=document.getElementById('uiCenter');
 
 /* ===== State ===== */
 const ARENA={x:240,y:420,w:480,h:180};
-const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:20,hpMax:20,_px:0,_py:0,_pdt:1/60};
+const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:50,hpMax:50,_px:0,_py:0,_pdt:1/60};
 let time=0, paused=false, turn='player', showArena=false;
 let attack=null, phaseT=0;
 let bullets=[], scene={flinch:0,shake:0}; let damagePopup=null; let slashes=[];
-const BOSS={name:'Golden Duelist', hpMax:300, hp:300, damage:7};
+const BOSS={name:'Golden Duelist', hpMax:320, hp:320};
 function bossBar(){bossHPFill.style.width=(380*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
 bossBar();
-function updatePlayerHP(){pHPFill.style.width=(240*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
+function updatePlayerHP(){pHPFill.style.width=(260*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
 updatePlayerHP();
 
 /* ===== Dialogue ===== */
@@ -121,12 +122,11 @@ addEventListener('keydown',e=>{
   down.add(e.key);
   if((e.key==='z'||e.key==='Z'||e.key==='Enter') && turn==='player'){
     showBubble('You strike.');
-    bossHit(20);
-    // transition to enemy turn: hide menu until attack ends
+    bossHit(24);
     setTimeout(()=>{
       turn='enemy';
       uiCenter.textContent='Enemy turn';
-      uiMenu.classList.add('hidden');       // hide menu during attack
+      uiBar.classList.add('hidden'); // hide entire bar during attacks
       hideBubble();
       startAttack();
     },220);
@@ -163,11 +163,11 @@ function drawMantis(ctx,t,flinch=0){
   ctx.fillStyle='#e5bf4d';
   ctx.fillRect(x-6,y-10,12,44);
 
-  // abdomen segmenting
+  // abdomen segments
   ctx.fillStyle='#d8b44a';
   for(let i=0;i<4;i++){ ctx.fillRect(x-5,y+28+i*6,10,4); }
 
-  // head (triangular with crest)
+  // head + crest
   ctx.fillStyle='#e5bf4d';
   ctx.beginPath();
   ctx.moveTo(x,y-38);
@@ -175,10 +175,7 @@ function drawMantis(ctx,t,flinch=0){
   ctx.lineTo(x+12,y-14);
   ctx.closePath();
   ctx.fill();
-
-  // crest
-  ctx.fillStyle='#ffd166';
-  ctx.fillRect(x-2,y-44,4,10);
+  ctx.fillStyle='#ffd166'; ctx.fillRect(x-2,y-44,4,10);
 
   // mandibles
   ctx.fillStyle='#e5bf4d';
@@ -232,35 +229,102 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.restore();
 }
 
-/* ===== Attack pattern (stable demo) ===== */
-function makeAttack(duration=4){
-  let t=0, g=0;
+/* ===== New attack system (per-attack damage) =====
+   Each pattern spawns bullets with {x,y,vx,vy,r,col,dmg}.
+*/
+function spawn(b){b.t=0; bullets.push(b); return b;}
+function spawnAimed(fromx,fromy,speed,dmg,color='#fff',radius=3){
+  const dx=HEART.x-fromx, dy=HEART.y-fromy, L=Math.hypot(dx,dy)||1;
+  const vx=(dx/L)*speed, vy=(dy/L)*speed;
+  return spawn({x:fromx,y:fromy,vx,vy,r:radius,col:color,dmg});
+}
+
+/* Patterns: each returns an object {enter, update, done} and uses its own dmg */
+function patSpearDash(duration=4, dmg=6){
+  let t=0, gap=0.12, g=0;
+  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
+    if(g>=gap){g=0;const left=Math.random()<0.5;const y=ARENA.y+12+Math.random()*(ARENA.h-24);
+      const x=left?ARENA.x-24:ARENA.x+ARENA.w+24; const dir=left?1:-1;
+      spawn({x,y,vx:dir*380,vy:0,r:4,col:'#ffd166',dmg});}
+  }, done(){return t>=duration;}};
+}
+function patPlungeLines(duration=4, dmg=4){
+  let t=0, gap=0.16, g=0;
+  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
+    if(g>=gap){g=0;const cols=6; const step=ARENA.w/(cols+1); const i=1+Math.floor(Math.random()*cols);
+      const x=ARENA.x+i*step + (Math.random()*16-8);
+      spawn({x,y:ARENA.y-18,vx:0,vy:310,r:4,col:'#ffb347',dmg});}
+  }, done(){return t>=duration;}};
+}
+function patArcRing(duration=4, dmg=5){
+  let t=0, rate=0.42, g=0;
+  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
+    if(g>=rate){g=0;const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2;
+      const angles=[-0.95,-0.55,0.55,0.95];
+      for(const a of angles){spawn({x:cx,y:cy,vx:Math.cos(a)*250,vy:Math.sin(a)*250,r:3,col:'#a6c7ff',dmg});}}
+  }, done(){return t>=duration;}};
+}
+function patHomingLanterns(duration=4, dmg=7){
+  let t=0, rate=0.6, g=0;
+  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt;
+    if(g>=rate){g=0;const x=ARENA.x+Math.random()*ARENA.w, y=ARENA.y-10;
+      spawnAimed(x,y,230,dmg,'#fff3b8',4);}
+  }, done(){return t>=duration;}};
+}
+function patSweepingBeads(duration=5, dmg=3){
+  let t=0, a=Math.random()*Math.PI*2, dir=Math.random()<0.5?-1:1, emit=0.09, g=0;
+  const pivot={x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2};
+  return {enter(){t=0;g=0;}, update(dt){t+=dt;g+=dt; a+=dir*1.2*dt;
+    if(g>=emit){g=0;const lx=pivot.x+Math.cos(a)*(ARENA.w/2-12), ly=pivot.y+Math.sin(a)*(ARENA.h/2-12);
+      spawnAimed(lx,ly,240,dmg,'#ffe799',3);}
+  }, done(){return t>=duration;}};
+}
+function patPressureMix(duration=7){ // mixed with varied damage
+  const A=patSpiralPull(7,5), B=patSpearDash(7,6), C=patHomingLanterns(7,7);
+  return {enter(){A.enter();B.enter();C.enter();}, update(dt){A.update(dt);B.update(dt);C.update(dt);}, done(){return false;}};
+}
+function patSpiralPull(duration=5, dmg=5){
+  let t=0, a0=Math.random()*Math.PI*2, rad=Math.max(ARENA.w,ARENA.h)*0.58;
+  const rateR=(rad/(duration*1.5)), rateA=6.1;
+  return {enter(){t=0;}, update(dt){t+=dt;const steps=3;
+    for(let i=0;i<steps;i++){const a=a0+t*rateA+i*(Math.PI*2/steps); const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad; const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad; spawnAimed(x,y,225,dmg,'#a6c7ff',3);}
+    rad=Math.max(30,rad-rateR*dt);
+  }, done(){return t>=duration;}};
+}
+
+/* Attack phase wrapper */
+function phase(duration, ...parts){
+  let t=0;
   return {
-    enter(){t=0; g=0;},
-    update(dt){
-      t+=dt; g+=dt;
-      if(g>0.14){ g=0;
-        const y=ARENA.y+Math.random()*ARENA.h;
-        const left=Math.random()<0.5;
-        const x=left?ARENA.x-22:ARENA.x+ARENA.w+22;
-        const dir=left?1:-1;
-        bullets.push({x,y,vx:dir*360,vy:0,r:4,col:'#ffd166',t:0});
-      }
-    },
+    enter(){t=0; parts.forEach(p=>p.enter&&p.enter());},
+    update(dt){t+=dt; parts.forEach(p=>p.update&&p.update(dt));},
     done(){return t>=duration;}
   };
+}
+
+/* Build a sequence for the Mantis Duelist */
+function makeMantisSequence(){
+  return [
+    phase(4, patSpearDash(4,6)),
+    phase(4, patArcRing(4,5)),
+    phase(4, patPlungeLines(4,4)),
+    phase(5, patSweepingBeads(5,3)),
+    phase(7, patPressureMix(7))
+  ];
 }
 
 /* ===== Flow ===== */
 function startAttack(){
   bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
-  attack=makeAttack(4); attack.enter();
+  if(!attackSeq){ attackSeq = makeMantisSequence(); }
+  attack = attackSeq[attackIx]; attackIx = (attackIx+1)%attackSeq.length;
+  attack.enter();
 }
 function finishAttack(){
   turn='player';
   uiCenter.textContent='Your turn';
   showArena=false; boxEl.style.display='none';
-  uiMenu.classList.remove('hidden'); // show menu after attack ends
+  uiBar.classList.remove('hidden'); // show the entire bar again
   restoreBubble();
 }
 function bossHit(dmg){
@@ -270,12 +334,15 @@ function bossHit(dmg){
 }
 
 /* ===== Init ===== */
+let attackSeq=null, attackIx=0;
 function initBattle(){
-  HEART.hp=20; updatePlayerHP();
+  HEART.hp=50; updatePlayerHP();
   HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; HEART.i=0;
+  BOSS.hp=BOSS.hpMax; bossBar();
+  attackSeq = makeMantisSequence(); attackIx=0;
   turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
-  uiMenu.classList.remove('hidden');
-  showBubble("The hall brightens as blades cross the air.\nIt bows. The trial begins.");
+  uiBar.classList.remove('hidden');
+  showBubble("A golden hall. A mantis descends.\nIt bows. The trial begins.");
 }
 initBattle();
 
@@ -308,25 +375,32 @@ function update(dt){
     HEART.i=Math.max(0,HEART.i-dt);
 
     // attack update
-    attack && attack.update(dt);
+    if(attack) attack.update(dt);
 
     // bullets
     for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
-    bullets=bullets.filter(b=>b.x>ARENA.x-120 && b.x<ARENA.x+ARENA.w+120 && b.y>ARENA.y-120 && b.y<ARENA.y+ARENA.h+120);
+    bullets=bullets.filter(b=>b.x>ARENA.x-120 && b.x<ARENA.x+ARENA.w+120 && b.y>ARENA.y-140 && b.y<ARENA.y+ARENA.h+160);
 
-    // collisions
+    // collisions (use bullet-specific damage)
     for(const b of bullets){
       const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-      if(dx*dx+dy*dy<=rr*rr && HEART.i<=0){ HEART.hp=Math.max(0,HEART.hp-7); updatePlayerHP(); HEART.i=0.85; }
+      if(dx*dx+dy*dy<=rr*rr && HEART.i<=0){
+        const dmg = Math.max(1, Math.floor(b.dmg||5));
+        HEART.hp=Math.max(0,HEART.hp - dmg);
+        updatePlayerHP();
+        HEART.i=0.85;
+      }
     }
 
     // end phase
-    if(attack && attack.done()){ finishAttack(); }
+    if(attack && attack.done()){
+      finishAttack();
+    }
 
     // defeat
     if(HEART.hp<=0){
       turn='defeat'; showBubble('You fall. The hall dims.');
-      setTimeout(()=>initBattle(),1000);
+      setTimeout(()=>initBattle(),1100);
     }
   }
 
