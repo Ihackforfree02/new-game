@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Undertale Gold — Routes + Yellow Shoot + Admin</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+<title>Undertale Gold — Solar Fang + Upgraded Admin</title>
 <style>
 :root{
   --fg:#ffd166; --hp:#ff6b6b; --emerald:#7affb7;
@@ -36,10 +36,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #bubbleText{white-space:pre-line;line-height:1.6;font-size:16px}
 #submenuHint{font-size:12px;opacity:.85;margin-top:6px}
 
-/* Action bar */
+/* Bottom UI */
 #uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:116px;background:var(--ui);border:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:3;transition:opacity .18s ease, transform .18s ease}
 #uiBar.hidden{opacity:0;pointer-events:none;transform:translate(-50%,6px)}
-.uiMenu{display:flex;gap:28px;flex-wrap:wrap}
+.uiMenu{display:flex;gap:36px;flex-wrap:wrap}
 .uiBtn{display:flex;align-items:center;gap:10px;cursor:pointer}
 .uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .uiLabel{font-size:20px;letter-spacing:1px}
@@ -52,21 +52,24 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 
 /* Admin panel */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:8}
-#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:760px;color:#ffd166;max-width:95%}
-.adSec{border:1px solid #333;padding:10px;margin:8px 0}
-.adTitle{font-weight:700;margin-bottom:6px}
+#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:780px;color:#ffd166;max-width:95%}
 .adRow{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
+.adCol{display:flex;flex-direction:column;gap:6px;flex:1}
 .adBtn{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
 .adInput,.adSelect{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
 .adInput{width:220px}
-.adSelect{width:320px}
+.adSelect{width:340px}
 .adHelp{color:#bbb;font-size:12px}
+#preview{width:140px;height:140px;border:1px solid #333;background:#0b0b0b;display:inline-block}
+
+/* Responsive fix (scale) */
 </style>
 </head>
 <body>
 <div id="stage"><div id="wrap">
+  <!-- HUD -->
   <div id="bossHUD">
-    <div id="bossName">Doge Paladin</div>
+    <div id="bossName">Solar Fang</div>
     <div id="bossHP"><div id="bossHPFill"></div></div>
     <div id="bossHPVal">000/000</div>
   </div>
@@ -76,69 +79,72 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="pHPVal">50/50</div>
   </div>
 
+  <!-- Main canvas + arena -->
   <canvas id="cv" width="960" height="720"></canvas>
   <div id="box"></div>
 
+  <!-- Dialogue -->
   <div id="bubble"><div class="bub">
     <div id="bubbleText"></div>
     <div id="submenuHint" style="display:none">Choose: 1-4 • Back: X/Backspace • Confirm: Z/Enter</div>
   </div></div>
 
+  <!-- Actions -->
   <div id="uiBar">
     <div class="uiMenu" id="uiMenu">
       <div class="uiBtn" data-act="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
       <div class="uiBtn" data-act="ACT"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
       <div class="uiBtn" data-act="ITEM"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
       <div class="uiBtn" data-act="MERCY"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
-      <div class="uiBtn" data-act="SHOOT"><div class="uiKey">S</div><div class="uiLabel">SHOOT</div></div>
     </div>
     <div id="uiCenter">Your turn.</div>
   </div>
 
-  <div id="tips">Move: Arrow/WASD — Confirm: Z/Enter — Back: X/Backspace — SHOOT: S on your turn — Type “67” three times for Admin</div>
+  <div id="tips">Move: Arrow/WASD — Confirm: Z/Enter — Back: X/Backspace — Type “67” three times to open Admin</div>
   <div id="toast">Admin opened</div>
 
+  <!-- Admin -->
   <div id="admin">
     <div id="adminPanel">
-      <div class="adSec">
-        <div class="adTitle">Profile</div>
-        <div class="adRow">
-          <label>Username</label>
-          <input id="adUser" class="adInput" placeholder="Your name"/>
-          <button id="adUserSave" class="adBtn">Save</button>
+      <div class="adRow" style="justify-content:space-between;align-items:flex-start">
+        <div class="adCol" style="max-width:60%">
+          <div class="adRow">
+            <label>Username</label>
+            <input id="adUser" class="adInput" placeholder="Your name"/>
+            <button id="adUserSave" class="adBtn">Save</button>
+          </div>
+          <div class="adRow">
+            <label>Player max HP</label>
+            <input id="adHP" class="adInput" type="number" min="1" max="99" value="50"/>
+            <button id="adHeal" class="adBtn">Heal</button>
+          </div>
+          <div class="adRow">
+            <label>Difficulty</label>
+            <select id="adDiff" class="adSelect">
+              <option>Normal</option><option>Hard</option><option>Insane</option>
+            </select>
+            <span class="adHelp">Affects bullet speed, rate, damage, and aim lead.</span>
+          </div>
+          <div class="adRow">
+            <label>Boss</label>
+            <select id="adBoss" class="adSelect"></select>
+          </div>
+          <div class="adRow">
+            <button id="adTest1" class="adBtn">Test pattern 1</button>
+            <button id="adTest2" class="adBtn">Test pattern 2</button>
+            <button id="adTest3" class="adBtn">Test pattern 3</button>
+          </div>
+          <div class="adRow">
+            <button id="adSkip" class="adBtn">Skip to next</button>
+            <button id="adReset" class="adBtn">Reset progress</button>
+            <button id="adClose" class="adBtn">Close</button>
+          </div>
+          <div class="adHelp">Open admin by typing “67” three times anywhere. Live preview updates with boss select.</div>
         </div>
-        <div class="adRow">
-          <label>Player max HP</label>
-          <input id="adHP" class="adInput" type="number" min="1" max="99" value="50"/>
-          <button id="adHeal" class="adBtn">Heal to full</button>
-        </div>
-        <div class="adRow">
-          <label>Difficulty</label>
-          <select id="adDiff" class="adSelect">
-            <option>Normal</option><option>Hard</option><option>Insane</option>
-          </select>
-          <span class="adHelp">Affects bullet speed, rate, and damage.</span>
+        <div>
+          <canvas id="preview" width="140" height="140"></canvas>
         </div>
       </div>
-      <div class="adSec">
-        <div class="adTitle">Boss control</div>
-        <div class="adRow">
-          <label>Boss</label>
-          <select id="adBoss" class="adSelect"></select>
-        </div>
-        <div class="adRow">
-          <button id="adSkip" class="adBtn">Skip to next</button>
-          <button id="adReset" class="adBtn">Reset progress</button>
-          <button id="adClose" class="adBtn">Close</button>
-        </div>
-        <div class="adRow">
-          <label>Test attack</label>
-          <button id="adTest1" class="adBtn">Pattern 1</button>
-          <button id="adTest2" class="adBtn">Pattern 2</button>
-          <button id="adTest3" class="adBtn">Pattern 3</button>
-        </div>
-      </div>
-      <small class="adHelp">Open with “67” typed three times anywhere.</small>
     </div>
   </div>
 </div></div>
@@ -146,12 +152,16 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 <script>
 "use strict";
 
-/* Responsive scale */
+/* ===== Responsive scaling (robust) ===== */
 const stage=document.getElementById('stage');
-function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${Math.max(0.2,s)})`;}
-addEventListener('resize',resizeStage,{passive:true}); resizeStage();
+function resizeStage(){
+  const s=Math.min(window.innerWidth/960, window.innerHeight/720);
+  stage.style.transform=`translate(-50%, -50%) scale(${Math.max(0.2,s)})`;
+}
+addEventListener('resize',resizeStage,{passive:true});
+resizeStage();
 
-/* Elements */
+/* ===== Elements ===== */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false});
 const bossNameEl=document.getElementById('bossName'), bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getElementById('bossHPVal');
 const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal'), nameLabel=document.getElementById('playerNameLabel');
@@ -163,44 +173,46 @@ const adUser=document.getElementById('adUser'), adUserSave=document.getElementBy
 const adBoss=document.getElementById('adBoss'), adHP=document.getElementById('adHP'), adHeal=document.getElementById('adHeal');
 const adSkip=document.getElementById('adSkip'), adReset=document.getElementById('adReset'), adClose=document.getElementById('adClose');
 const adDiff=document.getElementById('adDiff'), adTest1=document.getElementById('adTest1'), adTest2=document.getElementById('adTest2'), adTest3=document.getElementById('adTest3');
+const prevCanvas=document.getElementById('preview'), prevCtx=prevCanvas.getContext('2d');
 
-/* Save */
-const SAVE_KEY='utg_yellow_routes_admin_v1';
-function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}catch{return {};}}
+/* ===== Save ===== */
+const SAVE_KEY='utg_solar_admin_v1';
+function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}catch{return {} }}
 function writeSave(d){try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch{}}
 let SAVE=loadSave();
 
-/* Arena/player */
+/* ===== Arena/player ===== */
 const ARENA={x:240,y:420,w:480,h:180};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:Math.max(1,SAVE.hp||50),hpMax:Math.max(1,SAVE.hp||50),_px:0,_py:0,_pdt:1/60};
 let username=(SAVE.username||'Traveler').slice(0,16); nameLabel.textContent=username;
 
-/* Difficulty */
+/* ===== Difficulty ===== */
 const DIFFS={ Normal:{spd:1.0,rate:1.0,dmg:1.0,lead:0.06}, Hard:{spd:1.22,rate:1.2,dmg:1.2,lead:0.08}, Insane:{spd:1.36,rate:1.35,dmg:1.35,lead:0.1} };
 let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal; adDiff.value=Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF)||'Normal';
 
-/* State */
-const TURN={PLAYER:'player',ENEMY:'enemy',VICTORY:'victory',DEFEAT:'defeat',TRANS:'transition',SHOOT:'shoot'};
+/* ===== State ===== */
+const TURN={PLAYER:'player',ENEMY:'enemy',VICTORY:'victory',DEFEAT:'defeat',TRANS:'transition'};
 let time=0, turn=TURN.PLAYER, showArena=false, paused=false;
-let attack=null, attackSeq=null, attackIx=0, bullets=[], damagePopup=null, playerShots=[];
-let mode='main'; // 'main' | 'act' | 'item'
+let attack=null, attackSeq=null, attackIx=0, bullets=[], damagePopup=null;
+let mode='main';
 let bossIndex=(typeof SAVE.bossIndex==='number')?SAVE.bossIndex:0;
 let BOSS=null;
 
-/* Routes */
+/* ===== Route state ===== */
 const routeState={fight:SAVE.fight||0, act:SAVE.act||0, mercy:SAVE.mercy||0};
 function routeLean(){ if(routeState.fight>=routeState.act+routeState.mercy+3) return 'genocide'; if(routeState.mercy+routeState.act>=routeState.fight+3) return 'pacifist'; return 'neutral'; }
-function saveProgress(){ writeSave({bossIndex, hp:HEART.hpMax, username, fight:routeState.fight, act:routeState.act, mercy:routeState.mercy, inventory, difficulty:adDiff.value}); }
+function saveProgress(){ writeSave({bossIndex, hp:HEART.hpMax, username, fight:routeState.fight, act:routeState.act, mercy:routeState.mercy, difficulty:adDiff.value}); }
 
-/* Inventory */
-let inventory=Array.isArray(SAVE.inventory)?SAVE.inventory:[{id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2}];
-let tempBuff={atk:0};
-function rewardForRoute(r){ if(r==='pacifist') return {id:'tea',name:'Calming Tea',desc:'+16 HP',type:'heal',amount:16,count:1}; if(r==='genocide') return {id:'rage',name:'Rage Shard',desc:'+4 ATK (this run)',type:'buff',atk:4,count:1}; return {id:'tonic',name:'Tonic',desc:'+14 HP',type:'heal',amount:14,count:1}; }
-function giveItem(it){const f=inventory.find(x=>x.id===it.id); if(f) f.count+=it.count; else inventory.push(JSON.parse(JSON.stringify(it))); saveProgress(); }
+/* ===== Inventory (simple) ===== */
+let inventory=SAVE.inventory || [{id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2}];
 function itemsList(){ if(inventory.length===0) return "No items."; return inventory.map((it,i)=>` ${i+1}. ${it.name} (${it.count}) — ${it.desc}`).join('\n'); }
-function useItem(i){ const it=inventory[i]; if(!it||it.count<=0) return "Empty."; if(it.type==='heal'){ HEART.hp=Math.min(HEART.hpMax, HEART.hp+(it.amount||10)); updateHP(); it.count--; if(it.count<=0) inventory.splice(i,1); saveProgress(); return `You used ${it.name}. +${it.amount} HP`; } if(it.type==='buff'){ tempBuff.atk=(tempBuff.atk||0)+(it.atk||2); it.count--; if(it.count<=0) inventory.splice(i,1); saveProgress(); return `You used ${it.name}. ATK +${it.atk}`; } return "Nothing happened."; }
+function useItem(i){
+  const it=inventory[i]; if(!it||it.count<=0) return "Empty.";
+  if(it.type==='heal'){ HEART.hp=Math.min(HEART.hpMax, HEART.hp+(it.amount||10)); updateHP(); it.count--; if(it.count<=0) inventory.splice(i,1); SAVE.inventory=inventory; writeSave(SAVE); return `You used ${it.name}. +${it.amount} HP`; }
+  return "Nothing happened.";
+}
 
-/* UI helpers */
+/* ===== UI helpers ===== */
 function say(t,h=false){bubble.style.display='block'; bubbleText.textContent=t; submenuHint.style.display=h?'block':'none';}
 function hideSay(){bubble.style.display='none'; submenuHint.style.display='none';}
 function bossBar(){bossNameEl.textContent=BOSS.name; bossHPFill.style.width=(440*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`;}
@@ -208,32 +220,29 @@ function updateHP(){pHPFill.style.width=(260*Math.max(0,HEART.hp/HEART.hpMax))+'
 function centerHeart(){HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2;}
 function toast(msg){toastEl.textContent=msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'),1000);}
 
-/* Input */
+/* ===== Input ===== */
 const down=new Set();
 addEventListener('keydown',e=>{
   const isMove=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key);
-  if(!((turn===TURN.ENEMY||turn===TURN.SHOOT) && mode==='main') && isMove) return;
+  if(!(turn===TURN.ENEMY && mode==='main') && isMove) return;
   down.add(e.key);
 
+  // Back out of submenu
   if((e.key==='x'||e.key==='X'||e.key==='Backspace') && (mode==='act'||mode==='item')){ mode='main'; say('Your turn.'); }
 
-  if(mode==='act'||mode==='item'){
+  // Submenu choose
+  if(mode==='act' || mode==='item'){
     if('1234'.includes(e.key)) handleSubmenuSelect(parseInt(e.key,10)-1);
     if(e.key==='Enter'||e.key==='z'||e.key==='Z') handleSubmenuSelect(0);
   }
 
-  // Triple 67 -> admin
+  // Open admin via 67×3
   handleSecret67(e.key);
-
-  // Shoot fire in SHOOT mode
-  if(turn===TURN.SHOOT && (e.key==='z'||e.key==='Z'||e.key==='Enter')){
-    firePlayerShot();
-  }
 });
 addEventListener('keyup',e=>down.delete(e.key));
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
 
-/* Secret “67×3” -> admin */
+/* ===== Secret “67×3” -> admin ===== */
 let secretBuf='', pairCount=0, secretCooldown=0;
 function handleSecret67(k){
   if(secretCooldown>0) return;
@@ -246,27 +255,41 @@ function handleSecret67(k){
   }else{ secretBuf=''; pairCount=0; }
 }
 
-/* Drawing helpers */
-function bob(v=3){return Math.sin(time*2.5)*v;}
-function wag(v=4){return Math.sin(time*6)*v;}
-function blink(freq=4){return Math.sin(time*freq)>0.8;}
-function glow(x,y,r,fill,a=0.22){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
+/* ===== Drawing helpers / sprites ===== */
+function bob(v=3){return Math.sin(time*2.4)*v;}
+function glow(ctx,x,y,r,fill,a=0.22){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
 
-/* Sprites — minimal but distinct */
-function drawDoge(ctx,t){const x=480,y=250+bob(2),b=blink(4);glow(x,y,60,'#fff3b8',0.25);ctx.fillStyle='#e8c764';ctx.fillRect(x-20,y-6,40,26);ctx.fillStyle='#2b1a0f';ctx.fillRect(x-7,y+(b?2:0),4,b?1:5);ctx.fillRect(x+3,y+(b?2:0),4,b?1:5);}
-function drawCheems(ctx,t){const x=480,y=250+bob(2),b=blink(3.5);glow(x,y,62,'#ffd6ea',0.24);ctx.fillStyle='#f0a3c2';ctx.fillRect(x-42,y+34,84,22);ctx.fillStyle='#ffe0f0';ctx.fillRect(x-22,y-10,44,28);}
-function drawBell(ctx,t){const x=480,y=230+bob(2.6);glow(x,y,66,'#fff3b8',0.28);ctx.fillStyle='#ffe18a';ctx.beginPath();ctx.ellipse(x,y,14,22,0,0,Math.PI*2);ctx.fill();}
-function drawBee(ctx,t){const x=480,y=245+bob(2.4),b=blink(5);glow(x,y,58,'#ffe87a',0.25);ctx.fillStyle='#ffeb80';ctx.beginPath();ctx.ellipse(x,y,22,16,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#202020';ctx.fillRect(x-22,y-4,44,4);ctx.fillRect(x-22,y+4,44,4);}
-function drawTroll(ctx,t){const x=480,y=248+bob(2.4);glow(x,y,58,'#fff',0.18);ctx.fillStyle='#f2f2f2';ctx.fillRect(x-20,y-10,40,26);}
-function drawNyan(ctx,t){const x=480,y=240+bob(3);glow(x,y,58,'#f39ac1',0.18);ctx.fillStyle='#fbd3a7';ctx.fillRect(x-22,y-10,44,28);}
-function drawPepe(ctx,t){const x=480,y=248+bob(2);glow(x,y,54,'#bff7b5',0.2);ctx.fillStyle='#6bbf59';ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fill();}
-function drawShrek(ctx,t){const x=480,y=252+bob(2);glow(x,y,58,'#b5ffb0',0.22);ctx.fillStyle='#6aa84f';ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);ctx.fill();}
-function drawGiga(ctx,t){const x=480,y=240+bob(2);glow(x,y,64,'#cdeffd',0.22);ctx.fillStyle='#9bd3ff';ctx.fillRect(x-18,y-10,36,26);}
-function drawDoom(ctx,t){const x=480,y=242+bob(2.2);glow(x,y,64,'#b0a0ff',0.22);ctx.fillStyle='#a89bff';ctx.fillRect(x-18,y-12,36,28);}
-function drawKaren(ctx,t){const x=480,y=246+bob(2);glow(x,y,60,'#ffe3b0',0.22);ctx.fillStyle='#ffd8a0';ctx.fillRect(x-18,y-10,36,26);}
-function drawSigma(ctx,t){const x=480,y=244+bob(2.1);glow(x,y,60,'#e0e0ff',0.22);ctx.fillStyle='#d0d4ff';ctx.fillRect(x-18,y-12,36,28);}
-function drawOmega(ctx,t){const x=480,y=236+bob(2.4);glow(x,y,70,'#fff3b8',0.3);ctx.fillStyle='#222';ctx.beginPath();ctx.arc(x,y,24,0,Math.PI*2);ctx.fill();}
-function drawSkibidi(ctx,t){const x=480,y=245+bob(3);glow(x,y,62,'#ffb9b9',0.26);ctx.fillStyle='#241313';ctx.beginPath();ctx.ellipse(x,y+6,20,30,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffd166';ctx.font='bold 14px monospace';ctx.fillText('67', x-8, y+2);}
+/* Solar Fang sprite (animated gold aura + crown ring) */
+function drawSolarFang(ctx,t){
+  const x=480, y=240 + bob(2);
+  glow(ctx,x,y,66,'#fff3b8',0.30);
+  // face core
+  ctx.save();
+  ctx.fillStyle='#ffdf7a'; ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
+  // eyes blink
+  const blink = Math.sin(t*4)>0.75;
+  ctx.fillStyle='#2b200f';
+  if(!blink){ ctx.fillRect(x-8,y-2,5,5); ctx.fillRect(x+3,y-2,5,5); }
+  else { ctx.fillRect(x-8,y,5,1); ctx.fillRect(x+3,y,5,1); }
+  // crown ring
+  ctx.strokeStyle='#ffd166'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(x,y-26,16+Math.sin(t*5),0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+/* Ember Seraph (second boss) */
+function drawEmberSeraph(ctx,t){
+  const x=480,y=240+bob(2.6);
+  glow(ctx,x,y,62,'#ffb7a7',0.22);
+  ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.ellipse(x,y,18,24,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ffd3a0'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y+18,26,Math.PI,0); ctx.stroke();
+}
+/* Abyss Jester (third boss) */
+function drawAbyssJester(ctx,t){
+  const x=480,y=242+bob(2.2);
+  glow(ctx,x,y,62,'#b0a0ff',0.22);
+  ctx.fillStyle='#a89bff'; ctx.fillRect(x-18,y-12,36,28);
+  ctx.fillStyle='#222'; ctx.fillRect(x-8,y-2,5,4); ctx.fillRect(x+3,y-2,5,4);
+}
 
 /* Heart */
 function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
@@ -277,7 +300,7 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.restore();
 }
 
-/* Spawn */
+/* Spawn helpers */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
   const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60);
@@ -289,301 +312,150 @@ function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
 function rand(a,b){return Math.random()*(b-a)+a;}
 
 /* Patterns (fast but fair) */
-function patCone(dur=3.2,dmg=3,col='#fff3b8',spd=210,count=5,spread=Math.PI/2.8){
+function patCone(dur=3.0,dmg=3,col='#fff3b8',spd=210,count=5,spread=Math.PI/2.8){
   let t=0,g=0,rate=0.18/DIFF.rate; const cx=ARENA.x+ARENA.w/2,y=ARENA.y+12;
   return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<count;k++){const a=(-spread)+k*(2*spread/(Math.max(1,count-1)));spawn({x:cx,y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}}},done(){return t>=dur;}};
-}
-function patFalls(dur=3.4,dmg=3,col='#d1f7ff',spd=220){
-  let t=0,g=0,rate=0.22/DIFF.rate;
-  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(24,ARENA.w-24);spawn({x,y:ARENA.y-18,vx:0,vy:spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=dur;}};
 }
 function patHoming(dur=3.2,dmg=4,col='#ffd0e8',spd=230){
   let t=0,g=0,rate=0.5/DIFF.rate;
   return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w),y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4);} },done(){return t>=dur;}};
 }
-function patRing(dur=3.6,dmg=4,col='#fff3b8',spd=230,n=12){
+function patRing(dur=3.2,dmg=4,col='#fff3b8',spd=230,n=12){
   let t=0,g=0,rate=.48/DIFF.rate; const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};
   return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2;spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}}},done(){return t>=dur;}};
 }
-function patSpiralAim(dur=3.6,dmg=4,col='#ffd166',spd=220,arms=3){
+function patSpiral(dur=3.6,dmg=4,col='#ffd166',spd=220,arms=3){
   let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.5; const rateR=(rad/(dur*1.4)), rateA=6.0*DIFF.spd;
   return{enter(){t=0;},update(dt){t+=dt;for(let i=0;i<arms;i++){const a=a0+t*rateA+i*(Math.PI*2/arms);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,spd,dmg,col,3);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};
 }
 
-/* Bee minions */
-function patBeeOrbit(dur=3.8,dmg=3,col='#ffe87a'){
-  let t=0; const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2}, bees=[];
-  return{enter(){for(let k=0;k<5;k++) bees.push({phi:(k/5)*Math.PI*2,r:70,w:2.6*DIFF.spd});},
-    update(dt){t+=dt; for(const m of bees){m.phi+=m.w*dt; const x=c.x+Math.cos(m.phi)*m.r, y=c.y+Math.sin(m.phi)*m.r;
-      if(Math.random()<0.12/DIFF.rate) spawn({x,y,vx:0,vy:210*DIFF.spd,r:3,col:'#ffea96',dmg});
-      if(Math.random()<0.06/DIFF.rate){const dx=HEART.x-x,dy=HEART.y-y,L=Math.hypot(dx,dy)||1;spawn({x,y,vx:dx/L*260*DIFF.spd,vy:dy/L*260*DIFF.spd,r:3,col:'#ffd166',dmg:4*DIFF.dmg});}
-    }},done(){return t>=dur;}};
-}
-function patBeeStingers(dur=3.0,dmg=5,col='#ffd166',spd=320){
-  let t=0,g=0,rate=.22/DIFF.rate;
-  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(16,ARENA.h-16);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;spawn({x,y,vx:(left?1:-1)*spd*DIFF.spd,vy:0,r:4,col,dmg});}},done(){return t>=dur;}};
-}
-function patHoneyDrip(dur=3.2,dmg=3,col='#ffea96',spd=210){
-  let t=0,g=0,rate=.2/DIFF.rate;
-  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const cols=6, step=ARENA.w/(cols+1), i=1+Math.floor(Math.random()*cols);const x=ARENA.x+i*step+rand(-8,8);spawn({x,y:ARENA.y-18,vx:0,vy:spd*DIFF.spd,r:4,col,dmg});}},done(){return t>=dur;}};
-}
-
-/* Themed extras */
-function patDogeArcs(dur=3.4,dmg=4,spd=220){let t=0,g=0,rate=.42/DIFF.rate;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const s=rand(-0.2,0.2);for(const a of [-0.9+s,-0.5+s,0.5+s,1.0+s]) spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col:'#fff3b8',dmg});}},done(){return t>=dur;}};}
-function patNotifSpam(dur=3.4,dmg=4,col='#b0a0ff',spd=225){let t=0,g=0,rate=.2/DIFF.rate;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const rows=3;for(let i=0;i<rows;i++){const y=ARENA.y+20+i*50;const left=(Math.random()<0.5);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;spawn({x,y,vx:(left?1:-1)*spd*DIFF.spd,vy:0,r:3,col,dmg});}}},done(){return t>=dur;}};}
-function patHomingLaser(dur=3.2,dmg=5,col='#e0e0ff',spd=240){return patHoming(dur,dmg,col,spd);}
-function patShockwave(dur=3.2,dmg=5,col='#9bd3ff',spd=230){return patRing(dur,dmg,col,spd,10);}
-function patManagerCall(dur=3.2,dmg=4,col:'#ffe3b0',spd=230){return patCone(dur,dmg,col,spd,6,Math.PI/2.5);}
-function patGlitchSpiral(dur=3.2,dmg=5,col='#ff7a7a',spd=225){return patSpiralAim(dur,dmg,col,spd,3);}
-function patHotRing(dur=3.0,dmg=5,col='#ff3b3b',spd=240){return patRing(dur,dmg,col,spd,12);}
-function patOmegaWall(dur=3.2,dmg=6,col:'#fff3b8',spd=260){let t=0,g=0,rate=.28/DIFF.rate;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const top=Math.random()<0.5;for(let i=0;i<6;i++){const x=ARENA.x+40+i*70;spawn({x,y:top?ARENA.y-16:ARENA.y+ARENA.h+16,vx:0,vy:top?spd*DIFF.spd:-spd*DIFF.spd,r:3,col,dmg});}}},done(){return t>=dur;}};}
-
 /* Phase wrapper */
 function phase(dur,...parts){let t=0;return{enter(){t=0;parts.forEach(p=>p.enter&&p.enter());},update(dt){t+=dt;parts.forEach(p=>p.update&&p.update(dt));},done(){return t>=dur;}};}
 
-/* Boss roster (progression) */
+/* Boss roster (new names, unique dialogues) */
 const BOSSES=[
-  { key:'doge', name:'Doge Paladin', hpMax:320, draw:drawDoge,
-    intro:["much honor","very duel"], lines:["such focus","wow","amaze stance","parry pls","many form"], mercyNeed:3,
-    acts:[{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"so kind. very wow.";}},
-          {name:'Pet',effect:s=>{s.mercy=(s.mercy||0)+1;return"head pats accepted.";}},
-          {name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"respect returned.";}},
-          {name:'Taunt',effect:s=>{return"rude. restraint holds.";}}],
-    attacks:()=>[ patDogeArcs(3.2,4,220), patRing(3.2,4,'#fff3b8',230,10), patHoming(3.0,4,'#fff3b8',230) ] },
-  { key:'cheems', name:'Cheems Baker', hpMax:340, draw:drawCheems,
-    intro:["bonk? bake.","sprinkle time."], lines:["cheems bake","yum… panic","frost ur fear","cherry go brr","nom nom"], mercyNeed:3,
-    acts:[{name:'Taste Test',effect:s=>{s.mercy=(s.mercy||0)+1;return"approval granted. less sprinkles.";}},
-          {name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"pink pride intensifies.";}},
-          {name:'Joke',effect:s=>{s.mercy=(s.mercy||0)+1;return"hee hee. calm frosting.";}},
-          {name:'Insult',effect:s=>{return"ouch. noted.";}}],
-    attacks:()=>[ patCone(3.0,3,'#ffc6e0',205,5,Math.PI/3), patFalls(3.4,3,'#ffe3f2',215), patHoming(3.0,4,'#ffd0e8',230) ] },
-  { key:'archon', name:'Bell Archon', hpMax:360, draw:drawBell,
-    intro:["ding ding.","judgment comfy."], lines:["hold the note","resonate","no mald","center rings","gentle toll"], mercyNeed:2,
-    acts:[{name:'Listen',effect:s=>{s.mercy=(s.mercy||0)+1;return"you hear the silence between.";}},
-          {name:'Hum',effect:s=>{s.mercy=(s.mercy||0)+1;return"your pitch aligns.";}},
-          {name:'Apologize',effect:s=>{s.mercy=(s.mercy||0)+1;return"forgiven. a little.";}},
-          {name:'Mock',effect:s=>{return"discordant... but forgiven.";}}],
-    attacks:()=>[ patRing(3.0,4,'#ffe799',235,12), patSpiralAim(3.4,4,'#ffd166',220,3), patHoming(3.0,4,'#fff3b8',230) ] },
-  { key:'bee', name:'Baby Bee', hpMax:360, draw:drawBee,
-    intro:["bzz... hello.","tiny but rapid."], lines:["bzz-bzz!","honey time.","sting operation.","follow me!","sweet and swift."], mercyNeed:3,
-    acts:[{name:'Waggle',effect:s=>{s.mercy=(s.mercy||0)+1;return"you waggle. bee approves.";}},
-          {name:'Offer Honey',effect:s=>{s.mercy=(s.mercy||0)+2;return"bee sips happily.";}},
-          {name:'Calm Buzz',effect:s=>{s.mercy=(s.mercy||0)+1;return"buzz softens.";}},
-          {name:'Swat',effect:s=>{return"rude! stingers bristle.";}}],
-    attacks:()=>[ patBeeOrbit(3.4,3,'#ffe87a'), patBeeStingers(3.0,5,'#ffd166',320), patHoneyDrip(3.2,3,'#ffea96',210) ] },
-  { key:'troll', name:'Trollface Jester', hpMax:340, draw:drawTroll,
-    intro:["problem?","hehe."], lines:["u mad?","ez dodge",":^)","trololol","gotcha."], mercyNeed:3,
-    acts:[{name:'Laugh',effect:s=>{s.mercy=(s.mercy||0)+1;return"he laughs back.";}},
-          {name:'Compliment Grin',effect:s=>{s.mercy=(s.mercy||0)+1;return"so shiny.";}},
-          {name:'Wave',effect:s=>{s.mercy=(s.mercy||0)+1;return"wave returned.";}},
-          {name:'Taunt',effect:s=>{return"nice try.";}}],
-    attacks:()=>[ patRing(3.0,4,'#fff',230,8), patHoming(3.0,4,'#f0f0f0',230), patCone(3.0,4,'#fff',225,6,Math.PI/2.6) ] },
-  { key:'nyan', name:'Nyan Blade', hpMax:360, draw:drawNyan,
-    intro:["nyan~","rainbow slash!"], lines:["nya!","sparkle cut","meow dodge","rainbow go","pop pop"], mercyNeed:3,
-    acts:[{name:'Pet',effect:s=>{s.mercy=(s.mercy||0)+1;return"purr.";}},
-          {name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"nya~";}},
-          {name:'Sing',effect:s=>{s.mercy=(s.mercy||0)+1;return"duet time.";}},
-          {name:'Insult',effect:s=>{return"hiss.";}}],
-    attacks:()=>[ patCone(3.0,3,'#ffb6c1',205,5,Math.PI/3), patRing(3.2,4,'#fff',230,8), patHoming(3.0,4,'#cdeffd',225) ] },
-  { key:'pepe', name:'Pepe Sage', hpMax:380, draw:drawPepe,
-    intro:["wisdom croaks.","breathe, child."], lines:["inhale… exhale","feel the pond","do not tilt","you can","ribbit."], mercyNeed:2,
-    acts:[{name:'Listen',effect:s=>{s.mercy=(s.mercy||0)+1;return"silence shared.";}},
-          {name:'Meditate',effect:s=>{s.mercy=(s.mercy||0)+1;return"calm spreads.";}},
-          {name:'Nod',effect:s=>{s.mercy=(s.mercy||0)+1;return"understood.";}},
-          {name:'Joke',effect:s=>{return"gentle smile.";}}],
-    attacks:()=>[ patRing(3.2,3,'#bff7b5',210,10), patSpiralAim(3.2,4,'#a1e8af',215,3), patHoming(3.0,4,'#d7f5d0',225) ] },
-  { key:'giga', name:'Giga Chad', hpMax:380, draw:drawGiga,
-    intro:["we work.","we win."], lines:["flex","focus","clean form","again","power"], mercyNeed:3,
-    acts:[{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"respect.";}},
-          {name:'Mirror',effect:s=>{s.mercy=(s.mercy||0)+1;return"posture fixed.";}},
-          {name:'Pose',effect:s=>{s.mercy=(s.mercy||0)+1;return"symmetry achieved.";}},
-          {name:'Challenge',effect:s=>{return"accepted.";}}],
-    attacks:()=>[ patShockwave(3.2,5,'#9bd3ff',230), patHoming(3.0,4,'#9bd3ff',235), patRing(3.2,4,'#cdeffd',235,10) ] },
-  { key:'doom', name:'Doom Scroll', hpMax:380, draw:drawDoom,
-    intro:["more feeds.","less peace."], lines:["ping","scroll","no end","doom","breathe"], mercyNeed:3,
-    acts:[{name:'Mute',effect:s=>{s.mercy=(s.mercy||0)+1;return"notifications silenced.";}},
-          {name:'Scroll Away',effect:s=>{s.mercy=(s.mercy||0)+1;return"next post ignored.";}},
-          {name:'Breathe',effect:s=>{s.mercy=(s.mercy||0)+1;return"calm returns.";}},
-          {name:'Power Off',effect:s=>{s.mercy=(s.mercy||0)+1;return"screen fades.";}}],
-    attacks:()=>[ patNotifSpam(3.4,4,'#b0a0ff',225), patHoming(3.0,5,'#a89bff',240), patRing(3.2,4,'#b0a0ff',235,10) ] },
-  { key:'karen', name:'Karen Queen', hpMax:380, draw:drawKaren,
-    intro:["get me the manager.","now."], lines:["refund.","policy.","tsk.","unacceptable.","fine."], mercyNeed:3,
-    acts:[{name:'Apologize',effect:s=>{s.mercy=(s.mercy||0)+1;return"hmm... go on.";}},
-          {name:'Empathize',effect:s=>{s.mercy=(s.mercy||0)+1;return"finally, someone who gets it.";}},
-          {name:'Ignore',effect:s=>{s.mercy=(s.mercy||0)+1;return"excuse me?!" ;}},
-          {name:'Smile',effect:s=>{s.mercy=(s.mercy||0)+1;return"…whatever.";}}],
-    attacks:()=>[ patManagerCall(3.2,4,'#ffe3b0',230), patHoming(3.0,4,'#ffd8a0',235), patRing(3.2,4,'#ffe3b0',230,10) ] },
-  { key:'sigma', name:'Sigma Skeleton', hpMax:400, draw:drawSigma,
-    intro:["cold logic.","hot results."], lines:["compute","optimize","reduce noise","precision","done"], mercyNeed:4,
-    acts:[{name:'Respect',effect:s=>{s.mercy=(s.mercy||0)+1;return"acknowledged.";}},
-          {name:'Debate',effect:s=>{s.mercy=(s.mercy||0)+1;return"valid point.";}},
-          {name:'Wink',effect:s=>{s.mercy=(s.mercy||0)+1;return"unexpected.";}},
-          {name:'Exit',effect:s=>{s.mercy=(s.mercy||0)+1;return"permission granted... later.";}}],
-    attacks:()=>[ patHomingLaser(3.2,5,'#e0e0ff',240), patRing(3.2,4,'#e0e0ff',235,12), patSpiralAim(3.4,4,'#d0d4ff',225,4) ] },
-  { key:'omega', name:'Omega Meme King', hpMax:520, draw:drawOmega,
-    intro:["you reached the end.","prove your rhythm."], lines:["focus","commit","hold","flow","now"], mercyNeed:4,
-    acts:[{name:'Focus',effect:s=>{s.mercy=(s.mercy||0)+1;return"the room steadies.";}},
-          {name:'Resolve',effect:s=>{s.mercy=(s.mercy||0)+1;return"your core firms.";}},
-          {name:'Breathe',effect:s=>{s.mercy=(s.mercy||0)+1;return"breath syncs.";}},
-          {name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"respect noted.";}}],
-    attacks:()=>[ patOmegaWall(3.2,6,'#fff3b8',260), patHoming(3.0,6,'#ffd166',240), patRing(3.2,5,'#fff3b8',240,14), patSpiralAim(3.4,5,'#ffd166',230,4) ] }
+  { key:'solar', name:'Solar Fang', hpMax:360, draw:drawSolarFang,
+    intro:["The sun bows to no one.","Step into the flare, "+(username||'traveler')+"."],
+    lines:["Burn bright.","Hold your ground.","Not bad.","Again.","Endure."],
+    mercyNeed:3,
+    acts:[
+      {name:'Bow', effect:s=>{s.mercy=(s.mercy||0)+1; return "Respect accepted.";} },
+      {name:'Compliment', effect:s=>{s.mercy=(s.mercy||0)+1; return "Your courage glows.";} },
+      {name:'Focus', effect:s=>{s.mercy=(s.mercy||0)+1; return "Steady breath. Steady heart.";} },
+      {name:'Taunt', effect:s=>{return "Heat rises. Choice noted.";} }
+    ],
+    attacks:()=>[
+      phase(3.0, patCone(3.0,3,'#fff3b8',220,6,Math.PI/2.4)),
+      phase(3.2, patHoming(3.2,4,'#ffd7a0',235)),
+      phase(3.2, patSpiral(3.2,4,'#ffd166',220,3))
+    ]
+  },
+  { key:'ember', name:'Ember Seraph', hpMax:340, draw:drawEmberSeraph,
+    intro:["Ash remembers flame.","Let’s dance slowly."],
+    lines:["Inhale.","Soft steps.","Patience.","Gentle heat.","You learn."],
+    mercyNeed:2,
+    acts:[
+      {name:'Listen', effect:s=>{s.mercy=(s.mercy||0)+1; return "Silence shared.";} },
+      {name:'Apologize', effect:s=>{s.mercy=(s.mercy||0)+1; return "Forgiven.";} },
+      {name:'Hum', effect:s=>{s.mercy=(s.mercy||0)+1; return "You’re on pitch.";} },
+      {name:'Smile', effect:s=>{s.mercy=(s.mercy||0)+1; return "Warmth spreads.";} }
+    ],
+    attacks:()=>[
+      phase(3.0, patRing(3.0,3,'#ffb7a7',220,10)),
+      phase(3.2, patHoming(3.2,4,'#ffa277',230)),
+      phase(3.2, patCone(3.2,3,'#ffd3a0',215,5,Math.PI/3))
+    ]
+  },
+  { key:'abyss', name:'Abyss Jester', hpMax:360, draw:drawAbyssJester,
+    intro:["Smile through the dark.","Ready to play?"],
+    lines:["Ping.","Missed it.","Look closer.","Tricksy.","Almost."],
+    mercyNeed:3,
+    acts:[
+      {name:'Wave', effect:s=>{s.mercy=(s.mercy||0)+1; return "Wave returned.";} },
+      {name:'Laugh', effect:s=>{s.mercy=(s.mercy||0)+1; return "Heh.";} },
+      {name:'Compliment', effect:s=>{s.mercy=(s.mercy||0)+1; return "Flattery accepted.";} },
+      {name:'Ignore', effect:s=>{return "Bold.";} }
+    ],
+    attacks:()=>[
+      phase(3.0, patRing(3.0,4,'#b0a0ff',230,8)),
+      phase(3.2, patHoming(3.2,4,'#a89bff',235)),
+      phase(3.2, patCone(3.2,4,'#c8c0ff',225,6,Math.PI/2.5))
+    ]
+  }
 ];
 
-/* Admin-only Skibidi Demon */
-const ADMIN_BOSSES=[
-  { key:'skibidi', name:'67 Skibidi Demon (Admin)', hpMax:440, draw:drawSkibidi, adminOnly:true,
-    intro:["the feed distorts.","the lens turns."], lines:["faster.","louder.","wrong note.","keep up.","again."], mercyNeed:4,
-    acts:[{name:'Mute Feed',effect:s=>{s.mercy=(s.mercy||0)+1;return"signal dampened.";}},
-          {name:'Pose',effect:s=>{s.mercy=(s.mercy||0)+1;return"it approves of the framing.";}},
-          {name:'Wave',effect:s=>{s.mercy=(s.mercy||0)+1;return"acknowledged.";}},
-          {name:'Boo',effect:s=>{return"distortion spikes.";}}],
-    attacks:()=>[ patGlitchSpiral(3.2,5,'#ff7a7a',225), patHotRing(3.0,5,'#ff3b3b',240), patHoming(3.0,5,'#ffa0a0',235) ] }
-];
-
-/* Build admin list */
+/* ===== Admin list build ===== */
 function buildAdminBossList(){
   adBoss.innerHTML='';
-  BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value='main:'+i; o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o);});
-  ADMIN_BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value='admin:'+i; o.textContent=`[Admin] ${b.name}`; adBoss.appendChild(o);});
+  BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value=String(i); o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o);});
 }
 
-/* Flow */
-function setBossFromObj(obj){
-  BOSS={ key:obj.key,name:obj.name,hpMax:obj.hpMax,hp:obj.hpMax,draw:obj.draw,
-    intro:[...obj.intro],lines:[...obj.lines],mercyNeed:obj.mercyNeed,mercy:0,
-    acts:obj.acts.map(a=>({name:a.name,effect:a.effect})), attacks:obj.attacks };
-  attackSeq=BOSS.attacks(); attackIx=0; bossBar(); saveProgress();
+/* ===== Flow ===== */
+function setBoss(ix){
+  bossIndex=Math.max(0,Math.min(BOSSES.length-1, parseInt(ix,10)||0));
+  const base=BOSSES[bossIndex];
+  BOSS={
+    key:base.key, name:base.name, hpMax:base.hpMax, hp:base.hpMax,
+    draw:base.draw, intro:[...base.intro], lines:[...base.lines],
+    mercyNeed:base.mercyNeed, mercy:0,
+    acts:base.acts.map(a=>({name:a.name, effect:a.effect})),
+    attacks:base.attacks
+  };
+  attackIx=0; attackSeq=BOSS.attacks(); bossBar(); saveProgress();
+  // update preview
+  drawPreview();
 }
-function setBoss(ix){ bossIndex=Math.max(0,Math.min(BOSSES.length-1, parseInt(ix,10)||0)); setBossFromObj(BOSSES[bossIndex]); }
-function initBoss(sel){
-  if(typeof sel==='string' && sel.startsWith('admin:')){ const idx=parseInt(sel.split(':')[1],10)||0; setBossFromObj(ADMIN_BOSSES[idx]); }
-  else setBoss(typeof sel==='number'?sel:bossIndex);
-  HEART.hp=HEART.hpMax=Math.max(1,SAVE.hp||50); tempBuff.atk=0; updateHP(); HEART.i=0; centerHeart();
+function initBoss(ix){
+  setBoss(ix);
+  HEART.hp=HEART.hpMax=Math.max(1, SAVE.hp||50);
+  updateHP(); HEART.i=0; centerHeart();
   turn=TURN.PLAYER; mode='main'; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
   say((BOSS.intro||[]).join('\n'));
 }
-
-/* Movement (enemy or shoot only) */
-function processMovement(dt){
-  if(!((turn===TURN.ENEMY||turn===TURN.SHOOT) && mode==='main')) return;
-  let dx=0,dy=0; if(key('ArrowLeft')||key('a'))dx-=1; if(key('ArrowRight')||key('d'))dx+=1; if(key('ArrowUp')||key('w'))dy-=1; if(key('ArrowDown')||key('s'))dy+=1;
-  const L=Math.hypot(dx,dy)||1;
-  HEART.x=Math.max(ARENA.x+HEART.r,Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
-  HEART.y=Math.max(ARENA.y+HEART.r,Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
-  HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
+function startAttack(){
+  bullets.length=0; showArena=true; boxEl.style.display='block';
+  attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter&&attack.enter();
 }
-
-/* Bullets/collisions */
-function updateBullets(dt){
-  for(let i=0;i<bullets.length;i++){const b=bullets[i]; b.t=(b.t||0)+dt; b.x+=b.vx*dt; b.y+=b.vy*dt;}
-  bullets=bullets.filter(b=>isFinite(b.x)&&isFinite(b.y)&&b.x>ARENA.x-220&&b.x<ARENA.x+ARENA.w+220&&b.y>ARENA.y-220&&b.y<ARENA.y+ARENA.h+240);
+function finishAttack(){
+  showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
+  turn=TURN.PLAYER; mode='main';
+  say(BOSS.lines[(Math.floor(time*3))%(BOSS.lines.length||1)]||'...');
+  attack=null;
 }
-function collide(){
-  if(HEART.i>0 || turn===TURN.SHOOT) return;
-  for(const b of bullets){
-    const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-    if(dx*dx+dy*dy<=rr*rr){
-      const dmg=Math.max(1,Math.floor(b.dmg||3));
-      HEART.hp=Math.max(0,HEART.hp-dmg); updateHP(); HEART.i=0.85; break;
-    }
-  }
-}
-
-/* Attack lifecycle */
-function startAttack(){ bullets.length=0; showArena=true; boxEl.style.display='block'; attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; if(attack&&attack.enter) attack.enter(); }
-function finishAttack(){ showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden'); turn=TURN.PLAYER; mode='main'; say(BOSS.lines[(Math.floor(time*3))%(BOSS.lines.length||1)]||'...'); attack=null; }
-
-/* Combat */
-function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
-function playerFight(){ if(turn!==TURN.PLAYER||mode!=='main') return; const dmg=24+(tempBuff.atk||0); routeState.fight++; saveProgress(); say(`${username} strikes for ${dmg}.`); bossHit(dmg); endPlayerTurn(); }
-
-/* Yellow-style shoot */
-let shootT=0;
-function openShoot(){ if(turn!==TURN.PLAYER||mode!=='main') return; // small arena phase
-  turn=TURN.SHOOT; showArena=true; boxEl.style.display='block'; uiBar.classList.add('hidden'); say('Hold to move. Press Z to shoot.'); playerShots.length=0; shootT=0;
-}
-function firePlayerShot(){
-  // spawn a small shot toward boss center
-  const dx=480-HEART.x, dy=240-HEART.y, L=Math.hypot(dx,dy)||1;
-  playerShots.push({x:HEART.x,y:HEART.y,vx:(dx/L)*480,vy:(dy/L)*480,r:2,col:'#ffd166',dmg:3+Math.floor((tempBuff.atk||0)/2)});
-}
-function updateShoot(dt){
-  shootT+=dt;
-  for(const s of playerShots){ s.x+=s.vx*dt; s.y+=s.vy*dt; }
-  // simple hitbox for boss sprite region
-  const bx=440, by=180, bw=80, bh=120;
-  for(const s of playerShots){
-    if(s.x>bx && s.x<bx+bw && s.y>by && s.y<by+bh){
-      // Shoot effect: tiny damage and mercy nudge
-      bossHit(s.dmg);
-      BOSS.mercy=(BOSS.mercy||0)+1;
-      s.x=-9999;
-    }
-  }
-  playerShots=playerShots.filter(s=>s.x>-100 && s.x<1060 && s.y>-100 && s.y<820);
-  if(shootT>=2.5){ // end shoot, proceed to enemy turn
-    turn=TURN.ENEMY; hideSay(); uiCenter.textContent='Enemy turn'; startAttack();
-  }
-}
-
-/* ACT/MERCY/ITEM */
-function openAct(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='act'; const opts=BOSS.acts.map((a,i)=>` ${i+1}. ${a.name}`).join('\n'); say(`ACT on ${BOSS.name}:\n${opts}`,true); }
-function handleActChoice(i){ const a=BOSS.acts[i||0]; if(!a){ say('No such act.'); return; } const line=a.effect(BOSS); routeState.act++; saveProgress(); say(line); if((BOSS.mercy||0)>=BOSS.mercyNeed) say(`${BOSS.name} seems ready to be spared.`); mode='main'; endPlayerTurn(); }
-function openMercy(){ if((BOSS.mercy||0)>=BOSS.mercyNeed){ routeState.mercy++; saveProgress(); victory(true);} else say(`${BOSS.name} isn't ready to be spared.`); }
-function openItem(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='item'; say(`ITEMS:\n${itemsList()}\n\nPick with 1-4`,true); }
-function handleItemChoice(i){ const msg=useItem(i); say(msg); mode='main'; endPlayerTurn(); }
-
-/* Turns */
-function endPlayerTurn(){ if(turn!==TURN.PLAYER) return; turn=TURN.TRANS; setTimeout(()=>{ if(turn!==TURN.TRANS) return; turn=TURN.ENEMY; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideSay(); startAttack(); },140); }
 function defeat(){ if(turn===TURN.DEFEAT) return; turn=TURN.DEFEAT; say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
 function victory(spared=false){
   if(turn===TURN.VICTORY) return; turn=TURN.VICTORY;
-  const r=routeLean(); const rw=rewardForRoute(spared?'pacifist':r); giveItem(rw);
-  say(`${spared?'You spared':'You defeated'} ${BOSS.name}. (${r.toUpperCase()} leaning)\nGained: ${rw.name}`);
-  setTimeout(()=>{ const next=bossIndex+1; if(next<BOSSES.length) initBoss(next); else { say(r==='pacifist'?'Ending: Peace blooms.':'Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1500);} },1000);
+  say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
+  setTimeout(()=>{ if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else { say('Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1500);} },1000);
 }
 
-/* Admin */
-function openAdmin(){ admin.style.display='flex'; buildAdminBossList(); adBoss.value='main:'+bossIndex; adUser.value=username; adHP.value=String(HEART.hpMax); adDiff.value=Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF)||'Normal'; }
-function closeAdmin(){ admin.style.display='none'; saveProgress(); }
-adUserSave.onclick=()=>{ username=(adUser.value||'Traveler').slice(0,16); nameLabel.textContent=username; saveProgress(); };
-adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updateHP(); };
-adSkip.onclick=()=>{ closeAdmin(); if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else initBoss(0); };
-adReset.onclick=()=>{ localStorage.removeItem(SAVE_KEY); SAVE={}; inventory=[{id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2}]; username='Traveler'; nameLabel.textContent=username; closeAdmin(); initBoss(0); };
-adClose.onclick=()=> closeAdmin();
-adBoss.onchange=()=>{ const v=adBoss.value; closeAdmin(); if(v.startsWith('admin:')) initBoss(v); else initBoss(parseInt(v.split(':')[1],10)||0); };
-adHP.onchange=()=>{ let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=v; HEART.hp=v; updateHP(); saveProgress(); };
-adDiff.onchange=()=>{ DIFF=DIFFS[adDiff.value]||DIFFS.Normal; saveProgress(); };
-adTest1.onclick=()=>{ if(turn!==TURN.ENEMY){say('Previewing pattern 1'); showArena=true; boxEl.style.display='block'; bullets.length=0; const p=BOSS.attacks()[0]; p.enter&&p.enter(); attack=p; turn=TURN.ENEMY; uiBar.classList.add('hidden'); } };
-adTest2.onclick=()=>{ if(turn!==TURN.ENEMY){say('Previewing pattern 2'); showArena=true; boxEl.style.display='block'; bullets.length=0; const p=BOSS.attacks()[1]||BOSS.attacks()[0]; p.enter&&p.enter(); attack=p; turn=TURN.ENEMY; uiBar.classList.add('hidden'); } };
-adTest3.onclick=()=>{ if(turn!==TURN.ENEMY){say('Previewing pattern 3'); showArena=true; boxEl.style.display='block'; bullets.length=0; const p=BOSS.attacks()[2]||BOSS.attacks()[0]; p.enter&&p.enter(); attack=p; turn=TURN.ENEMY; uiBar.classList.add('hidden'); } };
+/* ===== Player actions ===== */
+function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp - dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
 
-/* UI clicks */
-uiMenu.addEventListener('click',e=>{
-  const btn=e.target.closest('.uiBtn'); if(!btn) return;
-  const act=btn.dataset.act;
-  if(turn===TURN.PLAYER && mode==='main'){
-    if(act==='FIGHT') playerFight();
-    else if(act==='ACT') openAct();
-    else if(act==='ITEM') openItem();
-    else if(act==='MERCY') openMercy();
-    else if(act==='SHOOT') openShoot();
-  } else if(act==='MERCY') openMercy();
-});
+function playerFight(){ if(turn!==TURN.PLAYER||mode!=='main') return; const dmg=24; routeState.fight++; saveProgress(); say(`${username} strikes for ${dmg}.`); bossHit(dmg); endPlayerTurn(); }
 
-/* Keybind shortcuts */
-addEventListener('keydown',e=>{
+function openAct(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='act'; const opts=BOSS.acts.map((a,i)=>` ${i+1}. ${a.name}`).join('\n'); say(`ACT on ${BOSS.name}:\n${opts}`,true); }
+function handleActChoice(i){
+  const a=BOSS.acts[i||0]; if(!a){ say('No such act.'); return; }
+  const line=a.effect(BOSS); routeState.act++; saveProgress(); say(line);
+  if((BOSS.mercy||0)>=BOSS.mercyNeed) say(`${BOSS.name} seems ready to be spared.`);
+  mode='main'; endPlayerTurn();
+}
+
+function openMercy(){ if((BOSS.mercy||0)>=BOSS.mercyNeed){ routeState.mercy++; saveProgress(); victory(true);} else say(`${BOSS.name} isn't ready to be spared.`); }
+
+function openItem(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='item'; say(`ITEMS:\n${itemsList()}\n\nPick with 1-4`,true); }
+function handleItemChoice(i){ const msg=useItem(i); say(msg); mode='main'; endPlayerTurn(); }
+
+function endPlayerTurn(){
   if(turn!==TURN.PLAYER) return;
-  if(mode==='main'){
-    if(e.key==='z'||e.key==='Z'||e.key==='Enter') playerFight();
-    if(e.key==='a'||e.key==='A') openAct();
-    if(e.key==='i'||e.key==='I') openItem();
-    if(e.key==='m'||e.key==='M') openMercy();
-    if(e.key==='s'||e.key==='S') openShoot();
-  }
-});
+  turn=TURN.TRANS;
+  setTimeout(()=>{ if(turn!==TURN.TRANS) return;
+    turn=TURN.ENEMY; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideSay(); startAttack();
+  },140);
+}
 
-/* Loop */
+/* ===== Loop ===== */
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.033, Math.max(0,(now-last)/1000)); last=now;
@@ -593,44 +465,131 @@ function loop(now){
 }
 requestAnimationFrame(loop);
 
-/* Update/Render */
+/* ===== Update ===== */
 function update(dt){
-  time+=dt; HEART.i=Math.max(0,HEART.i-dt);
-  if(turn===TURN.SHOOT){ processMovement(dt); updateBullets(dt); updateShoot(dt); return; }
+  time+=dt; HEART.i=Math.max(0, HEART.i - dt);
+
   if(turn===TURN.ENEMY){
-    processMovement(dt);
-    if(attack&&attack.update) attack.update(dt);
-    updateBullets(dt);
-    collide();
-    if(attack&&attack.done&&attack.done()) finishAttack();
+    // movement (enemy turn only)
+    let dx=0,dy=0; if(key('ArrowLeft')||key('a'))dx-=1; if(key('ArrowRight')||key('d'))dx+=1; if(key('ArrowUp')||key('w'))dy-=1; if(key('ArrowDown')||key('s'))dy+=1;
+    const L=Math.hypot(dx,dy)||1;
+    HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
+    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
+    HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
+
+    // attack update
+    attack && attack.update && attack.update(dt);
+
+    // bullets update
+    for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
+    bullets=bullets.filter(b=>isFinite(b.x)&&isFinite(b.y)&&b.x>ARENA.x-200&&b.x<ARENA.x+ARENA.w+200&&b.y>ARENA.y-200&&b.y<ARENA.y+ARENA.h+220);
+
+    // collisions
+    if(HEART.i<=0){
+      for(const b of bullets){
+        const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
+        if(dx*dx+dy*dy<=rr*rr){ const dmg=Math.max(1,Math.floor(b.dmg||3)); HEART.hp=Math.max(0,HEART.hp-dmg); updateHP(); HEART.i=0.85; break; }
+      }
+    }
+
+    // phase end
+    if(attack && attack.done && attack.done()) finishAttack();
     if(HEART.hp<=0) defeat();
   }
-  if(turn!==TURN.VICTORY && turn!==TURN.DEFEAT && BOSS && BOSS.hp<=0) victory(false);
+
+  // victory check
+  if(BOSS && BOSS.hp<=0 && turn!=='victory'){ victory(false); }
+
+  // popups
   if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
 }
+
+/* ===== Render ===== */
 function render(dt){
+  // background
   ctx.fillStyle='#08070a'; ctx.fillRect(0,0,960,720);
   ctx.fillStyle='#141018'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
+
+  // boss
   if(BOSS && typeof BOSS.draw==='function') BOSS.draw(ctx,time,0);
 
-  // Arena render
-  if((turn===TURN.ENEMY||turn===TURN.SHOOT) && showArena){
+  // arena
+  if(turn===TURN.ENEMY && showArena){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
-    // enemy bullets
     for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
-    // player shots in SHOOT
-    if(turn===TURN.SHOOT){
-      for(const s of playerShots){ ctx.fillStyle=s.col||'#ffd166'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r||2,0,Math.PI*2); ctx.fill(); }
-    }
-    // heart
-    ctx.save(); if(HEART.i>0 && turn!==TURN.SHOOT) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
-    drawHeart(ctx,HEART.x-6,HEART.y-6, turn===TURN.SHOOT?'#ffdf66':'#ffd166',0.8);
+    ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
+    drawHeart(ctx,HEART.x-6,HEART.y-6,'#ffd166',0.8);
     ctx.restore();
   }
+
+  // damage values
   if(damagePopup){ const a=Math.max(0,1-damagePopup.t/0.9); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace'; ctx.fillText(damagePopup.text,damagePopup.x,damagePopup.y-damagePopup.t*60); ctx.restore(); }
 }
 
-/* Start */
+/* ===== Admin ===== */
+function drawPreview(){
+  prevCtx.fillStyle='#0b0b0b'; prevCtx.fillRect(0,0,140,140);
+  if(BOSS && typeof BOSS.draw==='function'){
+    // draw in mini-space
+    prevCtx.save();
+    prevCtx.translate(-340,-100);
+    BOSS.draw(prevCtx, time, 0);
+    prevCtx.restore();
+  }
+}
+function openAdmin(){
+  admin.style.display='flex';
+  buildAdminBossList();
+  adBoss.value=String(bossIndex);
+  adUser.value=username;
+  adHP.value=String(HEART.hpMax);
+  adDiff.value=Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF)||'Normal';
+  drawPreview();
+}
+function closeAdmin(){ admin.style.display='none'; SAVE.inventory=inventory; writeSave(SAVE); }
+adUserSave.onclick=()=>{ username=(adUser.value||'Traveler').slice(0,16); nameLabel.textContent=username; SAVE.username=username; writeSave(SAVE); };
+adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updateHP(); };
+adSkip.onclick=()=>{ closeAdmin(); if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else initBoss(0); };
+adReset.onclick=()=>{ localStorage.removeItem(SAVE_KEY); SAVE={}; inventory=[{id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2}]; username='Traveler'; nameLabel.textContent=username; closeAdmin(); initBoss(0); };
+adClose.onclick=()=> closeAdmin();
+adBoss.onchange=()=>{ const v=parseInt(adBoss.value,10)||0; setBoss(v); drawPreview(); };
+adHP.onchange=()=>{ let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=v; HEART.hp=v; SAVE.hp=v; updateHP(); writeSave(SAVE); };
+adDiff.onchange=()=>{ DIFF=DIFFS[adDiff.value]||DIFFS.Normal; SAVE.difficulty=adDiff.value; writeSave(SAVE); };
+adTest1.onclick=()=>previewPattern(0);
+adTest2.onclick=()=>previewPattern(1);
+adTest3.onclick=()=>previewPattern(2);
+
+function previewPattern(ix){
+  // safe preview (doesn't alter progress)
+  if(turn===TURN.ENEMY) return;
+  const seq=BOSS.attacks(); const p=seq[ix]||seq[0];
+  bullets.length=0; showArena=true; boxEl.style.display='block'; uiBar.classList.add('hidden');
+  p.enter&&p.enter(); attack=p; turn=TURN.ENEMY;
+}
+
+/* ===== UI clicks ===== */
+uiMenu.addEventListener('click',e=>{
+  const btn=e.target.closest('.uiBtn'); if(!btn) return;
+  const act=btn.dataset.act;
+  if(turn!==TURN.PLAYER||mode!=='main'){ if(act==='MERCY') openMercy(); return; }
+  if(act==='FIGHT') playerFight();
+  else if(act==='ACT') openAct();
+  else if(act==='ITEM') openItem();
+  else if(act==='MERCY') openMercy();
+});
+
+/* ===== Keybind shortcuts ===== */
+addEventListener('keydown',e=>{
+  if(turn!==TURN.PLAYER) return;
+  if(mode==='main'){
+    if(e.key==='z'||e.key==='Z'||e.key==='Enter') playerFight();
+    if(e.key==='a'||e.key==='A') openAct();
+    if(e.key==='i'||e.key==='I') openItem();
+    if(e.key==='m'||e.key==='M') openMercy();
+  }
+});
+
+/* ===== Start ===== */
 initBoss(bossIndex);
 updateHP();
 </script>
