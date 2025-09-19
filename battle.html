@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
-<title>Undertale Gold — Solar Fang + Upgraded Admin</title>
+<title>Undertale Gold — Expanded + Admin Secret</title>
 <style>
 :root{
   --fg:#ffd166; --hp:#ff6b6b; --emerald:#7affb7;
@@ -52,17 +52,15 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 
 /* Admin panel */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:8}
-#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:780px;color:#ffd166;max-width:95%}
+#adminPanel{background:#0e0e0e;border:2px solid #fff;padding:14px 16px;width:820px;color:#ffd166;max-width:95%}
 .adRow{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
 .adCol{display:flex;flex-direction:column;gap:6px;flex:1}
 .adBtn{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
 .adInput,.adSelect{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
-.adInput{width:220px}
-.adSelect{width:340px}
+.adInput{width:230px}
+.adSelect{width:360px}
 .adHelp{color:#bbb;font-size:12px}
-#preview{width:140px;height:140px;border:1px solid #333;background:#0b0b0b;display:inline-block}
-
-/* Responsive fix (scale) */
+#preview{width:160px;height:160px;border:1px solid #333;background:#0b0b0b;display:inline-block}
 </style>
 </head>
 <body>
@@ -79,7 +77,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="pHPVal">50/50</div>
   </div>
 
-  <!-- Main canvas + arena -->
+  <!-- Canvas + arena -->
   <canvas id="cv" width="960" height="720"></canvas>
   <div id="box"></div>
 
@@ -89,7 +87,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div id="submenuHint" style="display:none">Choose: 1-4 • Back: X/Backspace • Confirm: Z/Enter</div>
   </div></div>
 
-  <!-- Actions -->
+  <!-- Action bar -->
   <div id="uiBar">
     <div class="uiMenu" id="uiMenu">
       <div class="uiBtn" data-act="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
@@ -123,7 +121,7 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
             <select id="adDiff" class="adSelect">
               <option>Normal</option><option>Hard</option><option>Insane</option>
             </select>
-            <span class="adHelp">Affects bullet speed, rate, damage, and aim lead.</span>
+            <span class="adHelp">Affects speed, density, damage, and homing lead.</span>
           </div>
           <div class="adRow">
             <label>Boss</label>
@@ -139,10 +137,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
             <button id="adReset" class="adBtn">Reset progress</button>
             <button id="adClose" class="adBtn">Close</button>
           </div>
-          <div class="adHelp">Open admin by typing “67” three times anywhere. Live preview updates with boss select.</div>
+          <div class="adHelp">Open by typing “67” three times anywhere. Admin-only bosses are marked and excluded from progression.</div>
         </div>
         <div>
-          <canvas id="preview" width="140" height="140"></canvas>
+          <canvas id="preview" width="160" height="160"></canvas>
         </div>
       </div>
     </div>
@@ -152,14 +150,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 <script>
 "use strict";
 
-/* ===== Responsive scaling (robust) ===== */
+/* ===== Responsive scaling ===== */
 const stage=document.getElementById('stage');
-function resizeStage(){
-  const s=Math.min(window.innerWidth/960, window.innerHeight/720);
-  stage.style.transform=`translate(-50%, -50%) scale(${Math.max(0.2,s)})`;
-}
-addEventListener('resize',resizeStage,{passive:true});
-resizeStage();
+function resizeStage(){const s=Math.min(innerWidth/960,innerHeight/720);stage.style.transform=`translate(-50%, -50%) scale(${Math.max(0.2,s)})`;}
+addEventListener('resize',resizeStage,{passive:true}); resizeStage();
 
 /* ===== Elements ===== */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false});
@@ -176,19 +170,19 @@ const adDiff=document.getElementById('adDiff'), adTest1=document.getElementById(
 const prevCanvas=document.getElementById('preview'), prevCtx=prevCanvas.getContext('2d');
 
 /* ===== Save ===== */
-const SAVE_KEY='utg_solar_admin_v1';
+const SAVE_KEY='utg_expanded_admin_secret_v1';
 function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{};}catch{return {} }}
 function writeSave(d){try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch{}}
 let SAVE=loadSave();
 
-/* ===== Arena/player ===== */
+/* ===== Arena / player ===== */
 const ARENA={x:240,y:420,w:480,h:180};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:Math.max(1,SAVE.hp||50),hpMax:Math.max(1,SAVE.hp||50),_px:0,_py:0,_pdt:1/60};
 let username=(SAVE.username||'Traveler').slice(0,16); nameLabel.textContent=username;
 
 /* ===== Difficulty ===== */
-const DIFFS={ Normal:{spd:1.0,rate:1.0,dmg:1.0,lead:0.06}, Hard:{spd:1.22,rate:1.2,dmg:1.2,lead:0.08}, Insane:{spd:1.36,rate:1.35,dmg:1.35,lead:0.1} };
-let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal; adDiff.value=Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF)||'Normal';
+const DIFFS={ Normal:{spd:1.00,rate:1.00,dmg:1.00,lead:0.06}, Hard:{spd:1.22,rate:1.18,dmg:1.20,lead:0.08}, Insane:{spd:1.38,rate:1.34,dmg:1.35,lead:0.10} };
+let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal;
 
 /* ===== State ===== */
 const TURN={PLAYER:'player',ENEMY:'enemy',VICTORY:'victory',DEFEAT:'defeat',TRANS:'transition'};
@@ -198,7 +192,7 @@ let mode='main';
 let bossIndex=(typeof SAVE.bossIndex==='number')?SAVE.bossIndex:0;
 let BOSS=null;
 
-/* ===== Route state ===== */
+/* ===== Routes (light) ===== */
 const routeState={fight:SAVE.fight||0, act:SAVE.act||0, mercy:SAVE.mercy||0};
 function routeLean(){ if(routeState.fight>=routeState.act+routeState.mercy+3) return 'genocide'; if(routeState.mercy+routeState.act>=routeState.fight+3) return 'pacifist'; return 'neutral'; }
 function saveProgress(){ writeSave({bossIndex, hp:HEART.hpMax, username, fight:routeState.fight, act:routeState.act, mercy:routeState.mercy, difficulty:adDiff.value}); }
@@ -224,19 +218,14 @@ function toast(msg){toastEl.textContent=msg; toastEl.classList.add('show'); setT
 const down=new Set();
 addEventListener('keydown',e=>{
   const isMove=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key);
-  if(!(turn===TURN.ENEMY && mode==='main') && isMove) return;
+  if(!(turn===TURN.ENEMY && mode==='main') && isMove) return; // movement lock to enemy turn
   down.add(e.key);
 
-  // Back out of submenu
   if((e.key==='x'||e.key==='X'||e.key==='Backspace') && (mode==='act'||mode==='item')){ mode='main'; say('Your turn.'); }
-
-  // Submenu choose
-  if(mode==='act' || mode==='item'){
+  if(mode==='act'||mode==='item'){
     if('1234'.includes(e.key)) handleSubmenuSelect(parseInt(e.key,10)-1);
     if(e.key==='Enter'||e.key==='z'||e.key==='Z') handleSubmenuSelect(0);
   }
-
-  // Open admin via 67×3
   handleSecret67(e.key);
 });
 addEventListener('keyup',e=>down.delete(e.key));
@@ -255,52 +244,25 @@ function handleSecret67(k){
   }else{ secretBuf=''; pairCount=0; }
 }
 
-/* ===== Drawing helpers / sprites ===== */
+/* ===== Drawing helpers ===== */
 function bob(v=3){return Math.sin(time*2.4)*v;}
 function glow(ctx,x,y,r,fill,a=0.22){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
 
-/* Solar Fang sprite (animated gold aura + crown ring) */
-function drawSolarFang(ctx,t){
-  const x=480, y=240 + bob(2);
-  glow(ctx,x,y,66,'#fff3b8',0.30);
-  // face core
-  ctx.save();
-  ctx.fillStyle='#ffdf7a'; ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
-  // eyes blink
-  const blink = Math.sin(t*4)>0.75;
-  ctx.fillStyle='#2b200f';
-  if(!blink){ ctx.fillRect(x-8,y-2,5,5); ctx.fillRect(x+3,y-2,5,5); }
-  else { ctx.fillRect(x-8,y,5,1); ctx.fillRect(x+3,y,5,1); }
-  // crown ring
-  ctx.strokeStyle='#ffd166'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.arc(x,y-26,16+Math.sin(t*5),0,Math.PI*2); ctx.stroke();
-  ctx.restore();
-}
-/* Ember Seraph (second boss) */
-function drawEmberSeraph(ctx,t){
-  const x=480,y=240+bob(2.6);
-  glow(ctx,x,y,62,'#ffb7a7',0.22);
-  ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.ellipse(x,y,18,24,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#ffd3a0'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y+18,26,Math.PI,0); ctx.stroke();
-}
-/* Abyss Jester (third boss) */
-function drawAbyssJester(ctx,t){
-  const x=480,y=242+bob(2.2);
-  glow(ctx,x,y,62,'#b0a0ff',0.22);
-  ctx.fillStyle='#a89bff'; ctx.fillRect(x-18,y-12,36,28);
-  ctx.fillStyle='#222'; ctx.fillRect(x-8,y-2,5,4); ctx.fillRect(x+3,y-2,5,4);
-}
+/* ===== Sprites (minimal but animated) ===== */
+function drawSolarFang(ctx,t){const x=480,y=240+bob(2);glow(ctx,x,y,66,'#fff3b8',0.30);ctx.fillStyle='#ffdf7a';ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y-26,16+Math.sin(t*5),0,Math.PI*2);ctx.stroke();ctx.fillStyle='#2b200f';const bl=Math.sin(t*4)>0.75;ctx.fillRect(x-8,y+(bl?0: -2),5,bl?1:5);ctx.fillRect(x+3,y+(bl?0: -2),5,bl?1:5);}
+function drawEmberSeraph(ctx,t){const x=480,y=240+bob(2.6);glow(ctx,x,y,62,'#ffb7a7',0.22);ctx.fillStyle='#ffa277';ctx.beginPath();ctx.ellipse(x,y,18,24,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd3a0';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y+18,26,Math.PI,0);ctx.stroke();}
+function drawAbyssJester(ctx,t){const x=480,y=242+bob(2.2);glow(ctx,x,y,62,'#b0a0ff',0.22);ctx.fillStyle='#a89bff';ctx.fillRect(x-18,y-12,36,28);ctx.fillStyle='#222';ctx.fillRect(x-8,y-2,5,4);ctx.fillRect(x+3,y-2,5,4);}
+function drawGoldenMantis(ctx,t){const x=480,y=238+bob(2.2);glow(ctx,x,y,64,'#ffe88a',0.26);ctx.fillStyle='#ffd166';ctx.beginPath();ctx.ellipse(x,y,20,16,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffefaa';ctx.fillRect(x-28,y-2,16,4);ctx.fillRect(x+12,y-2,16,4);}
+function drawPixelPhantom(ctx,t){const x=480,y=240+bob(2);glow(ctx,x,y,60,'#9fe0ff',0.22);ctx.fillStyle='#a8ecff';ctx.fillRect(x-18,y-12,36,26);ctx.fillStyle='#111';ctx.fillRect(x-8,y-2,6,6);ctx.fillRect(x+2,y-2,6,6);}
+function drawFrostWarden(ctx,t){const x=480,y=238+bob(2);glow(ctx,x,y,60,'#bfe7ff',0.22);ctx.fillStyle='#d0f0ff';ctx.beginPath();ctx.ellipse(x,y,18,22,0,0,Math.PI*2);ctx.fill();}
+function drawCrimsonDJ(ctx,t){const x=480,y=242+bob(2.2);glow(ctx,x,y,60,'#ffb0b0',0.22);ctx.fillStyle='#ff9090';ctx.fillRect(x-18,y-10,36,24);ctx.fillStyle='#111';ctx.fillRect(x-10,y+6,8,4);ctx.fillRect(x+2,y+6,8,4);}
+function drawVoidProphet(ctx,t){const x=480,y=236+bob(2.2);glow(ctx,x,y,66,'#d6c8ff',0.25);ctx.fillStyle='#c9b9ff';ctx.beginPath();ctx.ellipse(x,y,20,26,0,0,Math.PI*2);ctx.fill();}
+function drawOblivionHerald(ctx,t){const x=480,y=236+bob(2.4);glow(ctx,x,y,74,'#fff3b8',0.18);glow(ctx,x,y,64,'#201824',0.4);ctx.fillStyle='#0b0a0d';ctx.beginPath();ctx.ellipse(x,y,20,30,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y-28,18+Math.sin(t*6),0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffd166';ctx.fillRect(x-3,y-6,6,6);}
 
-/* Heart */
-function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
-  ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
-  const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
-  ctx.fillStyle=color; const s=3;
-  for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);
-  ctx.restore();
-}
+/* ===== Heart sprite ===== */
+function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const s=3;for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);ctx.restore();}
 
-/* Spawn helpers */
+/* ===== Spawning ===== */
 function spawn(b){b.t=0; bullets.push(b); return b;}
 function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
   const vx0=(HEART.x-(HEART._px||HEART.x))/(HEART._pdt||1/60);
@@ -311,256 +273,189 @@ function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
 }
 function rand(a,b){return Math.random()*(b-a)+a;}
 
-/* Patterns (fast but fair) */
-function patCone(dur=3.0,dmg=3,col='#fff3b8',spd=210,count=5,spread=Math.PI/2.8){
+/* ===== Patterns (core) ===== */
+function patCone(dur=3.0,dmg=3,col='#fff3b8',spd=210,count=6,spread=Math.PI/2.6){
   let t=0,g=0,rate=0.18/DIFF.rate; const cx=ARENA.x+ARENA.w/2,y=ARENA.y+12;
-  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<count;k++){const a=(-spread)+k*(2*spread/(Math.max(1,count-1)));spawn({x:cx,y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}}},done(){return t>=dur;}};
+  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<count;k++){const a=(-spread)+k*(2*spread/(count-1));spawn({x:cx,y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}}},done(){return t>=dur;}};
 }
-function patHoming(dur=3.2,dmg=4,col='#ffd0e8',spd=230){
-  let t=0,g=0,rate=0.5/DIFF.rate;
-  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w),y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4);} },done(){return t>=dur;}};
-}
-function patRing(dur=3.2,dmg=4,col='#fff3b8',spd=230,n=12){
-  let t=0,g=0,rate=.48/DIFF.rate; const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};
-  return{enter(){t=0;g=0;},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2;spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}}},done(){return t>=dur;}};
-}
-function patSpiral(dur=3.6,dmg=4,col='#ffd166',spd=220,arms=3){
-  let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.5; const rateR=(rad/(dur*1.4)), rateA=6.0*DIFF.spd;
-  return{enter(){t=0;},update(dt){t+=dt;for(let i=0;i<arms;i++){const a=a0+t*rateA+i*(Math.PI*2/arms);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,spd,dmg,col,3);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};
-}
+function patHoming(dur=3.2,dmg=4,col='#ffd0e8',spd=230){let t=0,g=0,rate=0.5/DIFF.rate;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w),y=ARENA.y-10;spawnAimed(x,y,spd,dmg,col,4);} },done(){return t>=dur;}};}
+function patRing(dur=3.2,dmg=4,col='#fff3b8',spd=230,n=12){let t=0,g=0,rate=.48/DIFF.rate;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2;spawn({x:c.x,y:c.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*DIFF.spd*spd,r:3,col,dmg});}}},done(){return t>=dur;}};}
+function patSpiral(dur=3.6,dmg=4,col='#ffd166',spd=220,arms=3){let t=0,a0=Math.random()*Math.PI*2,rad=Math.max(ARENA.w,ARENA.h)*0.5;const rateR=(rad/(dur*1.4)),rateA=6.0*DIFF.spd;return{enter(){},update(dt){t+=dt;for(let i=0;i<arms;i++){const a=a0+t*rateA+i*(Math.PI*2/arms);const x=ARENA.x+ARENA.w/2+Math.cos(a)*rad;const y=ARENA.y+ARENA.h/2+Math.sin(a)*rad;spawnAimed(x,y,spd,dmg,col,3);}rad=Math.max(30,rad-rateR*dt);},done(){return t>=dur;}};}
 
-/* Phase wrapper */
+/* ===== Themed Patterns (cool/unique) ===== */
+/* Golden Mantis */
+function patMantisArcs(dur=3.2,dmg=4){let t=0,g=0,rate=.22/DIFF.rate;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+30};return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(const a of [-1.0,-0.6,0.6,1.0]) spawn({x:c.x,y:c.y,vx:Math.cos(a)*240*DIFF.spd,vy:Math.sin(a)*240*DIFF.spd,r:3,col:'#ffe88a',dmg});}},done(){return t>=dur;}};}
+function patMantisDive(dur=3.0,dmg=5){let t=0,g=0,rate=.6/DIFF.rate;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(40,ARENA.w-40), y=ARENA.y-10;spawnAimed(x,y,300,dmg,'#ffd166',4,DIFF.lead+0.02);} },done(){return t>=dur;}};}
+/* Pixel Phantom */
+function patDataShards(dur=3.2,dmg=4){let t=0,g=0,rate=.18/DIFF.rate;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(10,ARENA.h-10);const x=left?ARENA.x-24:ARENA.x+ARENA.w+24;spawn({x,y,vx:(left?1:-1)*250*DIFF.spd,vy:0,r:3,col:'#a8ecff',dmg});}},done(){return t>=dur;}};}
+function patTearSpiral(dur=3.4,dmg=4){return patSpiral(dur,dmg,'#9fe0ff',230,4);}
+/* Frostbite Warden */
+function patIceWall(dur=3.2,dmg=4){let t=0,g=0,rate=.5/DIFF.rate;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<6;i++){const x=ARENA.x+40+i*70;spawn({x,y:ARENA.y-18,vx:0,vy:220*DIFF.spd,r:3,col:'#d0f0ff',dmg});}}},done(){return t>=dur;}};}
+function patIcicleHoming(dur=3.0,dmg=4){return patHoming(dur,dmg,'#bfe7ff',220);}
+/* Crimson DJ */
+function patBassPulse(dur=3.0,dmg=4){return patRing(dur,dmg,'#ff9aaa',240,10);}
+function patRhythmBarrage(dur=3.2,dmg=4){return patCone(dur,dmg,'#ff9090',230,7,Math.PI/2.2);}
+/* Void Prophet */
+function patGravityWell(dur=3.2,dmg=5){let t=0;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){t+=dt;const dx=C.x-HEART.x,dy=C.y-HEART.y;HEART.x+=dx*0.35*dt;HEART.y+=dy*0.35*dt;if(Math.random()<0.14/DIFF.rate){const a=Math.random()*Math.PI*2;spawn({x:C.x,y:C.y,vx:Math.cos(a)*250*DIFF.spd,vy:Math.sin(a)*250*DIFF.spd,r:3,col:'#c9b9ff',dmg});}},done(){return t>=dur;}};}
+/* Oblivion Herald (admin-only, brutal but fair) */
+function patEntropySpiral(dur=3.6,dmg=6){return patSpiral(dur,dmg,'#ffd166',240,5);}
+function patCollapsePulse(dur=3.2,dmg=6){let t=0,g=0,rate=.45/DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<12;k++){const a=k/12*Math.PI*2;const s=260*DIFF.spd;const rev=(Math.random()<0.4)?-1:1;spawn({x:C.x,y:C.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:3,col:'#fff3b8',dmg,rev});}}for(const b of bullets){if(b.rev && (b.t>0.6 && b.t<0.62)){b.vx*=-1;b.vy*=-1;b.rev=false;}}},done(){return t>=dur;}};}
+function patJudgmentChain(dur=3.2,dmg=6){let t=0,g=0,rate=.5/DIFF.rate,hor=true;return{enter(){},update(dt){t+=dt;g+=dt;if(g>=rate){g=0;hor=!hor;const n=5;for(let i=0;i<n;i++){if(hor){const x=ARENA.x+ (i+0.5)*ARENA.w/n;spawn({x,y:ARENA.y-18,vx:0,vy:260*DIFF.spd,r:3,col:'#ffd166',dmg});}else{const y=ARENA.y+ (i+0.5)*ARENA.h/n;spawn({x:ARENA.x-18,y,vx:260*DIFF.spd,vy:0,r:3,col:'#ffd166',dmg});}}}},done(){return t>=dur;}};}
+
+/* ===== Phase wrapper ===== */
 function phase(dur,...parts){let t=0;return{enter(){t=0;parts.forEach(p=>p.enter&&p.enter());},update(dt){t+=dt;parts.forEach(p=>p.update&&p.update(dt));},done(){return t>=dur;}};}
 
-/* Boss roster (new names, unique dialogues) */
+/* ===== Boss roster (progression) ===== */
 const BOSSES=[
   { key:'solar', name:'Solar Fang', hpMax:360, draw:drawSolarFang,
     intro:["The sun bows to no one.","Step into the flare, "+(username||'traveler')+"."],
     lines:["Burn bright.","Hold your ground.","Not bad.","Again.","Endure."],
     mercyNeed:3,
-    acts:[
-      {name:'Bow', effect:s=>{s.mercy=(s.mercy||0)+1; return "Respect accepted.";} },
-      {name:'Compliment', effect:s=>{s.mercy=(s.mercy||0)+1; return "Your courage glows.";} },
-      {name:'Focus', effect:s=>{s.mercy=(s.mercy||0)+1; return "Steady breath. Steady heart.";} },
-      {name:'Taunt', effect:s=>{return "Heat rises. Choice noted.";} }
-    ],
-    attacks:()=>[
-      phase(3.0, patCone(3.0,3,'#fff3b8',220,6,Math.PI/2.4)),
-      phase(3.2, patHoming(3.2,4,'#ffd7a0',235)),
-      phase(3.2, patSpiral(3.2,4,'#ffd166',220,3))
-    ]
-  },
+    acts:[{name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"Respect accepted.";}},{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"Your courage glows.";}},{name:'Focus',effect:s=>{s.mercy=(s.mercy||0)+1;return"Steady breath.";}},{name:'Taunt',effect:s=>{return"Heat rises.";} }],
+    attacks:()=>[ phase(3.0,patCone(3.0,3,'#fff3b8',220,6,Math.PI/2.4)), phase(3.2,patHoming(3.2,4,'#ffd7a0',235)), phase(3.2,patSpiral(3.2,4,'#ffd166',220,3)) ] },
   { key:'ember', name:'Ember Seraph', hpMax:340, draw:drawEmberSeraph,
     intro:["Ash remembers flame.","Let’s dance slowly."],
     lines:["Inhale.","Soft steps.","Patience.","Gentle heat.","You learn."],
     mercyNeed:2,
-    acts:[
-      {name:'Listen', effect:s=>{s.mercy=(s.mercy||0)+1; return "Silence shared.";} },
-      {name:'Apologize', effect:s=>{s.mercy=(s.mercy||0)+1; return "Forgiven.";} },
-      {name:'Hum', effect:s=>{s.mercy=(s.mercy||0)+1; return "You’re on pitch.";} },
-      {name:'Smile', effect:s=>{s.mercy=(s.mercy||0)+1; return "Warmth spreads.";} }
-    ],
-    attacks:()=>[
-      phase(3.0, patRing(3.0,3,'#ffb7a7',220,10)),
-      phase(3.2, patHoming(3.2,4,'#ffa277',230)),
-      phase(3.2, patCone(3.2,3,'#ffd3a0',215,5,Math.PI/3))
-    ]
-  },
+    acts:[{name:'Listen',effect:s=>{s.mercy=(s.mercy||0)+1;return"Silence shared.";}},{name:'Apologize',effect:s=>{s.mercy=(s.mercy||0)+1;return"Forgiven.";}},{name:'Hum',effect:s=>{s.mercy=(s.mercy||0)+1;return"On pitch.";}},{name:'Smile',effect:s=>{s.mercy=(s.mercy||0)+1;return"Warmth spreads.";} }],
+    attacks:()=>[ phase(3.0,patRing(3.0,3,'#ffb7a7',220,10)), phase(3.2,patHoming(3.2,4,'#ffa277',230)), phase(3.2,patCone(3.2,3,'#ffd3a0',215,5,Math.PI/3)) ] },
   { key:'abyss', name:'Abyss Jester', hpMax:360, draw:drawAbyssJester,
     intro:["Smile through the dark.","Ready to play?"],
     lines:["Ping.","Missed it.","Look closer.","Tricksy.","Almost."],
     mercyNeed:3,
-    acts:[
-      {name:'Wave', effect:s=>{s.mercy=(s.mercy||0)+1; return "Wave returned.";} },
-      {name:'Laugh', effect:s=>{s.mercy=(s.mercy||0)+1; return "Heh.";} },
-      {name:'Compliment', effect:s=>{s.mercy=(s.mercy||0)+1; return "Flattery accepted.";} },
-      {name:'Ignore', effect:s=>{return "Bold.";} }
-    ],
-    attacks:()=>[
-      phase(3.0, patRing(3.0,4,'#b0a0ff',230,8)),
-      phase(3.2, patHoming(3.2,4,'#a89bff',235)),
-      phase(3.2, patCone(3.2,4,'#c8c0ff',225,6,Math.PI/2.5))
-    ]
-  }
+    acts:[{name:'Wave',effect:s=>{s.mercy=(s.mercy||0)+1;return"Wave returned.";}},{name:'Laugh',effect:s=>{s.mercy=(s.mercy||0)+1;return"Heh.";}},{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"Flattery accepted.";}},{name:'Ignore',effect:s=>{return"Bold.";} }],
+    attacks:()=>[ phase(3.0,patRing(3.0,4,'#b0a0ff',230,8)), phase(3.2,patHoming(3.2,4,'#a89bff',235)), phase(3.2,patCone(3.2,4,'#c8c0ff',225,6,Math.PI/2.5)) ] },
+  { key:'mantis', name:'Golden Mantis', hpMax:380, draw:drawGoldenMantis,
+    intro:["Stillness. Then strike."],
+    lines:["Watch the arc.","Closer.","Cut the gap.","Blink.","Precise."],
+    mercyNeed:3,
+    acts:[{name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"Gesture noted.";}},{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"Golden discipline.";}},{name:'Calm',effect:s=>{s.mercy=(s.mercy||0)+1;return"Breath lowers.";}},{name:'Dodge',effect:s=>{s.mercy=(s.mercy||0)+1;return"Good step.";} }],
+    attacks:()=>[ phase(3.0,patMantisArcs(3.0,4)), phase(3.2,patRing(3.2,4,'#ffe88a',235,10)), phase(3.0,patMantisDive(3.0,5)) ] },
+  { key:'pixel', name:'Pixel Phantom', hpMax:360, draw:drawPixelPhantom,
+    intro:["gl1tch… r3ad?","rendering fear…"],
+    lines:["tearing…","lag spike","packet lost","nice dodge","reboot soon"],
+    mercyNeed:3,
+    acts:[{name:'Debug',effect:s=>{s.mercy=(s.mercy||0)+1;return"errors reduced.";}},{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"shader praised.";}},{name:'Reboot',effect:s=>{s.mercy=(s.mercy||0)+1;return"temp calm.";}},{name:'Ignore',effect:s=>{return"…"} }],
+    attacks:()=>[ phase(3.0,patDataShards(3.0,4)), phase(3.2,patTearSpiral(3.2,4)), phase(3.2,patHoming(3.2,4,'#a8ecff',240)) ] },
+  { key:'frost', name:'Frostbite Warden', hpMax:380, draw:drawFrostWarden,
+    intro:["Cold clarifies.","Hold steady."],
+    lines:["Breathe fog.","Still water.","Brace.","Do not rush.","Now."],
+    mercyNeed:3,
+    acts:[{name:'Shiver',effect:s=>{s.mercy=(s.mercy||0)+1;return"Accepted.";}},{name:'Respect',effect:s=>{s.mercy=(s.mercy||0)+1;return"Noted.";}},{name:'Warmth',effect:s=>{s.mercy=(s.mercy||0)+1;return"Fingers thaw.";}},{name:'Apologize',effect:s=>{s.mercy=(s.mercy||0)+1;return"Forgiven.";} }],
+    attacks:()=>[ phase(3.0,patIceWall(3.0,4)), phase(3.2,patRing(3.2,4,'#bfe7ff',230,12)), phase(3.0,patIcicleHoming(3.0,4)) ] },
+  { key:'dj', name:'Crimson DJ', hpMax:380, draw:drawCrimsonDJ,
+    intro:["drop the bass.","move your feet."],
+    lines:["bop","beat","sync","step","clean"],
+    mercyNeed:3,
+    acts:[{name:'Dance',effect:s=>{s.mercy=(s.mercy||0)+1;return"on tempo.";}},{name:'Compliment',effect:s=>{s.mercy=(s.mercy||0)+1;return"fresh mix.";}},{name:'Sync',effect:s=>{s.mercy=(s.mercy||0)+1;return"locked in.";}},{name:'Boo',effect:s=>{return"lol.";} }],
+    attacks:()=>[ phase(3.0,patBassPulse(3.0,4)), phase(3.2,patHoming(3.2,4,'#ff9090',235)), phase(3.0,patRhythmBarrage(3.0,4)) ] },
+  { key:'void', name:'Void Prophet', hpMax:400, draw:drawVoidProphet,
+    intro:["gravity listens.","do you?"],
+    lines:["fall inward","hush","orbit","release","center"],
+    mercyNeed:4,
+    acts:[{name:'Listen',effect:s=>{s.mercy=(s.mercy||0)+1;return"heard.";}},{name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"seen.";}},{name:'Meditate',effect:s=>{s.mercy=(s.mercy||0)+1;return"settled.";}},{name:'Resist',effect:s=>{return"counter-force.";} }],
+    attacks:()=>[ phase(3.0,patGravityWell(3.0,5)), phase(3.2,patRing(3.2,5,'#c9b9ff',235,12)), phase(3.2,patHoming(3.2,5,'#c0b0ff',240)) ] }
 ];
 
-/* ===== Admin list build ===== */
+/* ===== Admin-only secret boss ===== */
+const ADMIN_BOSSES=[
+  { key:'oblivion', name:'[Admin] Oblivion Herald', hpMax:520, draw:drawOblivionHerald, adminOnly:true,
+    intro:["entropy remembers you.","endings echo."],
+    lines:["closer","unmake","reverse","again","echo"],
+    mercyNeed:5,
+    acts:[{name:'Bow',effect:s=>{s.mercy=(s.mercy||0)+1;return"acknowledged.";}},{name:'Resist',effect:s=>{s.mercy=(s.mercy||0)+1;return"defiance mapped.";}},{name:'Reflect',effect:s=>{s.mercy=(s.mercy||0)+1;HEART.i=Math.max(HEART.i,1.0);return"brief light returns.";}},{name:'Accept',effect:s=>{s.mercy=(s.mercy||0)+1;return"peace is choice.";} }],
+    attacks:()=>[ phase(3.4,patEntropySpiral(3.4,6)), phase(3.2,patCollapsePulse(3.2,6)), phase(3.2,patJudgmentChain(3.2,6)) ] }
+];
+
+/* ===== Admin list builder ===== */
 function buildAdminBossList(){
   adBoss.innerHTML='';
-  BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value=String(i); o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o);});
+  BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value='main:'+i; o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o);});
+  ADMIN_BOSSES.forEach((b,i)=>{const o=document.createElement('option'); o.value='admin:'+i; o.textContent=b.name; adBoss.appendChild(o);});
 }
 
 /* ===== Flow ===== */
-function setBoss(ix){
-  bossIndex=Math.max(0,Math.min(BOSSES.length-1, parseInt(ix,10)||0));
-  const base=BOSSES[bossIndex];
-  BOSS={
-    key:base.key, name:base.name, hpMax:base.hpMax, hp:base.hpMax,
-    draw:base.draw, intro:[...base.intro], lines:[...base.lines],
-    mercyNeed:base.mercyNeed, mercy:0,
-    acts:base.acts.map(a=>({name:a.name, effect:a.effect})),
-    attacks:base.attacks
-  };
-  attackIx=0; attackSeq=BOSS.attacks(); bossBar(); saveProgress();
-  // update preview
-  drawPreview();
+function setBossFromObj(obj){
+  BOSS={ key:obj.key,name:obj.name,hpMax:obj.hpMax,hp:obj.hpMax,draw:obj.draw,
+    intro:[...obj.intro],lines:[...obj.lines],mercyNeed:obj.mercyNeed,mercy:0,
+    acts:obj.acts.map(a=>({name:a.name,effect:a.effect})), attacks:obj.attacks };
+  attackSeq=BOSS.attacks(); attackIx=0; bossBar(); saveProgress(); drawPreview();
 }
-function initBoss(ix){
-  setBoss(ix);
-  HEART.hp=HEART.hpMax=Math.max(1, SAVE.hp||50);
-  updateHP(); HEART.i=0; centerHeart();
+function setBoss(ix){ bossIndex=Math.max(0,Math.min(BOSSES.length-1, parseInt(ix,10)||0)); setBossFromObj(BOSSES[bossIndex]); }
+function initBoss(sel){
+  if(typeof sel==='string' && sel.startsWith('admin:')){ const idx=parseInt(sel.split(':')[1],10)||0; setBossFromObj(ADMIN_BOSSES[idx]); }
+  else setBoss(typeof sel==='number'?sel:bossIndex);
+  HEART.hp=HEART.hpMax=Math.max(1,SAVE.hp||50); updateHP(); HEART.i=0; centerHeart();
   turn=TURN.PLAYER; mode='main'; showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
   say((BOSS.intro||[]).join('\n'));
 }
-function startAttack(){
-  bullets.length=0; showArena=true; boxEl.style.display='block';
-  attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter&&attack.enter();
+
+/* ===== Movement (enemy turn only) ===== */
+function processMovement(dt){
+  if(turn!==TURN.ENEMY || mode!=='main') return;
+  let dx=0,dy=0; if(key('ArrowLeft')||key('a'))dx-=1; if(key('ArrowRight')||key('d'))dx+=1; if(key('ArrowUp')||key('w'))dy-=1; if(key('ArrowDown')||key('s'))dy+=1;
+  const L=Math.hypot(dx,dy)||1;
+  HEART.x=Math.max(ARENA.x+HEART.r,Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
+  HEART.y=Math.max(ARENA.y+HEART.r,Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
+  HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
 }
-function finishAttack(){
-  showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden');
-  turn=TURN.PLAYER; mode='main';
-  say(BOSS.lines[(Math.floor(time*3))%(BOSS.lines.length||1)]||'...');
-  attack=null;
+
+/* ===== Bullets / collisions ===== */
+function updateBullets(dt){
+  for(let i=0;i<bullets.length;i++){const b=bullets[i]; b.t=(b.t||0)+dt; b.x+=b.vx*dt; b.y+=b.vy*dt;}
+  bullets=bullets.filter(b=>isFinite(b.x)&&isFinite(b.y)&&b.x>ARENA.x-220&&b.x<ARENA.x+ARENA.w+220&&b.y>ARENA.y-220&&b.y<ARENA.y+ARENA.h+240);
 }
+function collide(){
+  if(HEART.i>0) return;
+  for(const b of bullets){
+    const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
+    if(dx*dx+dy*dy<=rr*rr){ const dmg=Math.max(1,Math.floor(b.dmg||3)); HEART.hp=Math.max(0,HEART.hp-dmg); updateHP(); HEART.i=0.85; break; }
+  }
+}
+
+/* ===== Attack lifecycle ===== */
+function startAttack(){ bullets.length=0; showArena=true; boxEl.style.display='block'; attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter&&attack.enter(); }
+function finishAttack(){ showArena=false; boxEl.style.display='none'; uiBar.classList.remove('hidden'); turn=TURN.PLAYER; mode='main'; say(BOSS.lines[(Math.floor(time*3))%(BOSS.lines.length||1)]||'...'); attack=null; }
+
+/* ===== Actions ===== */
+function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
+function playerFight(){ if(turn!==TURN.PLAYER||mode!=='main') return; const dmg=24; routeState.fight++; saveProgress(); say(`${username} strikes for ${dmg}.`); bossHit(dmg); endPlayerTurn(); }
+function openAct(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='act'; const opts=BOSS.acts.map((a,i)=>` ${i+1}. ${a.name}`).join('\n'); say(`ACT on ${BOSS.name}:\n${opts}`,true); }
+function handleActChoice(i){ const a=BOSS.acts[i||0]; if(!a){ say('No such act.'); return; } const line=a.effect(BOSS); routeState.act++; saveProgress(); say(line); if((BOSS.mercy||0)>=BOSS.mercyNeed) say(`${BOSS.name} seems ready to be spared.`); mode='main'; endPlayerTurn(); }
+function openMercy(){ if((BOSS.mercy||0)>=BOSS.mercyNeed){ routeState.mercy++; saveProgress(); victory(true);} else say(`${BOSS.name} isn't ready to be spared.`); }
+function openItem(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='item'; say(`ITEMS:\n${itemsList()}\n\nPick with 1-4`,true); }
+function handleItemChoice(i){ const msg=useItem(i); say(msg); mode='main'; endPlayerTurn(); }
+function endPlayerTurn(){ if(turn!==TURN.PLAYER) return; turn=TURN.TRANS; setTimeout(()=>{ if(turn!==TURN.TRANS) return; turn=TURN.ENEMY; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideSay(); startAttack(); },140); }
+
+/* ===== End states ===== */
 function defeat(){ if(turn===TURN.DEFEAT) return; turn=TURN.DEFEAT; say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
 function victory(spared=false){
   if(turn===TURN.VICTORY) return; turn=TURN.VICTORY;
   say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
-  setTimeout(()=>{ if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else { say('Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1500);} },1000);
+  setTimeout(()=>{ const next=bossIndex+1; if(next<BOSSES.length){ initBoss(next); } else { say('Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1500); } },1000);
 }
 
-/* ===== Player actions ===== */
-function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp - dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
-
-function playerFight(){ if(turn!==TURN.PLAYER||mode!=='main') return; const dmg=24; routeState.fight++; saveProgress(); say(`${username} strikes for ${dmg}.`); bossHit(dmg); endPlayerTurn(); }
-
-function openAct(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='act'; const opts=BOSS.acts.map((a,i)=>` ${i+1}. ${a.name}`).join('\n'); say(`ACT on ${BOSS.name}:\n${opts}`,true); }
-function handleActChoice(i){
-  const a=BOSS.acts[i||0]; if(!a){ say('No such act.'); return; }
-  const line=a.effect(BOSS); routeState.act++; saveProgress(); say(line);
-  if((BOSS.mercy||0)>=BOSS.mercyNeed) say(`${BOSS.name} seems ready to be spared.`);
-  mode='main'; endPlayerTurn();
-}
-
-function openMercy(){ if((BOSS.mercy||0)>=BOSS.mercyNeed){ routeState.mercy++; saveProgress(); victory(true);} else say(`${BOSS.name} isn't ready to be spared.`); }
-
-function openItem(){ if(turn!==TURN.PLAYER||mode!=='main') return; mode='item'; say(`ITEMS:\n${itemsList()}\n\nPick with 1-4`,true); }
-function handleItemChoice(i){ const msg=useItem(i); say(msg); mode='main'; endPlayerTurn(); }
-
-function endPlayerTurn(){
-  if(turn!==TURN.PLAYER) return;
-  turn=TURN.TRANS;
-  setTimeout(()=>{ if(turn!==TURN.TRANS) return;
-    turn=TURN.ENEMY; uiCenter.textContent='Enemy turn'; uiBar.classList.add('hidden'); hideSay(); startAttack();
-  },140);
-}
-
-/* ===== Loop ===== */
-let last=performance.now();
-function loop(now){
-  const dt=Math.min(0.033, Math.max(0,(now-last)/1000)); last=now;
-  secretCooldown=Math.max(0, secretCooldown-1);
-  if(!paused){ update(dt); render(dt); }
-  requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
-
-/* ===== Update ===== */
-function update(dt){
-  time+=dt; HEART.i=Math.max(0, HEART.i - dt);
-
-  if(turn===TURN.ENEMY){
-    // movement (enemy turn only)
-    let dx=0,dy=0; if(key('ArrowLeft')||key('a'))dx-=1; if(key('ArrowRight')||key('d'))dx+=1; if(key('ArrowUp')||key('w'))dy-=1; if(key('ArrowDown')||key('s'))dy+=1;
-    const L=Math.hypot(dx,dy)||1;
-    HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
-    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
-    HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
-
-    // attack update
-    attack && attack.update && attack.update(dt);
-
-    // bullets update
-    for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
-    bullets=bullets.filter(b=>isFinite(b.x)&&isFinite(b.y)&&b.x>ARENA.x-200&&b.x<ARENA.x+ARENA.w+200&&b.y>ARENA.y-200&&b.y<ARENA.y+ARENA.h+220);
-
-    // collisions
-    if(HEART.i<=0){
-      for(const b of bullets){
-        const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-        if(dx*dx+dy*dy<=rr*rr){ const dmg=Math.max(1,Math.floor(b.dmg||3)); HEART.hp=Math.max(0,HEART.hp-dmg); updateHP(); HEART.i=0.85; break; }
-      }
-    }
-
-    // phase end
-    if(attack && attack.done && attack.done()) finishAttack();
-    if(HEART.hp<=0) defeat();
-  }
-
-  // victory check
-  if(BOSS && BOSS.hp<=0 && turn!=='victory'){ victory(false); }
-
-  // popups
-  if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
-}
-
-/* ===== Render ===== */
-function render(dt){
-  // background
-  ctx.fillStyle='#08070a'; ctx.fillRect(0,0,960,720);
-  ctx.fillStyle='#141018'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
-
-  // boss
-  if(BOSS && typeof BOSS.draw==='function') BOSS.draw(ctx,time,0);
-
-  // arena
-  if(turn===TURN.ENEMY && showArena){
-    ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
-    for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
-    ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
-    drawHeart(ctx,HEART.x-6,HEART.y-6,'#ffd166',0.8);
-    ctx.restore();
-  }
-
-  // damage values
-  if(damagePopup){ const a=Math.max(0,1-damagePopup.t/0.9); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace'; ctx.fillText(damagePopup.text,damagePopup.x,damagePopup.y-damagePopup.t*60); ctx.restore(); }
-}
-
-/* ===== Admin ===== */
+/* ===== Admin panel ===== */
 function drawPreview(){
-  prevCtx.fillStyle='#0b0b0b'; prevCtx.fillRect(0,0,140,140);
+  prevCtx.fillStyle='#0b0b0b'; prevCtx.fillRect(0,0,160,160);
   if(BOSS && typeof BOSS.draw==='function'){
-    // draw in mini-space
-    prevCtx.save();
-    prevCtx.translate(-340,-100);
-    BOSS.draw(prevCtx, time, 0);
-    prevCtx.restore();
+    prevCtx.save(); prevCtx.translate(-320,-80); BOSS.draw(prevCtx, time, 0); prevCtx.restore();
   }
 }
-function openAdmin(){
-  admin.style.display='flex';
-  buildAdminBossList();
-  adBoss.value=String(bossIndex);
-  adUser.value=username;
-  adHP.value=String(HEART.hpMax);
-  adDiff.value=Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF)||'Normal';
-  drawPreview();
-}
+function openAdmin(){ admin.style.display='flex'; buildAdminBossList(); adBoss.value='main:'+bossIndex; adUser.value=username; adHP.value=String(HEART.hpMax); adDiff.value=SAVE.difficulty||'Normal'; drawPreview(); }
 function closeAdmin(){ admin.style.display='none'; SAVE.inventory=inventory; writeSave(SAVE); }
 adUserSave.onclick=()=>{ username=(adUser.value||'Traveler').slice(0,16); nameLabel.textContent=username; SAVE.username=username; writeSave(SAVE); };
 adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updateHP(); };
 adSkip.onclick=()=>{ closeAdmin(); if(bossIndex+1<BOSSES.length) initBoss(bossIndex+1); else initBoss(0); };
 adReset.onclick=()=>{ localStorage.removeItem(SAVE_KEY); SAVE={}; inventory=[{id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2}]; username='Traveler'; nameLabel.textContent=username; closeAdmin(); initBoss(0); };
 adClose.onclick=()=> closeAdmin();
-adBoss.onchange=()=>{ const v=parseInt(adBoss.value,10)||0; setBoss(v); drawPreview(); };
+adBoss.onchange=()=>{ const v=adBoss.value; if(v.startsWith('admin:')){ closeAdmin(); initBoss(v); } else { const ix=parseInt(v.split(':')[1],10)||0; closeAdmin(); initBoss(ix); } };
 adHP.onchange=()=>{ let v=parseInt(adHP.value,10)||50; v=Math.max(1,Math.min(99,v)); HEART.hpMax=v; HEART.hp=v; SAVE.hp=v; updateHP(); writeSave(SAVE); };
-adDiff.onchange=()=>{ DIFF=DIFFS[adDiff.value]||DIFFS.Normal; SAVE.difficulty=adDiff.value; writeSave(SAVE); };
+adDiff.onchange=()=>{ const name=adDiff.value; SAVE.difficulty=name; writeSave(SAVE); DIFF=DIFFS[name]||DIFFS.Normal; };
 adTest1.onclick=()=>previewPattern(0);
 adTest2.onclick=()=>previewPattern(1);
 adTest3.onclick=()=>previewPattern(2);
-
 function previewPattern(ix){
-  // safe preview (doesn't alter progress)
   if(turn===TURN.ENEMY) return;
   const seq=BOSS.attacks(); const p=seq[ix]||seq[0];
   bullets.length=0; showArena=true; boxEl.style.display='block'; uiBar.classList.add('hidden');
@@ -588,6 +483,50 @@ addEventListener('keydown',e=>{
     if(e.key==='m'||e.key==='M') openMercy();
   }
 });
+
+/* ===== Loop ===== */
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.033, Math.max(0,(now-last)/1000)); last=now;
+  secretCooldown=Math.max(0, secretCooldown-1);
+  if(!paused){ update(dt); render(dt); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ===== Update / Render ===== */
+function update(dt){
+  time+=dt; HEART.i=Math.max(0,HEART.i-dt);
+
+  if(turn===TURN.ENEMY){
+    processMovement(dt);
+    attack&&attack.update&&attack.update(dt);
+    updateBullets(dt);
+    collide();
+    if(attack&&attack.done&&attack.done()) finishAttack();
+    if(HEART.hp<=0) defeat();
+  }
+
+  if(BOSS && BOSS.hp<=0 && turn!==TURN.VICTORY) victory(false);
+
+  if(damagePopup){ damagePopup.t+=dt; if(damagePopup.t>0.9) damagePopup=null; }
+}
+function render(dt){
+  ctx.fillStyle='#08070a'; ctx.fillRect(0,0,960,720);
+  ctx.fillStyle='#141018'; for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
+
+  if(BOSS && typeof BOSS.draw==='function') BOSS.draw(ctx,time,0);
+
+  if(turn===TURN.ENEMY && showArena){
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
+    for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
+    ctx.save(); if(HEART.i>0) ctx.globalAlpha=0.6+0.3*Math.sin(time*20);
+    drawHeart(ctx,HEART.x-6,HEART.y-6,'#ffd166',0.8);
+    ctx.restore();
+  }
+
+  if(damagePopup){ const a=Math.max(0,1-damagePopup.t/0.9); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff1b6'; ctx.font='16px monospace'; ctx.fillText(damagePopup.text,damagePopup.x,damagePopup.y-damagePopup.t*60); ctx.restore(); }
+}
 
 /* ===== Start ===== */
 initBoss(bossIndex);
