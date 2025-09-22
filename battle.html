@@ -2,19 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Undertale Gold — Battle (stable build, equips, items, ACT, admin triggers)</title>
+<title>Undertale Gold — Battle (improved heart, boss drops, equips, admin bosses)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"/>
 <style>
 html,body{
   margin:0;height:100%;background:#000;color:#ffd166;
   display:flex;align-items:center;justify-content:center;
-  font-family:ui-monospace,menlo,consolas,monospace;
+  font-family:ui-monospace,Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
-#wrap{
-  width:960px;height:720px;position:relative;
-  background:#070606;border:4px solid #0a0a0f;image-rendering:pixelated;
-}
+#wrap{width:960px;height:720px;position:relative;background:#070606;border:4px solid #0a0a0f;image-rendering:pixelated;}
 /* HUD */
 #hud{position:absolute;left:0;right:0;top:0;padding:10px 16px;display:flex;justify-content:space-between;pointer-events:none;z-index:3}
 .hcol{display:flex;flex-direction:column;gap:6px}
@@ -37,9 +34,9 @@ html,body{
 #toast.show{opacity:1}
 /* Admin overlay */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10}
-#panel{width:720px;max-width:95%;background:#0e0e0e;border:2px solid #fff;padding:14px;color:#ffd166}
+#panel{width:740px;max-width:95%;background:#0e0e0e;border:2px solid #fff;padding:14px;color:#ffd166}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
-.sel,.inp,textarea{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
+.sel,.inp{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
 .btn2{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
 /* Equip overlay */
 #equip{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);z-index:9}
@@ -142,7 +139,9 @@ const PLAYER_NAME=(PROFILE.name||'Traveler').slice(0,16);
 const HEART_COLOR=PROFILE.glow||'#ffd166';
 
 /* Elements */
-const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false,desynchronized:true});
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d',{alpha:false,desynchronized:true});
+ctx.imageSmoothingEnabled=false;
 const bossName=document.getElementById('bossName'), bossVal=document.getElementById('bossVal'), bossFill=document.getElementById('bossFill');
 const playerNameEl=document.getElementById('playerName'); playerNameEl.textContent=PLAYER_NAME;
 const hpVal=document.getElementById('hpVal'), hpFill=document.getElementById('hpFill'), eqVal=document.getElementById('eqVal');
@@ -156,7 +155,7 @@ const equip=document.getElementById('equip'), equipClose=document.getElementById
 const btnStart=document.getElementById('btnStart'), btnUnequip=document.getElementById('btnUnequip'), equippedName=document.getElementById('equippedName');
 
 /* Save */
-const SAVE_KEY='ug_stable_v1';
+const SAVE_KEY='ug_refined_v1';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -166,16 +165,19 @@ const ARENA={x:240,y:420,w:480,h:180};
 const TURN={PLAYER:'p',ENEMY:'e',TRANS:'t',WIN:'w',LOSE:'l'};
 const DIFFS={ Normal:{spd:1.10,rate:1.10,dmg:1.40,lead:0.08}, Hard:{spd:1.28,rate:1.28,dmg:1.75,lead:0.10}, Insane:{spd:1.46,rate:1.40,dmg:2.10,lead:0.12} };
 
-/* Weapons & drops */
+/* Weapons & drops — boosted ATK, admin drops are legendary */
 const WEAPONS={
   stick:{id:'stick',name:'Stick',atk:0,desc:'Basic stick',source:'default'},
   solar:{id:'solar',name:'Solar Brand',atk:7,desc:'+7 ATK. Burns bright.',source:'solar'},
   ember:{id:'ember',name:'Ember Blade',atk:6,desc:'+6 ATK. Warm to the touch.',source:'ember'},
-  abyss:{id:'abyss',name:'Abyss Poker',atk:5,desc:'+5 ATK. Unnerving point.',source:'abyss'},
-  frost:{id:'frost',name:'Frost Lance',atk:7,desc:'+7 ATK. Chilling edge.',source:'frost'},
-  storm:{id:'storm',name:'Thunder Knuckles',atk:8,desc:'+8 ATK. Crackling arcs.',source:'storm'}
+  abyss:{id:'abyss',name:'Abyss Poker',atk:8,desc:'+8 ATK. Unnerving point.',source:'abyss'},
+  frost:{id:'frost',name:'Frost Lance',atk:9,desc:'+9 ATK. Chilling edge.',source:'frost'},
+  storm:{id:'storm',name:'Thunder Knuckles',atk:10,desc:'+10 ATK. Crackling arcs.',source:'storm'},
+  cupcakeLegend:{id:'cupcakeLegend',name:'Legendary Cupcake',atk:12,desc:'+12 ATK. Too sweet to handle.',source:'cupcake'},
+  oblivLegend:{id:'oblivLegend',name:'Legendary Oblivion',atk:12,desc:'+12 ATK. Echoes of endings.',source:'oblivion'}
 };
 const BOSS_DROP={solar:'solar', ember:'ember', abyss:'abyss', frost:'frost', storm:'storm'};
+const ADMIN_DROP={cupcake:'cupcakeLegend', oblivion:'oblivLegend'};
 
 function ensureInventory(){
   if(!Array.isArray(SAVE.weapons)) SAVE.weapons=['stick'];
@@ -184,22 +186,29 @@ function ensureInventory(){
     {id:'dew',name:'Dew Petal',desc:'+12 HP',type:'heal',amount:12,count:2},
     {id:'honey',name:'Amber Honey',desc:'+18 HP',type:'heal',amount:18,count:1}
   ];
+  if(!SAVE.difficulty) SAVE.difficulty='Normal';
+  if(typeof SAVE.bossIndex!=='number') SAVE.bossIndex=0;
+  if(typeof SAVE.hp!=='number') SAVE.hp=50;
   saveWrite(SAVE);
 }
-function hasWeapon(id){ return SAVE.weapons.includes(id); }
-function addWeaponByBossKey(k){ const w=BOSS_DROP[k]; if(!w) return; if(!hasWeapon(w)){ SAVE.weapons.push(w); saveWrite(SAVE); toastMsg(`New weapon: ${WEAPONS[w].name}`); } }
+function hasWeapon(id){ return (SAVE.weapons||[]).includes(id); }
+function addWeaponByBossKey(k,isAdmin=false){
+  const wid = isAdmin ? ADMIN_DROP[k] : BOSS_DROP[k];
+  if(!wid) return;
+  if(!hasWeapon(wid)){ SAVE.weapons.push(wid); saveWrite(SAVE); toastMsg(`New weapon: ${WEAPONS[wid].name}`); }
+}
 function equippedWeapon(){ return WEAPONS[SAVE.currentWeapon]||WEAPONS.stick; }
 function equippedLabel(){ const w=equippedWeapon(); return `${w.name} (+${w.atk} ATK)`; }
 
 /* Player */
 let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal;
 let GLOBAL_SPEED=1.0;
-const HEART={ x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:320,i:0,
+const HEART={ x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:5,sp:320,i:0,
   hp: Math.max(1,SAVE.hp||50), hpMax: Math.max(1,SAVE.hp||50),
   _px:0,_py:0,_pdt:1/60, glow:true
 };
 function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
-function updateHPUI(){ hpFill.style.width=(260*Math.max(0,HEART.hp/HEART.hpMax))+'px'; hpVal.textContent=`${HEART.hp}/${HEART.hpMax}`; eqVal.textContent=equippedLabel(); }
+function updateHPUI(){ const frac=Math.max(0,HEART.hp/HEART.hpMax); hpFill.style.width=(260*frac)+'px'; hpVal.textContent=`${HEART.hp}/${HEART.hpMax}`; eqVal.textContent=equippedLabel(); }
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
 function hideSay(){ bubble.style.display='none'; }
 function toastMsg(m){ toast.textContent=m; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1100); }
@@ -209,31 +218,50 @@ let time=0, turn=TURN.PLAYER, mode='main', waveCount=0;
 let bullets=[], attack=null, attackSeq=null, attackIx=0, damagePopup=null, showArena=false;
 let bossIndex=(typeof SAVE.bossIndex==='number')?SAVE.bossIndex:0;
 let BOSS=null;
+let IS_ADMIN=false;
 
 /* Helpers & drawing */
 const rand=(a,b)=>Math.random()*(b-a)+a;
 function glow(x,y,r,fill,a=0.25){ ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=fill; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
-function drawHeart(x,y,color=HEART_COLOR,scale=0.8){
-  ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
-  const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];
-  ctx.fillStyle=color; const s=3;
-  for(let r=0;r<m.length;r++) for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s,(r-3)*s,s,s);
+
+/* Improved heart */
+function drawHeartImproved(x,y,base=HEART_COLOR){
+  const t=time, pulse=1+0.06*Math.sin(t*6), aGlow=0.20+0.08*Math.sin(t*4);
+  glow(x,y,24*pulse,base,aGlow); glow(x,y,12*pulse,base,0.12);
+  ctx.save(); ctx.translate(x,y);
+  const blink = HEART.i>0 ? 0.45+0.45*Math.sin(t*32) : 1.0;
+  ctx.globalAlpha = blink;
+  ctx.lineWidth=2; ctx.strokeStyle='#111'; ctx.fillStyle=base;
+  ctx.beginPath();
+  ctx.moveTo(0,6);
+  ctx.bezierCurveTo(-10,-8, -22,-6, -22,6);
+  ctx.bezierCurveTo(-22,18, -10,26, 0,36);
+  ctx.bezierCurveTo(10,26, 22,18, 22,6);
+  ctx.bezierCurveTo(22,-6, 10,-8, 0,6);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 0.25*blink; ctx.fillStyle='#ffffff';
+  ctx.beginPath(); ctx.ellipse(-8,-2,6,4,0,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
+
+/* Boss visuals */
 function drawBase(x,y,colors,t){
-  glow(x,y,64,colors.aura,0.22); glow(x,y,36,colors.aura2||colors.aura,0.14);
+  glow(x,y,70,colors.aura,0.28); glow(x,y,40,colors.aura2||colors.aura,0.16);
   ctx.fillStyle=colors.head; ctx.beginPath(); ctx.arc(x, y-34, 12, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(x-4,y-38,1.6,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x+4,y-38,1.6,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=colors.body; ctx.fillRect(x-10, y-24, 20, 44);
-  ctx.fillStyle=colors.accent; ctx.fillRect(x-22,y-18,10,28); ctx.fillRect(x+12,y-18,10,28);
-  ctx.strokeStyle=colors.emblem||'#ffd166'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(x, y-12, 6+Math.sin(t*3)*0.8,0,Math.PI*2); ctx.stroke();
+  const g=ctx.createLinearGradient(x,y-24,x,y+20); g.addColorStop(0,colors.body); g.addColorStop(1,'#00000022');
+  ctx.fillStyle=g; ctx.fillRect(x-11, y-24, 22, 46);
+  ctx.fillStyle=colors.accent; ctx.fillRect(x-24,y-18,12,30); ctx.fillRect(x+12,y-18,12,30);
+  ctx.strokeStyle=colors.emblem||'#ffd166'; ctx.lineWidth=1.8; ctx.beginPath(); ctx.arc(x, y-12, 6+Math.sin(t*3)*0.8,0,Math.PI*2); ctx.stroke();
 }
-function dSolar(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#ffe9a0',head:'#ffefb0',body:'#ffd166',accent:'#ffe69a',emblem:'#ffd166'},t); }
-function dEmber(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#ffc7b8',head:'#ffd3c7',body:'#ffa277',accent:'#ffc2a4',emblem:'#ffbca0'},t); }
-function dAbyss(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#c7c0ff',head:'#e5e1ff',body:'#a89bff',accent:'#d7cffc',emblem:'#c9c1ff'},t); }
-function dFrost(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#d4f2ff',head:'#e6f7ff',body:'#d0f0ff',accent:'#c5ecff',emblem:'#bfe7ff'},t); }
-function dStorm(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#fffac4',head:'#fffbd1',body:'#ffd455',accent:'#ffec8a',emblem:'#ffe066'},t); }
-function dPixel(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#bff0ff',head:'#dafeff',body:'#a8ecff',accent:'#bff3ff',emblem:'#a8ecff'},t); }
+function dSolar(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#ffe9a0',aura2:'#fff4c8',head:'#fff3c8',body:'#ffd166',accent:'#ffe69a',emblem:'#ffcc55'},t); }
+function dEmber(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#ffc7b8',aura2:'#ffd7c6',head:'#ffe1d6',body:'#ffa277',accent:'#ffc2a4',emblem:'#ffbca0'},t); }
+function dAbyss(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#c7c0ff',aura2:'#e0dbff',head:'#efeaff',body:'#a89bff',accent:'#d7cffc',emblem:'#c9c1ff'},t); }
+function dFrost(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#cfeaff',aura2:'#e3f4ff',head:'#f1f9ff',body:'#d0f0ff',accent:'#c5ecff',emblem:'#aee3ff'},t); }
+function dStorm(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#fffac4',aura2:'#fffddc',head:'#fffbd1',body:'#ffd455',accent:'#ffec8a',emblem:'#ffe066'},t); }
+function dPixel(t){ drawBase(480,240+Math.sin(t*2.2)*2,{aura:'#bff0ff',aura2:'#d8f7ff',head:'#eaffff',body:'#a8ecff',accent:'#bff3ff',emblem:'#a8ecff'},t); }
+function dObliv(t){ drawBase(480,236+Math.sin(t*2.4)*2,{aura:'#1a141c',aura2:'#241c28',head:'#2a2230',body:'#0b0a0d',accent:'#3b3244',emblem:'#ffd166'},t); }
+function dCupcake(t){ drawBase(480,240+Math.sin(t*2.4)*2,{aura:'#ff9ad6',aura2:'#ffd1ec',head:'#ffe6f7',body:'#ff7acb',accent:'#ffc3f3',emblem:'#fff'},t); }
 
 /* Spawn & phases */
 function spawn(b){ b.t=0; bullets.push(b); return b; }
@@ -247,17 +275,17 @@ function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
 function ring(C,spd,col,dmg,n=12){ for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg}); } }
 function phase(dur,...parts){ return { t:0, enter(){this.t=0;parts.forEach(p=>p.enter&&p.enter());}, update(dt){this.t+=dt;parts.forEach(p=>p.update&&p.update(dt));}, done(){return this.t>=dur;} }; }
 
-/* Patterns (compact set reused across bosses) */
-const pFan = (col='#fff',spd=250,dmg=5,rate=.22)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){} ,update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const base=rand(-0.4,0.4);for(const a of [base-0.7,base,base+0.7])spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+18,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
+/* Patterns (reused) */
+const pFan = (col='#fff',spd=250,dmg=5,rate=.22)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){} ,update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const base=(Math.random()*0.8-0.4);for(const a of [base-0.7,base,base+0.7])spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+18,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
 const pRing = (col='#fff',spd=240,dmg=6,rate=.5)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(C,spd,col,dmg,12)}},done(){return t>=d;}}};
 const pWall = (col='#fff',vx=260,dmg=5,rate=.36)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;for(let i=0;i<5;i++){const y=ARENA.y+20+i*30;spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:(left?1:-1)*vx*DIFF.spd,vy:0,r:3,col,dmg});}}},done(){return t>=d;}}};
 const pHoming = (col='#fff',spd=210,dmg=5,rate=.46,lead=0.6)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w);spawnAimed(x,ARENA.y-10,spd,dmg,col,4,DIFF.lead*lead);}},done(){return t>=d;}}};
 const pRain = (col='#fff',vy=240,dmg=4,rate=.18)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(10,ARENA.w-10);spawn({x,y:ARENA.y-18,vx:rand(-60,60),vy:vy*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
 const pSpiral = (col='#fff',spd=245,dmg=5,rate=.22)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const a=t*2.1;spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
-const pOrbitThenShoot=(col='#bfb2ff',rad=70,spd=285,dmg=5,rate=.5)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const n=8;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;spawn({x:HEART.x+Math.cos(a)*60,y:HEART.y+Math.sin(a)*60,vx:0,vy:0,r:3,col,dmg,orbit:true,ang:a});}}for(const bb of bullets){if(bb.orbit){bb.ang+=dt*2.0;bb.x=HEART.x+Math.cos(bb.ang)*rad;bb.y=HEART.y+Math.sin(bb.ang)*rad;if(Math.random()<0.03){const dx=HEART.x-bb.x,dy=HEART.y-bb.y;const L=Math.hypot(dx,dy)||1;bb.vx=dx/L*spd*DIFF.spd;bb.vy=dy/L*spd*DIFF.spd;bb.orbit=false;}}}},done(){return t>=d;}}};
-const pPullWell=(col='#c9b9ff',pull=0.38,ringRate=0.2,spd=270,dmg=6)=>(d=3)=>{let t=0;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;const dx=C.x-HEART.x,dy=C.y-HEART.y;HEART.x+=dx*pull*dt;HEART.y+=dy*pull*dt;if(Math.random()<ringRate){const a=Math.random()*Math.PI*2;spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
+const pOrbitThenShoot=(col='#bfb2ff',rad=70,spd=300,dmg=6,rate=.5)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const n=8;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;spawn({x:HEART.x+Math.cos(a)*60,y:HEART.y+Math.sin(a)*60,vx:0,vy:0,r:3,col,dmg,orbit:true,ang:a});}}for(const bb of bullets){if(bb.orbit){bb.ang+=dt*2.0;bb.x=HEART.x+Math.cos(bb.ang)*rad;bb.y=HEART.y+Math.sin(bb.ang)*rad;if(Math.random()<0.03){const dx=HEART.x-bb.x,dy=HEART.y-bb.y;const L=Math.hypot(dx,dy)||1;bb.vx=dx/L*spd*DIFF.spd;bb.vy=dy/L*spd*DIFF.spd;bb.orbit=false;}}}},done(){return t>=d;}}};
+const pPullWell=(col='#c9b9ff',pull=0.38,ringRate=0.2,spd=280,dmg=7)=>(d=3)=>{let t=0;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;const dx=C.x-HEART.x,dy=C.y-HEART.y;HEART.x+=dx*pull*dt;HEART.y+=dy*pull*dt;if(Math.random()<ringRate){const a=Math.random()*Math.PI*2;spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
 
-/* Boss roster (6 bosses x 5 attacks) */
+/* Boss roster (6 bosses, 5 attacks each) */
 const BOSSES = [
   { key:'solar', name:'Solar Fang', hpMax:360, draw:dSolar,
     intro:["The sun bows to no one.","Step into the flare, "+PLAYER_NAME+"."],
@@ -274,7 +302,7 @@ const BOSSES = [
       phase(3, pRing('#ffd166',255,6,.50)(3)),
       phase(3, pWall('#ffe9a0',260,6,.36)(3)),
       phase(3, pSpiral('#ffd166',245,6,.22)(3)),
-      phase(3, pRing('#fff1b6',245,6,.55)(3))
+      phase(3, pRing('#fff1b6',240,6,.55)(3))
     ]
   },
   { key:'ember', name:'Ember Seraph', hpMax:340, draw:dEmber,
@@ -308,8 +336,8 @@ const BOSSES = [
     attacks:()=>[
       phase(3, pWall('#b0a0ff',260,5,.28)(3)),
       phase(3, pRain('#c0b3ff',250,4,.20)(3)),
-      phase(3, pHoming('#bfb3ff',225,5,.50,1.0)(3)),
-      phase(3, pFan('#cfc6ff',230,4,.30)(3)),
+      phase(3, pHoming('#bfb3ff',225,6,.50,1.0)(3)),
+      phase(3, pFan('#cfc6ff',235,5,.30)(3)),
       phase(3, pRing('#b9afff',245,6,.60)(3))
     ]
   },
@@ -326,7 +354,7 @@ const BOSSES = [
     attacks:()=>[
       phase(3, pRain('#d0f0ff',235,5,.26)(3)),
       phase(3, pFan('#e6f7ff',235,5,.34)(3)),
-      phase(3, pRing('#d0f0ff',220,5,.70)(3)),
+      phase(3, pRing('#d0f0ff',220,6,.70)(3)),
       phase(3, pWall('#c5ecff',280,5,.42)(3)),
       phase(3, pSpiral('#bfe7ff',245,5,.24)(3))
     ]
@@ -344,15 +372,15 @@ const BOSSES = [
     attacks:()=>[
       phase(3, pWall('#ffe066',280,7,.22)(3)),
       phase(3, pRain('#ffea80',320,8,.32)(3)),
-      phase(3, pSpiral('#fff59a',245,6,.22)(3)),
-      phase(3, pRing('#ffe066',250,6,.44)(3)),
-      phase(3, pFan('#fff59a',255,6,.24)(3))
+      phase(3, pSpiral('#fff59a',255,7,.22)(3)),
+      phase(3, pRing('#ffe066',250,7,.44)(3)),
+      phase(3, pFan('#fff59a',260,7,.24)(3))
     ]
   },
   { key:'pixel', name:'Pixel Phantom', hpMax:350, draw:dPixel,
     intro:["gl1tch... r3ady?","hold the frame."],
     lines:["tearing...","lag spike","packet lost"],
-    mercyNeed:3, drop:null, /* no drop */
+    mercyNeed:3, drop:null,
     actDefs:[
       {name:'Debug',say:"errors reduced.",effect:s=>{s.mercy=(s.mercy||0)+1; s.flags.nextSlow=0.85;}},
       {name:'Compliment',say:"shader praised.",effect:s=>{s.mercy=(s.mercy||0)+1;}},
@@ -369,11 +397,64 @@ const BOSSES = [
   }
 ];
 
+/* Admin bosses (10 attacks) */
+const ADMIN_BOSSES = {
+  oblivion: {
+    key:'oblivion', name:'Oblivion Herald', hpMax:720, draw:dObliv,
+    intro:["entropy remembers you.","endings echo.","only now exists."],
+    lines:["closer","unmake","reverse","again"],
+    mercyNeed:8, drop:'oblivLegend',
+    actDefs:[
+      {name:'Bow', say:"acknowledged.", effect:s=>{s.mercy=(s.mercy||0)+1;}},
+      {name:'Resist', say:"defiance mapped.", effect:s=>{s.flags.nextSlow=0.85;}},
+      {name:'Reflect', say:"brief light returns.", effect:s=>{HEART.i=Math.max(HEART.i,0.95);}},
+      {name:'Accept', say:"peace is choice.", effect:s=>{s.mercy=(s.mercy||0)+1;}}
+    ],
+    attacks:()=>[
+      phase(3, pFan('#fff59a',260,7,.20)(3)),
+      phase(3, pRing('#ffd166',260,7,.50)(3)),
+      phase(3, pRain('#ffea80',330,8,.30)(3)),
+      phase(3, pOrbitThenShoot('#bfb2ff',72,305,7,.5)(3)),
+      phase(3, pHoming('#ffd3a0',220,7,.40,0.8)(3)),
+      phase(3, pWall('#c5ecff',300,7,.38)(3)),
+      phase(3, pSpiral('#a8ecff',260,7,.22)(3)),
+      phase(3, pPullWell('#c9b9ff',0.42,0.22,290,8)(3)),
+      phase(3, pRing('#b9afff',260,8,.48)(3)),
+      phase(3, pFan('#fff1b6',280,9,.18)(3))
+    ]
+  },
+  cupcake: {
+    key:'cupcake', name:'The Cupcake Incident', hpMax:800, draw:dCupcake,
+    intro:["The frosting trembles.","Sprinkles rain down.","You regret everything."],
+    lines:["Sweet doom.","Sugar crash.","Frosting storm.","Sprinkle rain."],
+    mercyNeed:8, drop:'cupcakeLegend',
+    actDefs:[
+      {name:'Apologize',say:"Too late.",effect:s=>{s.flags.boost=1.25;}},
+      {name:'Compliment',say:"Cupcake ignores you.",effect:s=>{}},
+      {name:'Taste',say:"It burns sweet.",effect:s=>{HEART.hp=Math.max(1,HEART.hp-6); updateHPUI();}},
+      {name:'Dance',say:"Sprinkles swirl faster.",effect:s=>{s.flags.nextSlow=0.9;}}
+    ],
+    attacks:()=>[
+      phase(3, pRain('#ffb7e6',270,6,.18)(3)),
+      phase(3, pRing('#ff91e6',260,7,.50)(3)),
+      phase(3, pFan('#ffc4f0',275,7,.22)(3)),
+      phase(3, pWall('#ff7acb',300,8,.36)(3)),
+      phase(3, pSpiral('#ff9ad6',265,8,.22)(3)),
+      phase(3, pOrbitThenShoot('#ffc3f3',72,315,7,.5)(3)),
+      phase(3, pPullWell('#ffb6f2',0.44,0.25,300,8)(3)),
+      phase(3, pRain('#ff91e6',320,9,.20)(3)),
+      phase(3, pRing('#ff7acb',285,9,.40)(3)),
+      phase(3, pFan('#ffc3f3',290,10,.18)(3))
+    ]
+  }
+};
+
 /* Admin helpers */
 function buildAdminLists(){
   adBoss.innerHTML='';
-  BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o); });
-  adBoss.value=String(bossIndex);
+  BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o); });
+  for(const k of Object.keys(ADMIN_BOSSES)){ const o=document.createElement('option'); o.value='admin:'+k; o.textContent=ADMIN_BOSSES[k].name; adBoss.appendChild(o); }
+  adBoss.value='main:'+bossIndex;
   adDiff.value=SAVE.difficulty||'Normal';
   adSpeed.value=(GLOBAL_SPEED||1).toFixed(2);
 }
@@ -407,23 +488,27 @@ btnUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); updateHPUI
 btnStart.onclick=()=>{ closeEquip(); say('Ready.'); };
 
 /* Boss flow */
-function setBossFromObj(obj){
+function setBossFromObj(obj,isAdmin=false){
   BOSS={ key:obj.key,name:obj.name,hpMax:obj.hpMax,hp:obj.hpMax,draw:obj.draw,
     intro:[...obj.intro],lines:[...obj.lines],mercyNeed:obj.mercyNeed,mercy:0,
     flags:{nextSlow:1,boost:1}, actDefs:obj.actDefs.map(x=>x), attacks:obj.attacks, drop:obj.drop||null
   };
+  IS_ADMIN=isAdmin;
   attackSeq=BOSS.attacks(); attackIx=0; waveCount=0;
   bossName.textContent=BOSS.name; bossFill.style.width='100%'; bossVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`;
 }
-function initBoss(ix){
-  bossIndex = Math.max(0, Math.min(BOSSES.length-1, ix|0));
-  setBossFromObj(BOSSES[bossIndex]);
+function initBoss(sel){
+  if(typeof sel==='string' && sel.startsWith('admin:')){
+    const key=sel.split(':')[1]; setBossFromObj(ADMIN_BOSSES[key], true);
+  } else {
+    const ix=(typeof sel==='number'?sel:bossIndex)|0; bossIndex=Math.max(0,Math.min(BOSSES.length-1,ix)); setBossFromObj(BOSSES[bossIndex], false);
+  }
   HEART.hp=HEART.hpMax=Math.max(1,SAVE.hp||50); updateHPUI(); HEART.i=0; centerHeart();
   turn=TURN.PLAYER; mode='main'; showArena=false; arenaBox.style.display='none';
   say((BOSS.intro||[]).join('\n'));
   saveWrite({...SAVE,bossIndex, hp:HEART.hpMax});
 }
-function updateBossBar(){ bossFill.style.width=(440*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; }
+function updateBossBar(){ const frac=Math.max(0,BOSS.hp/BOSS.hpMax); bossFill.style.width=(440*frac)+'px'; bossVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; }
 
 /* Input & movement */
 const held=new Set();
@@ -434,6 +519,7 @@ addEventListener('keydown',e=>{
     if(equip.style.display==='flex'){ closeEquip(); return; }
     if(mode==='act'||mode==='item'){ mode='main'; say('Your turn.'); return; }
   }
+  // movement allowed only during enemy turn
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){
     if(!(turn===TURN.ENEMY && mode==='main')) return;
   }
@@ -466,7 +552,7 @@ function collide(){
     const dx=b.x-HEART.x, dy=b.y-HEART.y; const rr=(b.r||4)+HEART.r;
     if(dx*dx+dy*dy<=rr*rr){
       const dmg=Math.max(1,Math.floor((b.dmg||3)*(BOSS.flags.boost||1)));
-      HEART.hp=Math.max(0, HEART.hp-dmg); updateHPUI(); HEART.i=0.85;
+      HEART.hp=Math.max(0, HEART.hp-dmg); updateHPUI(); HEART.i=0.85; // i-frames
       break;
     }
   }
@@ -544,11 +630,13 @@ function useItem(i){
 }
 
 /* Win/lose + drops */
-function lose(){ if(turn===TURN.LOSE) return; turn=TURN.LOSE; say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
+function lose(){ if(turn===TURN.LOSE) return; turn=TURN.LOSE; say('You fall. The hall dims.'); setTimeout(()=>initBoss(IS_ADMIN?'admin:oblivion':bossIndex),900); }
 function win(spared){
   if(turn===TURN.WIN) return; turn=TURN.WIN; say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
-  if(BOSS.drop) addWeaponByBossKey(BOSS.key);
-  setTimeout(()=>{ const next=bossIndex+1; if(next<BOSSES.length) initBoss(next); else { say('Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1100); } }, 950);
+  if(IS_ADMIN) addWeaponByBossKey(BOSS.key,true); else if(BOSS.drop) addWeaponByBossKey(BOSS.key,false);
+  setTimeout(()=>{ if(IS_ADMIN){ say('Admin trial complete.'); setTimeout(()=>initBoss(bossIndex),1000); }
+    else { const next=bossIndex+1; if(next<BOSSES.length) initBoss(next); else { say('Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1100); } }
+  }, 950);
 }
 
 /* Admin triggers: 67x3 + words */
@@ -576,7 +664,7 @@ function handleHiddenTriggers(k){
 }
 
 /* Admin actions */
-adLoadBoss.onclick=()=>{ const ix=parseInt(adBoss.value,10)||0; initBoss(ix); };
+adLoadBoss.onclick=()=>{ const v=adBoss.value; if(v.startsWith('admin:')) initBoss(v); else initBoss(parseInt(v.split(':')[1],10)||0); };
 adEnd.onclick = ()=>{ if(turn===TURN.ENEMY) endAttack(); };
 adWin.onclick = ()=>{ if(BOSS){ BOSS.hp=0; updateBossBar(); win(false); } };
 adClose.onclick=()=> closeAdmin();
@@ -593,11 +681,7 @@ function render(){
   if(turn===TURN.ENEMY && showArena){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
     for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
-    ctx.save();
-    if(HEART.glow){ ctx.globalAlpha=0.15; glow(HEART.x,HEART.y,16,HEART_COLOR,0.35); }
-    if(HEART.i>0) ctx.globalAlpha = 0.6+0.3*Math.sin(time*20);
-    drawHeart(HEART.x-6,HEART.y-6,HEART_COLOR,0.8);
-    ctx.restore();
+    drawHeartImproved(HEART.x,HEART.y,HEART_COLOR);
   }
 
   if(damagePopup){
@@ -612,6 +696,7 @@ function render(){
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.033, Math.max(0,(now-last)/1000)); last=now; time+=dt;
+  if(HEART.i>0){ HEART.i=Math.max(0, HEART.i-dt); }
   if(turn===TURN.ENEMY){
     moveHeart(dt);
     attack&&attack.update&&attack.update(dt);
@@ -626,9 +711,10 @@ function loop(now){
 
 /* Start */
 ensureInventory();
+let inventory=SAVE.inventory;
 updateHPUI();
 buildAdminLists();
-openEquip();              // pre-battle equip
+openEquip(); // pre-battle
 initBoss((bossIndex>=0 && bossIndex<BOSSES.length)? bossIndex : 0);
 requestAnimationFrame(loop);
 cv.focus();
