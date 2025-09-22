@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Battle — gold SOUL, 12 normal + 2 admin, bottom equip, distinct attacks, improved backgrounds</title>
+<title>Battle — gold SOUL, improved admin + equip, 16 bosses total (12 normal + 2 admin + 4 new)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Consolas,Menlo,monospace}
@@ -16,8 +16,6 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 #bossFill{background:#ff5e6b;width:0}
 #hpFill{background:#7affb7;width:0}
 .sub{font-size:12px;color:#e6dcae}
-
-/* Black text for names and dialogue */
 #bossName,#playerName,#bubbleText{color:#000}
 
 /* Dialogue */
@@ -30,9 +28,14 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .key{width:22px;height:22px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;background:#fff}
 .lab{font-size:18px;letter-spacing:1px;min-width:88px;color:#fff}
 
-/* Equip overlay (bottom popup) */
-#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:760px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:5;display:none}
+/* Equip overlay (bottom popup) — two columns + stats */
+#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:860px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:5;display:none}
+#equipHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#stats{display:flex;gap:10px}
+.stat{background:#151728;border:1px solid #2d3050;border-radius:6px;padding:6px 8px;font-size:12px}
+#equipCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 #equipOverlay h4{margin:4px 0 6px 0;font-size:14px;color:#ffd166}
+.list{max-height:260px;overflow:auto;border:1px solid #25273a;border-radius:6px;padding:6px;background:#101223}
 .itemCard{border:1px solid #30303f;padding:8px;background:#141522;border-radius:6px;margin-bottom:8px}
 .itemHeader{display:flex;justify-content:space-between;align-items:center}
 .itemName{font-weight:700}
@@ -43,19 +46,27 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 /* Arena */
 #arena{position:absolute;left:240px;top:418px;width:480px;height:184px;border:3px solid #fff;display:none;box-shadow:0 0 12px rgba(255,255,255,.35);z-index:2}
 
-/* Admin overlay (67×3 to open) */
+/* Admin overlay (67×3) — improved */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:10}
-#panel{width:880px;max-width:95%;background:#111218;border:2px solid #fff;border-radius:8px;color:#ffd166;padding:14px}
+#panel{width:920px;max-width:96%;background:#111218;border:2px solid #fff;border-radius:8px;color:#ffd166;padding:12px}
+#panelHead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#panelHead .title{font-size:18px;font-weight:700}
+#panelHead .hint{font-size:12px;color:#bfc5de}
 .tabs{display:flex;gap:8px;margin-bottom:8px}
-.tbtn{padding:6px 10px;border:1px solid #fff;background:#161622;color:#ffd166;cursor:pointer}
+.tbtn{padding:6px 10px;border:1px solid #fff;background:#161622;color:#ffd166;cursor:pointer;border-radius:6px}
 .tbtn.active{background:#1f2030}
 .view{display:none}
 .view.active{display:block}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
-.sel,.inp{background:#0f1020;color:#ffd166;border:1px solid #34344a;padding:6px 8px}
-.btn2{padding:6px 10px;border:1px solid #fff;background:#212238;color:#ffd166;cursor:pointer}
+.sel,.inp, .rng{background:#0f1020;color:#ffd166;border:1px solid #34344a;padding:6px 8px;border-radius:6px}
+.btn2{padding:6px 10px;border:1px solid #fff;background:#212238;color:#ffd166;cursor:pointer;border-radius:6px}
 .btn2:hover{filter:brightness(1.12)}
-.badge{border:1px solid #3a3a4a;background:#0f1020;color:#cfd;padding:2px 6px;border-radius:4px;font-size:12px}
+.badge{border:1px solid #3a3a4a;background:#0f1020;color:#cfd;padding:4px 8px;border-radius:6px;font-size:12px}
+.chk{display:flex;align-items:center;gap:6px}
+#admGrid{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+#bossPrevWrap{background:#0b0c14;border:1px solid #2f3148;border-radius:8px;padding:8px}
+#bossPrev{width:240px;height:160px;background:#0c0d16;border:1px solid #31334a;border-radius:6px;display:block;margin:auto}
+.small{font-size:12px;color:#c9cfe4}
 
 /* Canvas */
 canvas{display:block}
@@ -73,7 +84,7 @@ canvas{display:block}
     </div>
     <div class="hcol" style="align-items:flex-end;min-width:240px">
       <div id="playerName">Traveler</div>
-      <div class="bar" style="width:260px"><div id="hpFill" class="fill"></"></div></div>
+      <div class="bar" style="width:260px"><div id="hpFill" class="fill"></div></div>
       <div id="hpVal" class="sub">60/60</div>
     </div>
   </div>
@@ -91,61 +102,112 @@ canvas{display:block}
 
   <!-- Equip overlay -->
   <div id="equipOverlay">
-    <h4>Equipment</h4>
-    <div id="equipList"></div>
-    <div class="btnGroup">
-      <button id="btnUnequip" class="btn3">Unequip</button>
+    <div id="equipHeader">
+      <div style="display:flex;gap:8px;align-items:center">
+        <h3 style="margin:0;color:#ffd166">Equipment</h3>
+        <span class="small">Equip/unequip and use items without costing your turn</span>
+      </div>
+      <div id="stats">
+        <div class="stat" id="statWeap">ATK +0</div>
+        <div class="stat" id="statHP">HP 60/60</div>
+      </div>
     </div>
-    <h4 style="margin-top:10px">Consumables</h4>
-    <div id="consumableList"></div>
-    <div class="btnGroup" style="margin-top:8px">
-      <button id="equipClose" class="btn3">Close</button>
+    <div id="equipCols">
+      <div>
+        <h4>Weapons</h4>
+        <div class="list" id="equipList"></div>
+        <div class="btnGroup">
+          <button id="btnUnequip" class="btn3" title="Revert to Stick">Unequip</button>
+        </div>
+      </div>
+      <div>
+        <h4>Healing items</h4>
+        <div class="list" id="consumableList"></div>
+        <div class="btnGroup">
+          <button id="equipClose" class="btn3">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Admin overlay -->
   <div id="admin">
     <div id="panel">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <div style="font-size:18px;font-weight:700">Admin</div>
-        <div style="font-size:12px;color:#c9c9dd">Press 6 then 7 three times to open</div>
-        <button id="adClose" class="btn2" style="margin-left:auto">Close [X]</button>
+      <div id="panelHead">
+        <div class="title">⚙️ Admin</div>
+        <div class="hint">Press 6 then 7 three times to open</div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button id="adClose" class="btn2">Close [X]</button>
+        </div>
       </div>
+
       <div class="tabs">
-        <button class="tbtn active" data-t="boss">Boss</button>
-        <button class="tbtn" data-t="power">Power</button>
-        <button class="tbtn" data-t="state">State</button>
+        <button class="tbtn active" data-t="boss">⚔️ Boss</button>
+        <button class="tbtn" data-t="power">💡 Power</button>
+        <button class="tbtn" data-t="state">📊 State</button>
       </div>
-      <div id="view-boss" class="view active">
-        <div class="row">
-          <select id="adBoss" class="sel" style="min-width:360px"></select>
-          <button id="adLoadBoss" class="btn2">Load</button>
-          <button id="adEnd" class="btn2">End attack</button>
-          <button id="adWin" class="btn2">Win</button>
+
+      <div id="admGrid">
+        <!-- Left: views -->
+        <div>
+          <div id="view-boss" class="view active">
+            <div class="row">
+              <select id="adBoss" class="sel" style="min-width:360px"></select>
+              <button id="adLoadBoss" class="btn2">Load</button>
+              <button id="adEnd" class="btn2">End attack</button>
+              <button id="adWin" class="btn2">Win</button>
+            </div>
+            <div class="row">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label class="small">Global speed: <span id="spVal">1.00x</span></label>
+                <input id="adSpeed" class="rng" type="range" min="0.5" max="2" step="0.05" value="1.00"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label class="small">Damage multiplier: <span id="dmVal">1.00x</span></label>
+                <input id="adDmg" class="rng" type="range" min="0.5" max="2" step="0.05" value="1.00"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label class="small">Speed multiplier: <span id="smVal">1.00x</span></label>
+                <input id="adSpd" class="rng" type="range" min="0.5" max="2" step="0.05" value="1.00"/>
+              </div>
+            </div>
+            <div class="row">
+              <div class="chk"><input type="checkbox" id="chkInf"/><label for="chkInf">Infinite HP</label></div>
+              <div class="chk"><input type="checkbox" id="chkOHK"/><label for="chkOHK">One-hit kill</label></div>
+              <div class="chk"><input type="checkbox" id="chkInv"/><label for="chkInv">Invincibility</label></div>
+            </div>
+            <div class="row">
+              <label class="small">Trigger attack:</label>
+              <select id="adAtk" class="sel" style="min-width:160px"></select>
+              <button id="adTrigger" class="btn2">Trigger</button>
+            </div>
+          </div>
+
+          <div id="view-power" class="view">
+            <div class="row">
+              <button id="adHeal" class="btn2">Heal player</button>
+              <button id="adClear" class="btn2">Clear bullets</button>
+              <button id="adGiveAll" class="btn2">Give all gear & items</button>
+              <button id="adSkip" class="btn2">Skip current attack</button>
+            </div>
+          </div>
+
+          <div id="view-state" class="view">
+            <div class="row">
+              <div class="badge" id="stTurn">turn: player</div>
+              <div class="badge" id="stArena">arena: hidden</div>
+              <div class="badge" id="stBul">bullets: 0</div>
+              <div class="badge" id="stBoss">boss: —</div>
+            </div>
+          </div>
         </div>
-        <div class="row">
-          <label>Difficulty</label>
-          <select id="adDiff" class="sel"><option>Normal</option><option>Hard</option><option>Insane</option></select>
-          <button id="adApplyDiff" class="btn2">Apply</button>
-          <label>Speed</label>
-          <input id="adSpeed" class="inp" type="number" step="0.05" min="0.5" max="2" value="1.00"/>
-          <button id="adApplySpeed" class="btn2">Apply</button>
+
+        <!-- Right: preview -->
+        <div id="bossPrevWrap">
+          <div class="small" style="margin-bottom:6px">Preview</div>
+          <canvas id="bossPrev" width="240" height="160"></canvas>
+          <div class="small" id="prevName" style="text-align:center;margin-top:6px">—</div>
         </div>
-      </div>
-      <div id="view-power" class="view">
-        <div class="row">
-          <button id="adHeal" class="btn2">Heal player</button>
-          <button id="adInvinc" class="btn2">Toggle invincibility</button>
-          <button id="adKillBoss" class="btn2">Boss to 1 HP</button>
-          <button id="adClear" class="btn2">Clear bullets</button>
-        </div>
-        <div class="row">
-          <button id="adGiveAll" class="btn2">Give all gear & items</button>
-          <button id="adSkip" class="btn2">Skip current attack</button>
-        </div>
-      </div>
-      <div id="view-state" class="view">
-        <div class="row"><div class="badge" id="stTurn">turn: player</div><div class="badge" id="stArena">arena: hidden</div><div class="badge" id="stBul">bullets: 0</div></div>
       </div>
     </div>
   </div>
@@ -155,35 +217,36 @@ canvas{display:block}
 "use strict";
 
 /* Canvas and elements */
-const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false});
-ctx.imageSmoothingEnabled=false;
-
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
 const bossName=document.getElementById('bossName'), bossFill=document.getElementById('bossFill'), bossVal=document.getElementById('bossVal');
 const hpFill=document.getElementById('hpFill'), hpVal=document.getElementById('hpVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiBar=document.getElementById('uiBar'), arenaEl=document.getElementById('arena');
-
 const equipOverlay=document.getElementById('equipOverlay'), equipList=document.getElementById('equipList'), consumableList=document.getElementById('consumableList');
 const btnUnequip=document.getElementById('btnUnequip'), equipClose=document.getElementById('equipClose');
-
 const admin=document.getElementById('admin'), adClose=document.getElementById('adClose');
 const tbtns=[...document.querySelectorAll('.tbtn')];
 const views={boss:document.getElementById('view-boss'), power:document.getElementById('view-power'), state:document.getElementById('view-state')};
 const adBoss=document.getElementById('adBoss'), adLoadBoss=document.getElementById('adLoadBoss'), adEnd=document.getElementById('adEnd'), adWin=document.getElementById('adWin');
-const adDiff=document.getElementById('adDiff'), adApplyDiff=document.getElementById('adApplyDiff');
-const adSpeed=document.getElementById('adSpeed'), adApplySpeed=document.getElementById('adApplySpeed');
+const adSpeed=document.getElementById('adSpeed'), adDmg=document.getElementById('adDmg'), adSpd=document.getElementById('adSpd');
+const spVal=document.getElementById('spVal'), dmVal=document.getElementById('dmVal'), smVal=document.getElementById('smVal');
+const chkInf=document.getElementById('chkInf'), chkOHK=document.getElementById('chkOHK'), chkInv=document.getElementById('chkInv');
+const adAtk=document.getElementById('adAtk'), adTrigger=document.getElementById('adTrigger');
 const adHeal=document.getElementById('adHeal'), adInvinc=document.getElementById('adInvinc'), adKillBoss=document.getElementById('adKillBoss'), adClear=document.getElementById('adClear');
 const adGiveAll=document.getElementById('adGiveAll'), adSkip=document.getElementById('adSkip');
-const stTurn=document.getElementById('stTurn'), stArena=document.getElementById('stArena'), stBul=document.getElementById('stBul');
+const stTurn=document.getElementById('stTurn'), stArena=document.getElementById('stArena'), stBul=document.getElementById('stBul'), stBoss=document.getElementById('stBoss');
+const bossPrev=document.getElementById('bossPrev'), pctx=bossPrev.getContext('2d'); pctx.imageSmoothingEnabled=false;
+const prevName=document.getElementById('prevName');
+const statWeap=document.getElementById('statWeap'), statHP=document.getElementById('statHP');
 
 /* Helpers */
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
 function hideSay(){ bubble.style.display='none'; }
-function updateStateBadges(){ stTurn.textContent='turn: '+turn; stArena.textContent='arena: '+(showArena?'shown':'hidden'); stBul.textContent='bullets: '+bullets.length; }
+function updateStateBadges(){ stTurn.textContent='turn: '+turn; stArena.textContent='arena: '+(showArena?'shown':'hidden'); stBul.textContent='bullets: '+bullets.length; stBoss.textContent='boss: '+(BOSS?BOSS.name:'—'); }
 function setTab(name){ tbtns.forEach(b=>b.classList.toggle('active', b.dataset.t===name)); Object.entries(views).forEach(([k,v])=>v.classList.toggle('active', k===name)); }
 
 /* Save/data */
-const SAVE_KEY='battle_bottom_equip_full_v2';
+const SAVE_KEY='battle_full_admin_equip_v3';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -192,68 +255,78 @@ if(!SAVE.currentWeapon) SAVE.currentWeapon='stick';
 if(!Array.isArray(SAVE.items)) SAVE.items=[{id:'petal',name:'Petal',heal:12,count:3},{id:'elixir',name:'Elixir',heal:30,count:1}];
 if(!SAVE.hp) SAVE.hp=60;
 if(typeof SAVE.bossIndex!=='number') SAVE.bossIndex=0;
-if(!SAVE.difficulty) SAVE.difficulty='Normal';
 saveWrite(SAVE);
 
-const DIFFS={ Normal:{spd:1.0,dmg:1.0}, Hard:{spd:1.18,dmg:1.3}, Insane:{spd:1.35,dmg:1.6} };
-let DIFF=DIFFS[SAVE.difficulty]||DIFFS.Normal;
+/* Balancing */
 let GLOBAL_SPEED=1.0;
+let DIFF = { spd:1.0, dmg:1.0 };
+
+/* Flags */
+let FLAG_INFINITE=false, FLAG_ONEHIT=false, FLAG_INVINC=false;
 
 /* Equipment & items */
 const WEAPONS={
-  stick:{id:'stick',name:'Stick',atk:0,desc:'Basic starter'},
-  solar:{id:'solar',name:'Solar Brand',atk:7,desc:'+7 ATK'},
-  ember:{id:'ember',name:'Ember Blade',atk:6,desc:'+6 ATK'},
-  abyss:{id:'abyss',name:'Abyss Poker',atk:8,desc:'+8 ATK'},
-  mantis:{id:'mantis',name:'Gilded Claws',atk:6,desc:'+6 ATK'},
-  pixel:{id:'pixel',name:'Glitch Knife',atk:6,desc:'+6 ATK'},
-  frost:{id:'frost',name:'Frost Lance',atk:9,desc:'+9 ATK'},
-  dj:{id:'dj',name:'Beat Baton',atk:6,desc:'+6 ATK'},
-  void:{id:'void',name:'Grav Halberd',atk:8,desc:'+8 ATK'},
-  siren:{id:'siren',name:'Tide Spear',atk:6,desc:'+6 ATK'},
-  storm:{id:'storm',name:'Thunder Knuckles',atk:10,desc:'+10 ATK'},
-  chrono:{id:'chrono',name:'Chrono Edge',atk:8,desc:'+8 ATK'},
-  aurora:{id:'aurora',name:'Aurora Ribbon',atk:7,desc:'+7 ATK'},
-  godslayer:{id:'godslayer',name:'Godslayer Blade',atk:999,desc:'Normal bosses spawn at 1 HP; admin hits set to 67 HP.'}
+  stick:{id:'stick',name:'Stick',atk:0,desc:'Basic, but it’s yours.'},
+  solar:{id:'solar',name:'Solar Brand',atk:7,desc:'Forged in eclipses.'},
+  ember:{id:'ember',name:'Ember Blade',atk:6,desc:'Breathes cinders.'},
+  abyss:{id:'abyss',name:'Abyss Poker',atk:8,desc:'Pierces the void.'},
+  mantis:{id:'mantis',name:'Gilded Claws',atk:6,desc:'Fast and precise.'},
+  pixel:{id:'pixel',name:'Glitch Knife',atk:6,desc:'Reality tearer.'},
+  frost:{id:'frost',name:'Frost Lance',atk:9,desc:'Winter’s edge.'},
+  dj:{id:'dj',name:'Beat Baton',atk:6,desc:'Drop the beatdown.'},
+  void:{id:'void',name:'Grav Halberd',atk:8,desc:'Weight of worlds.'},
+  siren:{id:'siren',name:'Tide Spear',atk:6,desc:'Sings and strikes.'},
+  storm:{id:'storm',name:'Thunder Knuckles',atk:10,desc:'Storm in your fists.'},
+  chrono:{id:'chrono',name:'Chrono Edge',atk:8,desc:'Cuts time clean.'},
+  aurora:{id:'aurora',name:'Aurora Ribbon',atk:7,desc:'Dances and dazzles.'},
+  colossus:{id:'colossus',name:'Forge Breaker',atk:9,desc:'Anvil-cracker.'},
+  venom:{id:'venom',name:'Serpent Fang',atk:7,desc:'Tastes like victory.'},
+  crystal:{id:'crystal',name:'Prism Saber',atk:8,desc:'Light into steel.'},
+  phoenix:{id:'phoenix',name:'Ashwing Talon',atk:9,desc:'Flare-born.'},
+  godslayer:{id:'godslayer',name:'Godslayer Blade',atk:999,desc:'Ends it before it begins.'}
 };
 function equippedWeapon(){ return WEAPONS[SAVE.currentWeapon]||WEAPONS.stick; }
 
+function refreshStats(){
+  const w=equippedWeapon();
+  statWeap.textContent='ATK +'+w.atk;
+  statHP.textContent='HP '+Math.floor(HEART.hp)+'/'+Math.floor(HEART.hpMax);
+}
+
 function renderEquip(){
+  const owned=[...SAVE.weapons].sort((a,b)=>(WEAPONS[b]?.atk||0)-(WEAPONS[a]?.atk||0));
   equipList.innerHTML='';
-  Object.values(WEAPONS).forEach(w=>{
-    if(!SAVE.weapons.includes(w.id)) return; // show owned weapons
-    const card=document.createElement('div'); card.className='itemCard';
-    const head=document.createElement('div'); head.className='itemHeader';
-    const name=document.createElement('div'); name.className='itemName'; name.textContent=w.name+(SAVE.currentWeapon===w.id?' (equipped)':'');
-    const atk=document.createElement('div'); atk.textContent='ATK +'+w.atk;
-    head.appendChild(name); head.appendChild(atk);
-    const desc=document.createElement('div'); desc.className='itemDesc'; desc.textContent=w.desc;
-    const btns=document.createElement('div'); btns.className='btnGroup';
-    const btnEq=document.createElement('button'); btnEq.className='btn3'; btnEq.textContent='Equip (no turn)';
-    btnEq.onclick=()=>{ SAVE.currentWeapon=w.id; saveWrite(SAVE); renderEquip(); };
-    btns.appendChild(btnEq);
-    card.appendChild(head); card.appendChild(desc); card.appendChild(btns);
+  for(const id of owned){
+    const w=WEAPONS[id]; if(!w) continue;
+    const card=document.createElement('div'); card.className='itemCard'; card.title=w.desc;
+    card.innerHTML=`
+      <div class="itemHeader">
+        <div class="itemName">${w.name}${SAVE.currentWeapon===id?' (equipped)':''}</div>
+        <div>ATK +${w.atk}</div>
+      </div>
+      <div class="itemDesc">${w.desc}</div>
+      <div class="btnGroup"><button class="btn3">Equip (no turn)</button></div>`;
+    card.querySelector('button').onclick=()=>{ SAVE.currentWeapon=w.id; saveWrite(SAVE); renderEquip(); refreshStats(); };
     equipList.appendChild(card);
-  });
+  }
 }
 function renderConsumables(){
+  const heals=(SAVE.items||[]).filter(it=>it.heal).sort((a,b)=>b.heal-a.heal);
   consumableList.innerHTML='';
-  (SAVE.items||[]).filter(it=>it.heal).forEach(it=>{
+  for(const it of heals){
     const card=document.createElement('div'); card.className='itemCard';
-    const head=document.createElement('div'); head.className='itemHeader';
-    const name=document.createElement('div'); name.className='itemName'; name.textContent=it.name;
-    const cnt=document.createElement('div'); cnt.textContent='×'+it.count;
-    head.appendChild(name); head.appendChild(cnt);
-    const desc=document.createElement('div'); desc.className='itemDesc'; desc.textContent='Heals '+it.heal+' HP';
-    const btns=document.createElement('div'); btns.className='btnGroup';
-    const btnUse=document.createElement('button'); btnUse.className='btn3'; btnUse.textContent='Use (no turn)';
-    btnUse.onclick=()=>{ if(it.count<=0) return; it.count--; HEART.hp=Math.min(HEART.hpMax, HEART.hp+it.heal); updatePlayerBar(); saveWrite(SAVE); renderConsumables(); };
-    btns.appendChild(btnUse);
-    card.appendChild(head); card.appendChild(desc); card.appendChild(btns);
+    card.innerHTML=`
+      <div class="itemHeader">
+        <div class="itemName">${it.name}</div>
+        <div>×${it.count}</div>
+      </div>
+      <div class="itemDesc">Heals ${it.heal} HP</div>
+      <div class="btnGroup"><button class="btn3"${it.count<=0?' disabled':''}>Use (no turn)</button></div>`;
+    card.querySelector('button').onclick=()=>{ if(it.count<=0) return; it.count--; HEART.hp=Math.min(HEART.hpMax, HEART.hp+it.heal); updatePlayerBar(); saveWrite(SAVE); renderConsumables(); refreshStats(); };
     consumableList.appendChild(card);
-  });
+  }
 }
-btnUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); renderEquip(); };
+btnUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); renderEquip(); refreshStats(); };
 equipClose.onclick=()=>{ equipOverlay.style.display='none'; };
 
 /* Bars */
@@ -303,21 +376,26 @@ const PAT = {
   arcs:(col,spd,rate,n,dmg,dur)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; spawn({x:cx+Math.cos(a)*60,y:cy+Math.sin(a)*40,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg}); } } } })
 };
 
-/* Boss icons — all distinct */
-function drawSolar(t){ const cx=480, cy=240+Math.sin(t*2)*3; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,42,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,0.4)'; for(let i=0;i<12;i++){ const a=i/12*Math.PI*2+t; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*48,cy+Math.sin(a)*48); ctx.lineTo(cx+Math.cos(a)*64,cy+Math.sin(a)*64); ctx.stroke(); } }
-function drawEmber(t){ const cx=480, cy=240; ctx.fillStyle='#ff7a3a'; ctx.beginPath(); ctx.ellipse(cx,cy,48,28,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#ffd3a0'; for(let i=0;i<20;i++){ const a=i/20*Math.PI*2; ctx.fillRect(cx+Math.cos(a)*(30+Math.sin(t*6+i)*6), cy+Math.sin(a)*(18+Math.cos(t*5+i)*4), 3,3); } }
-function drawAbyss(t){ const cx=480, cy=240; ctx.fillStyle='#2a2450'; ctx.fillRect(cx-42,cy-42,84,84); ctx.fillStyle='#fff'; ctx.fillRect(cx-18,cy-6,10,10); ctx.fillRect(cx+8,cy-6,10,10); ctx.strokeStyle='#a89bff'; ctx.strokeRect(cx-42,cy-42,84,84); }
-function drawMantis(t){ const cx=480, cy=240; ctx.fillStyle='#ffe27a'; ctx.fillRect(cx-58,cy-18,116,36); ctx.fillStyle='#fff59a'; ctx.fillRect(cx-90,cy-6,42,12); ctx.fillRect(cx+48,cy-6,42,12); }
-function drawPixel(t){ const cx=480, cy=240; ctx.save(); ctx.translate(Math.sin(t*10)*4,0); ctx.fillStyle='#a8ecff'; ctx.fillRect(cx-40,cy-40,80,80); ctx.fillStyle='#0d0e18'; ctx.fillRect(cx-12,cy-12,24,24); ctx.restore(); }
-function drawFrost(t){ const cx=480, cy=240; ctx.fillStyle='#cfeeff'; ctx.fillRect(cx-50,cy-50,100,100); ctx.strokeStyle='#fff'; for(let i=0;i<6;i++){ ctx.beginPath(); ctx.arc(cx,cy,18+i*10,0,Math.PI*2); ctx.stroke(); } }
-function drawDJ(t){ const cx=480, cy=240; ctx.fillStyle='#ff99a9'; ctx.beginPath(); ctx.arc(cx,cy,34,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#ffb0b0'; ctx.fillRect(cx-70,cy-10,40,20); ctx.fillRect(cx+30,cy-10,40,20); }
-function drawVoid(t){ const cx=480, cy=240; ctx.strokeStyle='#c9b9ff'; for(let r=18;r<=60;r+=14){ ctx.beginPath(); ctx.arc(cx+Math.sin(t)*4,cy+Math.cos(t)*4,r+Math.sin(t*2+r)*2,0,Math.PI*2); ctx.stroke(); } }
-function drawSiren(t){ const cx=480, cy=240; ctx.fillStyle='#66ccff'; ctx.beginPath(); ctx.arc(cx,cy,32,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#88d9ff'; for(let i=0;i<10;i++){ ctx.beginPath(); ctx.arc(cx+Math.cos(i+t*2)*40, cy+Math.sin(i+t*2)*18, 4,0,Math.PI*2); ctx.fill(); } }
-function drawStorm(t){ const cx=480, cy=240; ctx.fillStyle='#ffd455'; ctx.beginPath(); ctx.arc(cx,cy,36,0,Math.PI*2); ctx.fill(); if(Math.random()<0.07){ ctx.strokeStyle='#fff'; ctx.beginPath(); ctx.moveTo(cx,cy-44); ctx.lineTo(cx+10,cy-10); ctx.lineTo(cx-10,cy+24); ctx.stroke(); } }
-function drawChrono(t){ const cx=480, cy=240; ctx.strokeStyle='#64f0c2'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,36,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*2)*24, cy+Math.sin(t*2)*24); ctx.stroke(); }
-function drawAurora(t){ const cx=480, cy=240; for(let i=0;i<6;i++){ const y=cy-56+i*18; const col=['#ff91e6','#ffc3f3','#ffd6f8','#a2f3ff','#b0a7ff','#ffd6f8'][i]; ctx.strokeStyle=col; ctx.lineWidth=8; ctx.beginPath(); ctx.moveTo(120, y+Math.sin(t*2+i)*5); ctx.lineTo(840, y-Math.sin(t*2+i)*5); ctx.stroke(); } }
-function drawObliv(t){ const cx=480, cy=240; ctx.fillStyle='#241c28'; ctx.fillRect(cx-44,cy-44,88,88); ctx.strokeStyle='#ffd166'; for(let i=0;i<4;i++){ ctx.strokeRect(cx-20-i*8,cy-20-i*8,40+i*16,40+i*16); } }
-function drawCupcake(t){ const cx=480, cy=240; ctx.fillStyle='#ff7acb'; ctx.beginPath(); ctx.moveTo(cx-44,cy+40); ctx.lineTo(cx+44,cy+40); ctx.lineTo(cx+32,cy+84); ctx.lineTo(cx-32,cy+84); ctx.closePath(); ctx.fill(); ctx.fillStyle='#ffc3f3'; ctx.beginPath(); ctx.arc(cx,cy,42,Math.PI,0); ctx.arc(cx,cy-20,32,Math.PI,0); ctx.arc(cx,cy-42,22,Math.PI,0); ctx.fill(); ctx.fillStyle='#ff3a6b'; ctx.beginPath(); ctx.arc(cx,cy-64+Math.sin(t*3)*2,10,0,Math.PI*2); ctx.fill(); const colors=['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff']; for(let i=0;i<12;i++){ const a=t*2+i/12*Math.PI*2; const x=cx+Math.cos(a)*52; const y=cy-20+Math.sin(a)*28; ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(x,y,4,8); } }
+/* Shared draw helpers: accept context g */
+function drawSolar(t,g=ctx){ const cx=480, cy=240+Math.sin(t*2)*3; g.fillStyle='#ffd166'; g.beginPath(); g.arc(cx,cy,42,0,Math.PI*2); g.fill(); g.strokeStyle='rgba(255,255,255,0.4)'; for(let i=0;i<12;i++){ const a=i/12*Math.PI*2+t; g.beginPath(); g.moveTo(cx+Math.cos(a)*48,cy+Math.sin(a)*48); g.lineTo(cx+Math.cos(a)*64,cy+Math.sin(a)*64); g.stroke(); } }
+function drawEmber(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ff7a3a'; g.beginPath(); g.ellipse(cx,cy,48,28,0,0,Math.PI*2); g.fill(); g.fillStyle='#ffd3a0'; for(let i=0;i<20;i++){ const a=i/20*Math.PI*2; g.fillRect(cx+Math.cos(a)*(30+Math.sin(t*6+i)*6), cy+Math.sin(a)*(18+Math.cos(t*5+i)*4), 3,3); } }
+function drawAbyss(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#2a2450'; g.fillRect(cx-42,cy-42,84,84); g.fillStyle='#fff'; g.fillRect(cx-18,cy-6,10,10); g.fillRect(cx+8,cy-6,10,10); g.strokeStyle='#a89bff'; g.strokeRect(cx-42,cy-42,84,84); }
+function drawMantis(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ffe27a'; g.fillRect(cx-58,cy-18,116,36); g.fillStyle='#fff59a'; g.fillRect(cx-90,cy-6,42,12); g.fillRect(cx+48,cy-6,42,12); }
+function drawPixel(t,g=ctx){ const cx=480, cy=240; g.save(); g.translate(Math.sin(t*10)*4,0); g.fillStyle='#a8ecff'; g.fillRect(cx-40,cy-40,80,80); g.fillStyle='#0d0e18'; g.fillRect(cx-12,cy-12,24,24); g.restore(); }
+function drawFrost(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#cfeeff'; g.fillRect(cx-50,cy-50,100,100); g.strokeStyle='#fff'; for(let i=0;i<6;i++){ g.beginPath(); g.arc(cx,cy,18+i*10,0,Math.PI*2); g.stroke(); } }
+function drawDJ(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ff99a9'; g.beginPath(); g.arc(cx,cy,34,0,Math.PI*2); g.fill(); g.fillStyle='#ffb0b0'; g.fillRect(cx-70,cy-10,40,20); g.fillRect(cx+30,cy-10,40,20); }
+function drawVoid(t,g=ctx){ const cx=480, cy=240; g.strokeStyle='#c9b9ff'; for(let r=18;r<=60;r+=14){ g.beginPath(); g.arc(cx+Math.sin(t)*4,cy+Math.cos(t)*4,r+Math.sin(t*2+r)*2,0,Math.PI*2); g.stroke(); } }
+function drawSiren(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#66ccff'; g.beginPath(); g.arc(cx,cy,32,0,Math.PI*2); g.fill(); g.fillStyle='#88d9ff'; for(let i=0;i<10;i++){ g.beginPath(); g.arc(cx+Math.cos(i+t*2)*40, cy+Math.sin(i+t*2)*18, 4,0,Math.PI*2); g.fill(); } }
+function drawStorm(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ffd455'; g.beginPath(); g.arc(cx,cy,36,0,Math.PI*2); g.fill(); if(Math.random()<0.07){ g.strokeStyle='#fff'; g.beginPath(); g.moveTo(cx,cy-44); g.lineTo(cx+10,cy-10); g.lineTo(cx-10,cy+24); g.stroke(); } }
+function drawChrono(t,g=ctx){ const cx=480, cy=240; g.strokeStyle='#64f0c2'; g.lineWidth=3; g.beginPath(); g.arc(cx,cy,36,0,Math.PI*2); g.stroke(); g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(t*2)*24, cy+Math.sin(t*2)*24); g.stroke(); }
+function drawAurora(t,g=ctx){ const cx=480, cy=240; for(let i=0;i<6;i++){ const y=cy-56+i*18; const col=['#ff91e6','#ffc3f3','#ffd6f8','#a2f3ff','#b0a7ff','#ffd6f8'][i]; g.strokeStyle=col; g.lineWidth=8; g.beginPath(); g.moveTo(120, y+Math.sin(t*2+i)*5); g.lineTo(840, y-Math.sin(t*2+i)*5); g.stroke(); } }
+function drawObliv(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#241c28'; g.fillRect(cx-44,cy-44,88,88); g.strokeStyle='#ffd166'; for(let i=0;i<4;i++){ g.strokeRect(cx-20-i*8,cy-20-i*8,40+i*16,40+i*16); } }
+function drawCupcake(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ff7acb'; g.beginPath(); g.moveTo(cx-44,cy+40); g.lineTo(cx+44,cy+40); g.lineTo(cx+32,cy+84); g.lineTo(cx-32,cy+84); g.closePath(); g.fill(); g.fillStyle='#ffc3f3'; g.beginPath(); g.arc(cx,cy,42,Math.PI,0); g.arc(cx,cy-20,32,Math.PI,0); g.arc(cx,cy-42,22,Math.PI,0); g.fill(); g.fillStyle='#ff3a6b'; g.beginPath(); g.arc(cx,cy-64+Math.sin(t*3)*2,10,0,Math.PI*2); g.fill(); const colors=['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff']; for(let i=0;i<12;i++){ const a=t*2+i/12*Math.PI*2; const x=cx+Math.cos(a)*52; const y=cy-20+Math.sin(a)*28; g.fillStyle=colors[i%colors.length]; g.fillRect(x,y,4,8); } }
+/* New bosses draws */
+function drawColossus(t,g=ctx){ const cx=480,cy=240; g.fillStyle='#5e5a58'; g.fillRect(cx-70,cy-50,140,100); g.fillStyle='#ff6a00'; g.beginPath(); g.arc(cx,cy,22+Math.sin(t*3)*2,0,Math.PI*2); g.fill(); g.strokeStyle='#9a8f89'; g.strokeRect(cx-70,cy-50,140,100); }
+function drawVenom(t,g=ctx){ const cx=480,cy=240; g.fillStyle='#2a3f2a'; g.beginPath(); g.ellipse(cx,cy,70,28,Math.sin(t)*0.2,0,Math.PI*2); g.fill(); g.fillStyle='#5bff66'; for(let i=0;i<10;i++){ g.fillRect(cx-50+i*10,cy+Math.sin(t*6+i)*18,4,8); } }
+function drawCrystal(t,g=ctx){ const cx=480,cy=240; g.fillStyle='#a8e6ff'; for(let i=0;i<6;i++){ const a=i/6*Math.PI*2+t; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(a)*50, cy+Math.sin(a)*30); g.lineTo(cx+Math.cos(a+0.2)*40, cy+Math.sin(a+0.2)*24); g.closePath(); g.fill(); } g.fillStyle='#d0f8ff'; g.beginPath(); g.arc(cx,cy,10,0,Math.PI*2); g.fill(); }
+function drawPhoenix(t,g=ctx){ const cx=480,cy=240; g.fillStyle='#ff8a3a'; g.beginPath(); g.arc(cx,cy,26,0,Math.PI*2); g.fill(); g.strokeStyle='#ffd166'; g.lineWidth=3; for(let i=0;i<6;i++){ const a=i/6*Math.PI*2+t; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(a)*60,cy+Math.sin(a)*20); g.stroke(); } }
 
 /* Backgrounds */
 function bgDefault(){ ctx.fillStyle='#09090f'; ctx.fillRect(0,0,960,720); }
@@ -335,39 +413,54 @@ function bgChrono(){ ctx.fillStyle='#0c1f1d'; ctx.fillRect(0,0,960,720); ctx.str
 function bgAurora(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a0b1a'); g.addColorStop(1,'#101536'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<6;i++){ const y=120+i*90; const h=40+Math.sin(time+i)*12; const col=['#ff91e6','#ffc3f3','#ffd6f8','#a2f3ff','#b0a7ff','#ffd6f8'][i%6]; ctx.fillStyle=col; ctx.globalAlpha=0.35; ctx.fillRect(0,y,960,h); ctx.globalAlpha=1; } }
 function bgObliv(){ ctx.fillStyle='#0b0b0f'; ctx.fillRect(0,0,960,720); ctx.strokeStyle='rgba(255,214,102,0.25)'; ctx.lineWidth=1; for(let i=0;i<12;i++){ ctx.strokeRect(120+i*50,120+i*30,720-i*100,480-i*60); } }
 function bgCandy(){ const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffccf9'); grad.addColorStop(1,'#ffe6f7'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720); ctx.strokeStyle='#ff99cc'; ctx.lineWidth=30; for(let x=-100;x<960;x+=120){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+200,720); ctx.stroke(); } for(let i=0;i<5;i++){ const lx=100+i*180, ly=600; ctx.strokeStyle='#663300'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-120); ctx.stroke(); ctx.fillStyle=['#ff6666','#66ccff','#99ff99','#ffff66','#ff99ff'][i%5]; ctx.beginPath(); ctx.arc(lx,ly-140,40,0,Math.PI*2); ctx.fill(); } }
+/* New backgrounds */
+function bgColossus(){ ctx.fillStyle='#1a1a1e'; ctx.fillRect(0,0,960,720); for(let i=0;i<50;i++){ ctx.fillStyle='rgba(255,140,50,'+(Math.random()*0.3)+')'; ctx.fillRect(Math.random()*960, 500+Math.random()*220, 2, 10+Math.random()*30); } }
+function bgVenom(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0f1a0f'); g.addColorStop(1,'#1a2e1a'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<80;i++){ ctx.fillStyle='rgba(90,255,110,'+(Math.random()*0.15)+')'; ctx.beginPath(); ctx.arc(Math.random()*960, 600+Math.random()*120, 3,0,Math.PI*2); ctx.fill(); } }
+function bgCrystal(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a111a'); g.addColorStop(1,'#132236'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<70;i++){ ctx.fillStyle='rgba(168,230,255,'+(Math.random()*0.25)+')'; ctx.fillRect(Math.random()*960, Math.random()*720, 2,2); } }
+function bgPhoenix(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#2a0f0a'); g.addColorStop(1,'#501c12'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<40;i++){ ctx.fillStyle='rgba(255,170,70,'+(Math.random()*0.3)+')'; ctx.beginPath(); ctx.arc(100+Math.random()*760, 100+Math.random()*520, 2,0,Math.PI*2); ctx.fill(); } }
 
-/* Boss roster — 12 normal + 2 admin-only */
+/* Boss roster — 12 normal + 4 new + 2 admin */
 function B(name,hp,draw,bg,intro,lines,attacks,drop,isAdmin=false){ return {name,hpMax:hp,hp:hp,draw,bg,intro,lines,attacks,drop,isAdmin}; }
 const BOSSES=[
-  B('Solar Fang',360,()=>drawSolar(time),bgSolar,["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently."],
+  B('Solar Fang',360,t=>drawSolar(t),bgSolar,["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently."],
     ()=>[PAT.rain('#fff3b8',280,0.09,12,5,3.0),PAT.walls('#ffe9a0',280,8,0.48,6,3.0),PAT.ring('#ffd166',260,0.46,16,6,3.0),PAT.spiral('#ffd166',300,0.04,6,3.0),PAT.homing('#ffd166',280,0.35,6,3.0)],'solar',false),
-  B('Ember Seraph',340,()=>drawEmber(time),bgEmber,["Ash remembers flame.","You match breath with embers."],["Embers drift upward.","The kiln hums."],
+  B('Ember Seraph',340,t=>drawEmber(t),bgEmber,["Ash remembers flame.","You match breath with embers."],["Embers drift upward.","The kiln hums."],
     ()=>[PAT.rain('#ffb7a7',300,0.08,12,6,3.0),PAT.homing('#ffd3a0',280,0.36,6,3.0),PAT.arcs('#ffa277',260,0.42,12,6,3.0),PAT.ring('#ffb286',290,0.44,18,6,3.0),PAT.zigzag('#ffb48f',280,0.08,6,3.0)],'ember',false),
-  B('Abyss Jester',360,()=>drawAbyss(time),bgAbyss,["The abyss laughs with you.","Eyes open where none should be."],["You hear faint chuckling.","The darkness ripples."],
+  B('Abyss Jester',360,t=>drawAbyss(t),bgAbyss,["The abyss laughs with you.","Eyes open where none should be."],["You hear faint chuckling.","The darkness ripples."],
     ()=>[PAT.walls('#b0a0ff',300,8,0.28,6,3.0),PAT.homing('#c0b3ff',300,0.34,7,3.0),PAT.zigzag('#b9afff',240,0.08,7,3.0),PAT.ring('#a89bff',280,0.42,20,7,3.0),PAT.spiral('#c9c0ff',300,0.035,7,3.0)],'abyss',false),
-  B('Golden Mantis',380,()=>drawMantis(time),bgMantis,["Stillness. Then strike.","Measure the gap."],["He counts your steps.","Intent sharpens."],
+  B('Golden Mantis',380,t=>drawMantis(t),bgMantis,["Stillness. Then strike.","Measure the gap."],["He counts your steps.","Intent sharpens."],
     ()=>[PAT.zigzag('#ffe27a',280,0.08,7,3.0),PAT.homing('#ffdf99',300,0.32,7,3.0),PAT.ring('#ffd166',300,0.40,18,7,3.0),PAT.walls('#ffe27a',320,10,0.30,7,3.0),PAT.spiral('#fff1b6',320,0.04,7,3.0)],'mantis',false),
-  B('Pixel Phantom',350,()=>drawPixel(time),bgPixel,["gl1tch… r3ady?","hold the frame."],["Packet loss jitters.","The frame tears."],
+  B('Pixel Phantom',350,t=>drawPixel(t),bgPixel,["gl1tch… r3ady?","hold the frame."],["Packet loss jitters.","The frame tears."],
     ()=>[PAT.arcs('#a8ecff',250,0.42,14,6,3.0),PAT.spiral('#7fdcff',320,0.035,7,3.0),PAT.walls('#9fe0ff',320,10,0.26,6,3.0),PAT.ring('#a8ecff',310,0.40,20,7,3.0),PAT.homing('#9ad9ff',300,0.33,7,3.0)],'pixel',false),
-  B('Frostbite Warden',390,()=>drawFrost(time),bgFrost,["Cold clarifies.","Hold steady."],["Your breath fogs.","No ripples."],
+  B('Frostbite Warden',390,t=>drawFrost(t),bgFrost,["Cold clarifies.","Hold steady."],["Your breath fogs.","No ripples."],
     ()=>[PAT.rain('#d0f0ff',320,0.08,14,6,3.0),PAT.ring('#cfeeff',300,0.38,20,7,3.0),PAT.arcs('#bfe7ff',260,0.36,10,7,3.0),PAT.spiral('#aee8ff',320,0.033,7,3.0),PAT.homing('#e6f7ff',300,0.34,7,3.0)],'frost',false),
-  B('Crimson DJ',370,()=>drawDJ(time),bgDJ,["drop the bass.","on the one."],["The beat stutters.","Equalizer hums."],
+  B('Crimson DJ',370,t=>drawDJ(t),bgDJ,["drop the bass.","on the one."],["The beat stutters.","Equalizer hums."],
     ()=>[PAT.arcs('#ff9aaa',270,0.40,12,7,3.0),PAT.zigzag('#ffb0b0',280,0.08,7,3.0),PAT.ring('#ff99a9',300,0.36,18,7,3.0),PAT.walls('#ff9aaa',320,10,0.28,7,3.0),PAT.homing('#ffc1c9',300,0.33,7,3.0)],'dj',false),
-  B('Void Prophet',420,()=>drawVoid(time),bgVoid,["gravity listens.","choose your orbit."],["Fall inward.","Orbit forms."],
+  B('Void Prophet',420,t=>drawVoid(t),bgVoid,["gravity listens.","choose your orbit."],["Fall inward.","Orbit forms."],
     ()=>[PAT.ring('#d4c8ff',320,0.36,22,7,3.0),PAT.spiral('#c9b9ff',320,0.035,7,3.0),PAT.homing('#cfc6ff',300,0.30,7,3.0),PAT.arcs('#bfb2ff',260,0.40,14,7,3.0),PAT.walls('#c9b9ff',300,8,0.32,7,3.0)],'void',false),
-  B('Tidecaller Siren',380,()=>drawSiren(time),bgSiren,["The tide rises.","Breathe."],["Foam glows.","Hold steady."],
+  B('Tidecaller Siren',380,t=>drawSiren(t),bgSiren,["The tide rises.","Breathe."],["Foam glows.","Hold steady."],
     ()=>[PAT.rain('#66ccff',320,0.08,14,7,3.0),PAT.zigzag('#88d9ff',280,0.08,7,3.0),PAT.arcs('#99ddff',260,0.40,14,7,3.0),PAT.ring('#88d9ff',320,0.36,20,7,3.0),PAT.homing('#aaddff',300,0.30,7,3.0)],'siren',false),
-  B('Storm Herald',520,()=>drawStorm(time),bgStorm,["Thunder answers.","Stand in it."],["The sky maps itself.","Static tingles."],
+  B('Storm Herald',520,t=>drawStorm(t),bgStorm,["Thunder answers.","Stand in it."],["The sky maps itself.","Static tingles."],
     ()=>[PAT.walls('#ffe066',340,10,0.24,8,3.0),PAT.ring('#fff59a',330,0.34,24,8,3.0),PAT.zigzag('#ffea80',300,0.07,8,3.0),PAT.spiral('#fff59a',330,0.028,8,3.0),PAT.homing('#ffe066',320,0.28,8,3.0)],'storm',false),
-  B('Chrono Warden',430,()=>drawChrono(time),bgChrono,["Time bends.","Heartbeat is a metronome."],["Moments widen.","Pulse aligns."],
+  B('Chrono Warden',430,t=>drawChrono(t),bgChrono,["Time bends.","Heartbeat is a metronome."],["Moments widen.","Pulse aligns."],
     ()=>[PAT.spiral('#a0ffd6',330,0.03,7,3.0),PAT.arcs('#64f0c2',260,0.42,16,7,3.0),PAT.homing('#9fffe3',330,0.30,7,3.0),PAT.ring('#64f0c2',320,0.36,22,7,3.0),PAT.walls('#a0ffd6',320,8,0.30,7,3.0)],'chrono',false),
-  B('Aurora Weaver',410,()=>drawAurora(time),bgAurora,["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves."],
+  B('Aurora Weaver',410,t=>drawAurora(t),bgAurora,["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves."],
     ()=>[PAT.rain('#ffb6f2',330,0.06,16,7,3.0),PAT.arcs('#ffc3f3',260,0.40,14,7,3.0),PAT.ring('#ffd6f8',330,0.34,22,7,3.0),PAT.spiral('#ffc3f3',330,0.028,7,3.0),PAT.homing('#ffd6f8',300,0.32,7,3.0)],'aurora',false),
 
-  // Admin-only (13,14)
-  B('Oblivion Herald',720,()=>drawObliv(time),bgObliv,["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],
+  /* Four new normal bosses */
+  B('Iron Colossus',560,t=>drawColossus(t),bgColossus,["Furnace roars.","Steel remembers impact."],["Sparks rain.","Pistons chant."],
+    ()=>[PAT.rain('#ff6a00',360,0.06,12,9,3.4),PAT.ring('#b3b3b3',300,0.34,24,8,3.4),PAT.zigzag('#d1d1d1',300,0.08,8,3.4),PAT.homing('#ff8c1a',320,0.30,9,3.4),PAT.spiral('#ffb347',320,0.03,8,3.4)],'colossus',false),
+  B('Venom Dancer',420,t=>drawVenom(t),bgVenom,["Sway with the toxin.","Every step a sting."],["Hiss.","Shed skin."],
+    ()=>[PAT.rain('#5bff66',320,0.07,14,7,3.2),PAT.zigzag('#70ff88',300,0.09,7,3.2),PAT.homing('#66ffa1',320,0.32,8,3.2),PAT.spiral('#90ffb0',300,0.03,7,3.2),PAT.arcs('#66ff66',260,0.40,16,7,3.2)],'venom',false),
+  B('Crystal Oracle',480,t=>drawCrystal(t),bgCrystal,["Shards sing answers.","Light chooses angles."],["Refraction.","Facet gaze."],
+    ()=>[PAT.rain('#a8e6ff',320,0.06,16,7,3.2),PAT.ring('#d0f8ff',320,0.32,26,7,3.2),PAT.zigzag('#bfefff',280,0.08,7,3.2),PAT.spiral('#a8e6ff',320,0.03,7,3.2),PAT.homing('#e2fbff',320,0.30,8,3.2)],'crystal',false),
+  B('Ashen Phoenix',540,t=>drawPhoenix(t),bgPhoenix,["Fall. Rise. Repeat.","Ash is memory."],["Wingbeat.","Cinder trail."],
+    ()=>[PAT.rain('#ff8a3a',360,0.06,14,8,3.4),PAT.ring('#ffd166',320,0.32,24,8,3.4),PAT.homing('#ffa85a',320,0.30,8,3.4),PAT.spiral('#ff9a4a',320,0.028,8,3.4),PAT.zigzag('#ffc07a',300,0.08,8,3.4)],'phoenix',false),
+
+  /* Admin-only */
+  B('Oblivion Herald',720,t=>drawObliv(t),bgObliv,["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],
     ()=>[PAT.rain('#fff59a',340,0.05,18,8,3.4),PAT.ring('#ffd166',340,0.28,26,9,3.4),PAT.spiral('#a8ecff',340,0.028,8,3.4),PAT.walls('#c5ecff',340,12,0.28,8,3.4),PAT.homing('#ffd166',340,0.30,8,3.4)],'godslayer',true),
-  B('The Cupcake Incident',800,()=>drawCupcake(time),bgCandy,["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm."],
+  B('The Cupcake Incident',800,t=>drawCupcake(t),bgCandy,["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm."],
     ()=>[PAT.rain('#ffb7e6',320,0.06,16,7,3.4),PAT.walls('#ff7acb',320,10,0.40,8,3.4),PAT.homing('#ff3a6b',300,0.35,9,3.4),PAT.ring('#ffc3f3',300,0.40,20,8,3.4),PAT.spiral('#ff9ad6',320,0.03,8,3.4)],'godslayer',true)
 ];
 
@@ -376,19 +469,18 @@ let BOSS=null, bossIndex=SAVE.bossIndex;
 let attack=null, attackSeq=null, attackIx=0;
 let time=0,last=performance.now();
 let showArena=false, turn='player';
-let ADMIN_INVINC=false;
 
 function setBossByObj(obj){
   const hpMax=Math.max(1,obj.hpMax|0);
   BOSS={name:obj.name,hpMax, hp:hpMax, draw:obj.draw, bg:obj.bg, intro:obj.intro, lines:obj.lines, attacks:obj.attacks, drop:obj.drop, isAdmin:obj.isAdmin};
   attackSeq=BOSS.attacks(); attackIx=0; bossName.textContent=BOSS.name;
   const w=equippedWeapon(); if(w.id==='godslayer' && !BOSS.isAdmin){ BOSS.hp=BOSS.hpMax=1; }
-  updateBossBar();
+  updateBossBar(); buildAttackList();
 }
 function initBoss(index){
   bossIndex=Math.max(0,Math.min(BOSSES.length-1,index));
   setBossByObj(BOSSES[bossIndex]);
-  HEART.hp=HEART.hpMax=SAVE.hp; updatePlayerBar(); HEART.i=0; centerHeart();
+  HEART.hp=HEART.hpMax=SAVE.hp; updatePlayerBar(); HEART.i=0; centerHeart(); refreshStats();
   turn='player'; showArena=false; arenaEl.style.display='none';
   say(BOSS.intro.join('\n'));
   saveWrite({...SAVE,bossIndex});
@@ -406,16 +498,16 @@ function endAttack(){
 
 /* ACT and ITEM */
 const ACTS=[
-  {id:'compliment',name:'Compliment',effect:()=>{ DIFF={...DIFF, spd:Math.max(0.88,DIFF.spd-0.08)}; say('You compliment. The air cools.'); }},
-  {id:'taunt',name:'Taunt',effect:()=>{ DIFF={...DIFF, spd:DIFF.spd+0.06, dmg:Math.max(0.8,DIFF.dmg-0.12)}; say('You taunt. It rushes, softer.'); }},
-  {id:'focus',name:'Focus',effect:()=>{ ADMIN_INVINC=true; setTimeout(()=>ADMIN_INVINC=false,1200); say('You focus. Nothing hits for a moment.'); }}
+  {id:'compliment',name:'Compliment',effect:()=>{ DIFF.spd=Math.max(0.88,DIFF.spd-0.08); say('You compliment. The air cools.'); }},
+  {id:'taunt',name:'Taunt',effect:()=>{ DIFF.spd=DIFF.spd+0.06; DIFF.dmg=Math.max(0.8,DIFF.dmg-0.12); say('You taunt. It rushes, softer.'); }},
+  {id:'focus',name:'Focus',effect:()=>{ FLAG_INVINC=true; setTimeout(()=>FLAG_INVINC=false,1200); say('You focus. Nothing hits for a moment.'); }}
 ];
 function useAct(){ const a=ACTS[Math.floor(Math.random()*ACTS.length)]; a.effect(); setTimeout(()=>startAttack(),140); }
 function useItem(){
-  const item = SAVE.items.find(x=>x.heal && x.count>0);
+  const item = (SAVE.items||[]).find(x=>x.heal && x.count>0);
   if(!item){ say('No items left.'); setTimeout(()=>startAttack(),140); return; }
   item.count--; HEART.hp=Math.min(HEART.hpMax, HEART.hp+item.heal); updatePlayerBar();
-  say(`You used ${item.name}. +${item.heal} HP (${item.count} left)`); saveWrite(SAVE); renderConsumables();
+  say(`You used ${item.name}. +${item.heal} HP (${item.count} left)`); saveWrite(SAVE); renderConsumables(); refreshStats();
   setTimeout(()=>startAttack(),140);
 }
 
@@ -426,9 +518,9 @@ function addDrop(key,isAdmin){
     const ex=SAVE.items.find(i=>i.id==='ambrosia'); if(ex) ex.count++; else SAVE.items.push({id:'ambrosia',name:'Ambrosia',heal:50,count:1});
     saveWrite(SAVE); renderEquip(); renderConsumables(); return;
   }
-  const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
-  const healMap={solar:'emberleaf',ember:'embershade',abyss:'nightmint',mantis:'goldtea',pixel:'glitchgel',frost:'snowdew',dj:'beatjuice',void:'voidsalts',siren:'tidebrew',storm:'shocktonic',chrono:'timecordial',aurora:'auroratea'};
-  const names={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea'};
+  const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora',colossus:'colossus',venom:'venom',crystal:'crystal',phoenix:'phoenix'};
+  const healMap={solar:'emberleaf',ember:'embershade',abyss:'nightmint',mantis:'goldtea',pixel:'glitchgel',frost:'snowdew',dj:'beatjuice',void:'voidsalts',siren:'tidebrew',storm:'shocktonic',chrono:'timecordial',aurora:'auroratea',colossus:'forgebrew',venom:'venomvial',crystal:'prismtonic',phoenix:'ashbrew'};
+  const names={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea',forgebrew:'Forge Brew',venomvial:'Venom Vial',prismtonic:'Prism Tonic',ashbrew:'Ash Brew'};
   const wid=weaponMap[key]; if(wid && !SAVE.weapons.includes(wid)) SAVE.weapons.push(wid);
   const healId=healMap[key]; if(healId){ const ex=SAVE.items.find(i=>i.id===healId); if(ex) ex.count++; else SAVE.items.push({id:healId,name:names[healId]||healId,heal:18,count:1}); }
   saveWrite(SAVE); renderEquip(); renderConsumables();
@@ -446,9 +538,7 @@ let adminSeq='', adminCount=0;
 
 uiBar.addEventListener('click',e=>{ const b=e.target.closest('.btn'); if(!b) return; onAction(b.dataset.act); });
 document.addEventListener('keydown',e=>{
-  // Admin: press 6 then 7 three times
   if(e.key==='6' || e.key==='7'){ adminSeq+=e.key; if(adminSeq.endsWith('67')){ adminCount++; adminSeq=''; if(adminCount>=3){ adminCount=0; toggleAdmin(true); } } }
-  // Keybinds
   if(turn==='player'){
     if(['z','Z','Enter',' '].includes(e.key)) onAction('FIGHT');
     else if(e.key==='a'||e.key==='A') onAction('ACT');
@@ -465,20 +555,17 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{
   if(['ArrowLeft','a','A'].includes(e.key)) held.delete('left');
   if(['ArrowRight','d','D'].includes(e.key)) held.delete('right');
-  if(['ArrowUp','w','W'].includes(e.key)) held.delete('up');     // fixed
+  if(['ArrowUp','w','W'].includes(e.key)) held.delete('up');
   if(['ArrowDown','s','S'].includes(e.key)) held.delete('down');
 },{passive:true});
 
 function onAction(act){
-  if(act==='EQUIP'){
-    equipOverlay.style.display='block';
-    renderEquip(); renderConsumables();
-    return; // no turn cost
-  }
+  if(act==='EQUIP'){ equipOverlay.style.display='block'; renderEquip(); renderConsumables(); refreshStats(); return; }
   if(turn!=='player') return;
   if(act==='FIGHT'){
     const w=equippedWeapon();
-    if(w.id==='godslayer'){ if(BOSS.isAdmin){ BOSS.hp=67; } else { BOSS.hp=0; } }
+    if(FLAG_ONEHIT && !BOSS.isAdmin){ BOSS.hp=0; }
+    else if(w.id==='godslayer'){ if(BOSS.isAdmin){ BOSS.hp=67; } else { BOSS.hp=0; } }
     else { const dealt=Math.max(1,Math.floor(24 + w.atk)); BOSS.hp=Math.max(0,BOSS.hp-dealt); }
     updateBossBar(); say(`You strike ${BOSS.name}.`);
     if(BOSS.hp<=0){ win(false); } else setTimeout(()=>startAttack(),120);
@@ -502,12 +589,13 @@ function updateBullets(dt){
   const m=200; bullets=bullets.filter(b=> b.x>ARENA.x-m && b.x<ARENA.x+ARENA.w+m && b.y>ARENA.y-m && b.y<ARENA.y+ARENA.h+m);
 }
 function collide(){
-  if(ADMIN_INVINC || HEART.i>0 || turn!=='enemy') return;
+  if(FLAG_INVINC || HEART.i>0 || turn!=='enemy') return;
+  if(FLAG_INFINITE) return;
   for(const b of bullets){
     const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
     if(dx*dx+dy*dy<=rr*rr){
       const dmg=Math.max(1,Math.floor((b.dmg||3)*(DIFF.dmg||1)));
-      HEART.hp=Math.max(0, HEART.hp-dmg); updatePlayerBar();
+      HEART.hp=Math.max(0, HEART.hp-dmg); updatePlayerBar(); refreshStats();
       HEART.i=0.85; if(HEART.hp<=0){ lose(); }
       break;
     }
@@ -518,32 +606,52 @@ function lose(){ say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIn
 /* Admin UI */
 function buildAdminLists(){
   adBoss.innerHTML='';
-  BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=(i+1)+'. '+b.name+(b.isAdmin?' [ADMIN ONLY]':''); adBoss.appendChild(o); });
-  adBoss.value='main:'+bossIndex;
-  adDiff.value=(Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF) || 'Normal');
-  adSpeed.value=GLOBAL_SPEED.toFixed(2);
+  BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=(i+1)+'. '+b.name+(b.isAdmin?' [ADMIN]':''); adBoss.appendChild(o); });
+  adBoss.value=String(bossIndex);
+  prevName.textContent=BOSSES[bossIndex].name;
 }
-function toggleAdmin(open){ admin.style.display=open?'flex':'none'; if(open){ setTab('boss'); buildAdminLists(); } }
+function buildAttackList(){
+  adAtk.innerHTML='';
+  const n = attackSeq?.length||0;
+  for(let i=0;i<n;i++){ const o=document.createElement('option'); o.value=String(i); o.textContent='Attack '+(i+1); adAtk.appendChild(o); }
+}
+function drawPreview(){
+  pctx.fillStyle='#0c0d16'; pctx.fillRect(0,0,240,160);
+  // Temporarily draw using preview context centered
+  pctx.save();
+  pctx.translate(-240, -160); // hack to reuse drawX centered at 480x240
+  const b=BOSSES[bossIndex]; b && b.draw(time, pctx);
+  pctx.restore();
+  prevName.textContent=BOSSES[bossIndex]?.name||'—';
+}
+function toggleAdmin(open){ admin.style.display=open?'flex':'none'; if(open){ setTab('boss'); buildAdminLists(); buildAttackList(); drawPreview(); } }
 tbtns.forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 adClose.onclick=()=>toggleAdmin(false);
-adLoadBoss.onclick=()=>{ const v=adBoss.value; initBoss(parseInt(v.split(':')[1],10)||0); };
+adBoss.onchange=()=>{ const ix=parseInt(adBoss.value,10)||0; initBoss(ix); drawPreview(); };
+adLoadBoss.onclick=()=>{ const ix=parseInt(adBoss.value,10)||0; initBoss(ix); drawPreview(); };
 adEnd.onclick=()=>{ if(turn==='enemy') endAttack(); };
 adWin.onclick=()=>{ if(BOSS){ BOSS.hp=1; updateBossBar(); win(false); } };
-adApplyDiff.onclick=()=>{ const d=adDiff.value; DIFF=DIFFS[d]||DIFFS.Normal; SAVE.difficulty=d; saveWrite(SAVE); say('Difficulty set: '+d); };
-adApplySpeed.onclick=()=>{ GLOBAL_SPEED=Math.max(0.5,Math.min(2,parseFloat(adSpeed.value)||1)); say('Speed x'+GLOBAL_SPEED.toFixed(2)); };
-adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerBar(); };
-adInvinc.onclick=()=>{ ADMIN_INVINC=!ADMIN_INVINC; say('Invincibility '+(ADMIN_INVINC?'ON':'OFF')); };
-adKillBoss.onclick=()=>{ if(BOSS){ BOSS.hp=1; updateBossBar(); } };
+adSpeed.oninput=()=>{ GLOBAL_SPEED=parseFloat(adSpeed.value)||1; spVal.textContent=GLOBAL_SPEED.toFixed(2)+'x'; };
+adDmg.oninput=()=>{ DIFF.dmg=parseFloat(adDmg.value)||1; dmVal.textContent=DIFF.dmg.toFixed(2)+'x'; };
+adSpd.oninput=()=>{ DIFF.spd=parseFloat(adSpd.value)||1; smVal.textContent=DIFF.spd.toFixed(2)+'x'; };
+chkInf.onchange=()=>{ FLAG_INFINITE=chkInf.checked; };
+chkOHK.onchange=()=>{ FLAG_ONEHIT=chkOHK.checked; };
+chkInv.onchange=()=>{ FLAG_INVINC=chkInv.checked; };
+adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerBar(); refreshStats(); };
 adClear.onclick=()=>{ bullets.length=0; };
-adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))];
-  const extra=[{id:'ambrosia',name:'Ambrosia',heal:50,count:2},{id:'auroratea',name:'Aurora Tea',heal:18,count:3},{id:'shocktonic',name:'Shock Tonic',heal:18,count:3}];
-  extra.forEach(it=>{ const ex=SAVE.items.find(i=>i.id===it.id); if(ex) ex.count+=it.count; else SAVE.items.push(it); });
-  saveWrite(SAVE); renderEquip(); renderConsumables(); say('All gear & items granted'); };
+adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))]; const extra=[{id:'ambrosia',name:'Ambrosia',heal:50,count:2},{id:'auroratea',name:'Aurora Tea',heal:18,count:3},{id:'shocktonic',name:'Shock Tonic',heal:18,count:3},{id:'forgebrew',name:'Forge Brew',heal:18,count:2},{id:'prismtonic',name:'Prism Tonic',heal:18,count:2},{id:'venomvial',name:'Venom Vial',heal:18,count:2},{id:'ashbrew',name:'Ash Brew',heal:18,count:2}]; extra.forEach(it=>{ const ex=SAVE.items.find(i=>i.id===it.id); if(ex) ex.count+=it.count; else SAVE.items.push(it); }); saveWrite(SAVE); renderEquip(); renderConsumables(); say('All gear & items granted'); };
 adSkip.onclick=()=>{ if(turn==='enemy' && attack){ while(!attack.done()) attack.update(0.3); endAttack(); } };
+adTrigger.onclick=()=>{ const ix=parseInt(adAtk.value,10)||0; triggerAttack(ix); };
+function triggerAttack(ix){
+  if(!attackSeq || !attackSeq[ix]) return;
+  bullets.length=0; showArena=true; arenaEl.style.display='block'; hideSay(); uiBar.style.opacity='0.65';
+  attack=attackSeq[ix]; attack.enter&&attack.enter();
+  turn='enemy'; updateStateBadges();
+}
 
 /* Render/loop */
 function render(){
-  if(BOSS){ BOSS.bg(time); BOSS.draw(time); } else { bgDefault(); }
+  if(BOSS){ BOSS.bg(time); BOSS.draw(time, ctx); } else { bgDefault(); }
   if(showArena){
     ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
     for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||3,0,Math.PI*2); ctx.fill(); }
@@ -561,13 +669,14 @@ function loop(now){
     if(attack && attack.done && attack.done()) endAttack();
   }
   render();
+  if(admin.style.display==='flex') drawPreview();
   updateStateBadges();
   requestAnimationFrame(loop);
 }
 
 /* Start */
 function updateAllBars(){ updateBossBar(); updatePlayerBar(); }
-renderEquip(); renderConsumables();
+renderEquip(); renderConsumables(); refreshStats();
 initBoss(SAVE.bossIndex||0);
 updateAllBars();
 requestAnimationFrame(loop);
