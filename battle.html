@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Undertale Gold</title>
+<title>Battle — fixed bars, candy world cupcake, undertale heart, 12 bosses + 2 admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"/>
 <style>
 html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -14,8 +14,8 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .hcol{display:flex;flex-direction:column;gap:6px}
 .bar{height:10px;background:#16161c;border:1px solid #2a2a33;position:relative}
 .fill{position:absolute;left:0;top:0;bottom:0}
-#bossFill{background:#ff5e6b;width:100%}
-#hpFill{background:#7affb7;width:100%}
+#bossFill{background:#ff5e6b;width:440px}
+#hpFill{background:#7affb7;width:260px}
 .sub{font-size:12px;color:#e6dcae}
 
 /* Dialogue */
@@ -168,7 +168,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 <script>
 "use strict";
 
-/* ===== Elements ===== */
+/* Elements */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false,desynchronized:true});
 const bossName=document.getElementById('bossName'), bossFill=document.getElementById('bossFill'), bossVal=document.getElementById('bossVal');
 const hpFill=document.getElementById('hpFill'), hpVal=document.getElementById('hpVal');
@@ -189,13 +189,13 @@ const loreTextEl=document.getElementById('loreText');
 const equip=document.getElementById('equip'), eqClose=document.getElementById('eqClose'), eqList=document.getElementById('equipList'), eqUnequip=document.getElementById('eqUnequip'), eqStart=document.getElementById('eqStart');
 ctx.imageSmoothingEnabled=false;
 
-/* ===== Toast & say ===== */
+/* Toast & say */
 function toastMsg(m){ toast.textContent=m; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),950); }
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
 function hideSay(){ bubble.style.display='none'; }
 
-/* ===== Save/data ===== */
-const SAVE_KEY='battle_full_v3';
+/* Save/data */
+const SAVE_KEY='battle_fixbars_v1';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -210,74 +210,36 @@ const DIFFS={ Normal:{spd:1.0,rate:1.0,dmg:1.0}, Hard:{spd:1.18,rate:1.18,dmg:1.
 let DIFF=DIFFS[SAVE.difficulty]||DIFFS.Normal;
 let GLOBAL_SPEED=1.0;
 
-/* ===== Heart selection & drawing (Undertale-style) ===== */
+/* Heart selection & Undertale-style draw */
 const LS_PROFILE='utg_shared_profile_v1';
 const PROFILE = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_PROFILE))||{} }catch{return {}} })();
-function styleToColor(style){
-  switch((style||'').toLowerCase()){
-    case 'red': return '#ff0000';
-    case 'green': return '#00ff7a';
-    case 'blue': return '#00a0ff';
-    case 'yellow': return '#ffd400';
-    case 'cyan': return '#00fff3';
-    case 'purple': return '#c56bff';
-    case 'white': return '#ffffff';
-    case 'rainbow': return '#ff66cc';
-    default: return '#ff0000';
-  }
-}
+function styleToColor(style){ switch((style||'').toLowerCase()){
+  case 'red': return '#ff0000'; case 'green': return '#00ff7a'; case 'blue': return '#00a0ff';
+  case 'yellow': return '#ffd400'; case 'cyan': return '#00fff3'; case 'purple': return '#c56bff';
+  case 'white': return '#ffffff'; case 'rainbow': return '#ff66cc'; default: return '#ff0000';
+}}
 function getSelectedHeart(){
   const pSoul = PROFILE?.soul || PROFILE?.heart || {};
   let style = (pSoul.style || pSoul.type || '').toString().toLowerCase();
   let color = pSoul.color || pSoul.glow;
-
   const idx = localStorage.getItem('utg_heart_index');
   const legacyColor = localStorage.getItem('utg_heart_color');
-
-  if(!style && typeof idx==='string'){
-    const styles=['red','green','blue','yellow','cyan','purple','white','rainbow'];
-    const i=Math.max(0,Math.min(styles.length-1,parseInt(idx,10)||0));
-    style=styles[i];
-  }
-  if(legacyColor && /^#?[0-9a-f]{6}$/i.test(legacyColor)){
-    color=legacyColor.startsWith('#')? legacyColor : '#'+legacyColor;
-    style='custom';
-  }
-  if(!style) style='red';
-  return { style, color: color || styleToColor(style) };
+  if(!style && typeof idx==='string'){ const styles=['red','green','blue','yellow','cyan','purple','white','rainbow']; const i=Math.max(0,Math.min(styles.length-1,parseInt(idx,10)||0)); style=styles[i]; }
+  if(legacyColor && /^#?[0-9a-f]{6}$/i.test(legacyColor)){ color=legacyColor.startsWith('#')? legacyColor : '#'+legacyColor; style='custom'; }
+  if(!style) style='red'; return { style, color: color || styleToColor(style) };
 }
 function drawUndertaleHeart(x,y,scale=4,selected=getSelectedHeart()){
   const { style, color: baseColor } = selected;
-  const mask=[
-    "00100100",
-    "01111110",
-    "11111111",
-    "11111111",
-    "11111111",
-    "01111110",
-    "00111100",
-    "00011000"
-  ];
+  const mask=["00100100","01111110","11111111","11111111","11111111","01111110","00111100","00011000"];
   let color=baseColor;
-  if(style==='rainbow'){
-    const t=(performance.now()/1000)%6;
-    const hue=(t/6)*360;
-    color=`hsl(${hue.toFixed(1)},95%,60%)`;
-  }
-  ctx.save();
-  ctx.globalAlpha=0.18; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,scale*4.5,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-  ctx.translate(x - (mask[0].length*scale)/2, y - (mask.length*scale)/2);
-  ctx.fillStyle=color;
-  for(let r=0;r<mask.length;r++){
-    for(let c=0;c<mask[r].length;c++){
-      if(mask[r][c]==='1') ctx.fillRect(c*scale, r*scale, scale, scale);
-    }
-  }
+  if(style==='rainbow'){ const t=(performance.now()/1000)%6; const hue=(t/6)*360; color=`hsl(${hue.toFixed(1)},95%,60%)`; }
+  ctx.save(); ctx.globalAlpha=0.18; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,scale*4.5,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+  ctx.translate(x - (mask[0].length*scale)/2, y - (mask.length*scale)/2); ctx.fillStyle=color;
+  for(let r=0;r<mask.length;r++) for(let c=0;c<mask[r].length;c++) if(mask[r][c]==='1') ctx.fillRect(c*scale, r*scale, scale, scale);
   ctx.restore();
 }
 
-/* ===== Equip overlay & weapons (includes Godslayer) ===== */
+/* Equip & weapons (Godslayer included) */
 const WEAPONS={
   stick:{id:'stick',name:'Stick',atk:0,desc:'Basic starter'},
   solar:{id:'solar',name:'Solar Brand',atk:7,desc:'+7 ATK'},
@@ -316,28 +278,33 @@ function closeEquip(){ equip.style.display='none'; }
 eqClose.onclick=closeEquip;
 eqUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); equipRenderList(); toastMsg('Unequipped'); };
 
-/* ===== Arena/player/bullets ===== */
+/* Arena/player/bullets */
 const ARENA={x:240,y:418,w:480,h:184};
 const HEART={ x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2, r:6, sp:320, i:0, hp: SAVE.hp, hpMax: SAVE.hp };
 let bullets=[];
 function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
 
-/* ===== Boss state & bars ===== */
+/* Boss state & bars */
 let time=0,last=performance.now();
 let showArena=false, turn='player', attack=null, attackIx=0, attackSeq=null;
 let BOSS=null, bossIndex=SAVE.bossIndex;
-let ADMIN_INVINC=false;
+let ADMIN_INVINCIBLE=false;
 let nextBossPendingIndex=null;
 
-function updateBossBarInstant(){ bossFill.style.width=(440*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; }
+function updateBossBarInstant(){
+  if(!BOSS || !isFinite(BOSS.hp) || !isFinite(BOSS.hpMax)) return;
+  const ratio = Math.max(0, Math.min(1, BOSS.hp / BOSS.hpMax));
+  bossFill.style.width = (440 * ratio) + 'px';
+  bossVal.textContent = `${Math.max(0,Math.floor(BOSS.hp))}/${Math.max(1,Math.floor(BOSS.hpMax))}`;
+}
 function updatePlayerBarInstant(){
-  const pf=Math.max(0,HEART.hp/HEART.hpMax);
-  hpFill.style.width=(260*pf)+'px';
-  hpFill.style.background = (pf<.25?'#ff5e6b':(pf<.5?'#ffd166':'#7affb7'));
-  hpVal.textContent=`${HEART.hp}/${HEART.hpMax}`;
+  const ratio = Math.max(0, Math.min(1, HEART.hp / HEART.hpMax));
+  hpFill.style.width = (260 * ratio) + 'px';
+  hpFill.style.background = (ratio < 0.25 ? '#ff5e6b' : ratio < 0.5 ? '#ffd166' : '#7affb7');
+  hpVal.textContent = `${Math.max(0,Math.floor(HEART.hp))}/${Math.max(1,Math.floor(HEART.hpMax))}`;
 }
 
-/* ===== Lore (pre-generated) + portrait ===== */
+/* Lore + portrait (pre-generated) */
 const LORE={
   'Solar Fang': { title:'Solar Fang — The Lion of Noon', text:`Born where dunes meet the horizon, Solar Fang guarded a city of mirrors.\nEach noon, he walked the glass streets, returning lost light to wandering travelers.\nWhen the city fell, he swallowed a sun fragment. It burns in his chest to this day.` },
   'Ember Seraph': { title:'Ember Seraph — Choir of Ash', text:`A singer whose voice soothed the dying flame of an ancient kiln.\nThey learned the language of embers — quiet heat and slow patience.\nNow they test your breath, to see if you can carry warmth without burning.` },
@@ -381,96 +348,64 @@ function updateLore(name){
   drawLorePortrait(name);
 }
 
-/* ===== Idle boss draws ===== */
-function drawSolar(t){ const cx=480, cy=240+Math.sin(t*2)*3;
-  ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,40,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#000'; const blink=(Math.sin(t*4)>0.9)?0:1; ctx.fillRect(cx-12,cy-10,6,blink*6); ctx.fillRect(cx+6,cy-10,6,blink*6);
-}
-function drawEmber(t){ const cx=480, cy=240;
-  ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.arc(cx,cy,30+Math.sin(t*3)*2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#ffc2a4'; ctx.fillRect(cx-50,cy-10,30,10+Math.sin(t*5)*4); ctx.fillRect(cx+20,cy-10,30,10+Math.cos(t*5)*4);
-}
-function drawAbyss(t){ const cx=480, cy=240;
-  ctx.fillStyle='#a89bff'; ctx.fillRect(cx-30,cy-30,60,60);
-  ctx.fillStyle='#fff'; ctx.fillRect(cx-15,cy-10,10,10); ctx.fillRect(cx+5,cy-10,10,10);
-  ctx.strokeStyle='#000'; ctx.beginPath(); ctx.arc(cx,cy+10,15,0,Math.PI,false); ctx.stroke();
-}
-function drawMantis(t){ const cx=480, cy=238+Math.sin(t*2.2)*2;
-  ctx.fillStyle='#ffd166'; ctx.fillRect(cx-35,cy-20,70,40);
-  ctx.fillStyle='#ffe88a'; ctx.fillRect(cx-45,cy-12,25,8); ctx.fillRect(cx+20,cy-12,25,8);
-}
-function drawPixel(t){ const cx=480, cy=240;
-  ctx.fillStyle='#a8ecff'; ctx.fillRect(cx-30+Math.sin(t*20)*4,cy-30,60,60);
-  ctx.fillStyle='#0d0e18'; ctx.fillRect(cx-10,cy-10,20,20);
-}
-function drawFrost(t){ const cx=480, cy=240;
-  ctx.fillStyle='#d0f0ff'; ctx.fillRect(cx-40,cy-40,80,80);
-  ctx.fillStyle='rgba(255,255,255,'+(0.5+0.5*Math.sin(t*3))+')'; ctx.beginPath(); ctx.arc(cx+50,cy-10,10+Math.sin(t*2)*3,0,Math.PI*2); ctx.fill();
-}
-function drawDJ(t){ const cx=480, cy=242+Math.sin(t*3)*2;
-  ctx.fillStyle='#ffb0b0'; ctx.beginPath(); ctx.arc(cx,cy,28,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#ff99a9'; ctx.fillRect(cx-50,cy-8,30,16); ctx.fillRect(cx+20,cy-8,30,16);
-}
-function drawVoid(t){ const cx=480, cy=236+Math.sin(t*2)*2;
-  ctx.strokeStyle='#c9b9ff'; ctx.lineWidth=3; for(let r=20;r<=40;r+=10){ ctx.beginPath(); ctx.arc(cx,cy,r+Math.sin(t*2)*2,0,Math.PI*2); ctx.stroke(); }
-}
-function drawSiren(t){ const cx=480, cy=240;
-  ctx.fillStyle='#66ccff'; ctx.beginPath(); ctx.arc(cx,cy,30,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#88d9ff'; for(let i=0;i<6;i++){ const a=t*1.5+i; ctx.beginPath(); ctx.arc(cx+Math.cos(a)*40,cy+Math.sin(a)*12,4,0,Math.PI*2); ctx.fill(); }
-}
-function drawStorm(t){ const cx=480, cy=238+Math.sin(t*2)*2;
-  ctx.fillStyle='#ffd455'; ctx.beginPath(); ctx.arc(cx,cy,35,0,Math.PI*2); ctx.fill();
-  if(Math.random()<0.1){ ctx.strokeStyle='#fff'; ctx.beginPath(); ctx.moveTo(cx,cy-40); ctx.lineTo(cx+10,cy); ctx.lineTo(cx-10,cy+40); ctx.stroke(); }
-}
-function drawChrono(t){ const cx=480, cy=238+Math.sin(t*2)*2;
-  ctx.strokeStyle='#64f0c2'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,34,0,Math.PI*2); ctx.stroke();
-  ctx.strokeStyle='#a0ffd6'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*2)*24, cy+Math.sin(t*2)*24); ctx.stroke();
-}
-function drawAurora(t){ const cx=480, cy=240;
-  for(let i=0;i<5;i++){ const y=cy-40+i*16, col=['#ff91e6','#ffc3f3','#ffd6f8','#ffb6f2','#ffc3f3'][i];
-    ctx.strokeStyle=col; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(cx-60, y+Math.sin(t*2+i)*4); ctx.lineTo(cx+60, y-Math.sin(t*2+i)*4); ctx.stroke();
-  }
-}
-function drawObliv(t){ const cx=480, cy=236+Math.sin(t*2.4)*2;
-  ctx.fillStyle='#241c28'; ctx.fillRect(cx-40,cy-40,80,80);
-  ctx.strokeStyle='#ffd166'; ctx.strokeRect(cx-20,cy-20,40,40);
-}
-function drawCupcake(t){
-  const cx=480, cy=240;
+/* Idle boss draws */
+function drawSolar(t){ const cx=480, cy=240+Math.sin(t*2)*3; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,40,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#000'; const blink=(Math.sin(t*4)>0.9)?0:1; ctx.fillRect(cx-12,cy-10,6,blink*6); ctx.fillRect(cx+6,cy-10,6,blink*6); }
+function drawEmber(t){ const cx=480, cy=240; ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.arc(cx,cy,30+Math.sin(t*3)*2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffc2a4'; ctx.fillRect(cx-50,cy-10,30,10+Math.sin(t*5)*4); ctx.fillRect(cx+20,cy-10,30,10+Math.cos(t*5)*4); }
+function drawAbyss(t){ const cx=480, cy=240; ctx.fillStyle='#a89bff'; ctx.fillRect(cx-30,cy-30,60,60);
+  ctx.fillStyle='#fff'; ctx.fillRect(cx-15,cy-10,10,10); ctx.fillRect(cx+5,cy-10,10,10); ctx.strokeStyle='#000'; ctx.beginPath(); ctx.arc(cx,cy+10,15,0,Math.PI,false); ctx.stroke(); }
+function drawMantis(t){ const cx=480, cy=238+Math.sin(t*2.2)*2; ctx.fillStyle='#ffd166'; ctx.fillRect(cx-35,cy-20,70,40);
+  ctx.fillStyle='#ffe88a'; ctx.fillRect(cx-45,cy-12,25,8); ctx.fillRect(cx+20,cy-12,25,8); }
+function drawPixel(t){ const cx=480, cy=240; ctx.fillStyle='#a8ecff'; ctx.fillRect(cx-30+Math.sin(t*20)*4,cy-30,60,60); ctx.fillStyle='#0d0e18'; ctx.fillRect(cx-10,cy-10,20,20); }
+function drawFrost(t){ const cx=480, cy=240; ctx.fillStyle='#d0f0ff'; ctx.fillRect(cx-40,cy-40,80,80);
+  ctx.fillStyle='rgba(255,255,255,'+(0.5+0.5*Math.sin(t*3))+')'; ctx.beginPath(); ctx.arc(cx+50,cy-10,10+Math.sin(t*2)*3,0,Math.PI*2); ctx.fill(); }
+function drawDJ(t){ const cx=480, cy=242+Math.sin(t*3)*2; ctx.fillStyle='#ffb0b0'; ctx.beginPath(); ctx.arc(cx,cy,28,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ff99a9'; ctx.fillRect(cx-50,cy-8,30,16); ctx.fillRect(cx+20,cy-8,30,16); }
+function drawVoid(t){ const cx=480, cy=236+Math.sin(t*2)*2; ctx.strokeStyle='#c9b9ff'; ctx.lineWidth=3;
+  for(let r=20;r<=40;r+=10){ ctx.beginPath(); ctx.arc(cx,cy,r+Math.sin(t*2)*2,0,Math.PI*2); ctx.stroke(); } }
+function drawSiren(t){ const cx=480, cy=240; ctx.fillStyle='#66ccff'; ctx.beginPath(); ctx.arc(cx,cy,30,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#88d9ff'; for(let i=0;i<6;i++){ const a=t*1.5+i; ctx.beginPath(); ctx.arc(cx+Math.cos(a)*40,cy+Math.sin(a)*12,4,0,Math.PI*2); ctx.fill(); } }
+function drawStorm(t){ const cx=480, cy=238+Math.sin(t*2)*2; ctx.fillStyle='#ffd455'; ctx.beginPath(); ctx.arc(cx,cy,35,0,Math.PI*2); ctx.fill();
+  if(Math.random()<0.1){ ctx.strokeStyle='#fff'; ctx.beginPath(); ctx.moveTo(cx,cy-40); ctx.lineTo(cx+10,cy); ctx.lineTo(cx-10,cy+40); ctx.stroke(); } }
+function drawChrono(t){ const cx=480, cy=238+Math.sin(t*2)*2; ctx.strokeStyle='#64f0c2'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,34,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='#a0ffd6'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*2)*24, cy+Math.sin(t*2)*24); ctx.stroke(); }
+function drawAurora(t){ const cx=480, cy=240; for(let i=0;i<5;i++){ const y=cy-40+i*16, col=['#ff91e6','#ffc3f3','#ffd6f8','#ffb6f2','#ffc3f3'][i];
+  ctx.strokeStyle=col; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(cx-60, y+Math.sin(t*2+i)*4); ctx.lineTo(cx+60, y-Math.sin(t*2+i)*4); ctx.stroke(); } }
+function drawObliv(t){ const cx=480, cy=236+Math.sin(t*2.4)*2; ctx.fillStyle='#241c28'; ctx.fillRect(cx-40,cy-40,80,80); ctx.strokeStyle='#ffd166'; ctx.strokeRect(cx-20,cy-20,40,40); }
+function drawCupcake(t){ const cx=480, cy=240;
   ctx.fillStyle='#ff7acb'; ctx.beginPath(); ctx.moveTo(cx-40,cy+40); ctx.lineTo(cx+40,cy+40); ctx.lineTo(cx+30,cy+80); ctx.lineTo(cx-30,cy+80); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#ffc3f3'; ctx.beginPath(); ctx.arc(cx,cy,40,Math.PI,0); ctx.arc(cx,cy-20,30,Math.PI,0); ctx.arc(cx,cy-40,20,Math.PI,0); ctx.fill();
   ctx.fillStyle='#ff3a6b'; ctx.beginPath(); ctx.arc(cx,cy-60+Math.sin(t*3)*2,10,0,Math.PI*2); ctx.fill();
-  const colors=['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff'];
-  for(let i=0;i<12;i++){ const a=t*2+i/12*Math.PI*2; const x=cx+Math.cos(a)*50; const y=cy-20+Math.sin(a)*30; ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(x,y,4,8); }
-}
+  const colors=['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff']; for(let i=0;i<12;i++){ const a=t*2+i/12*Math.PI*2; const x=cx+Math.cos(a)*50; const y=cy-20+Math.sin(a)*30; ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(x,y,4,8); } }
 
-/* ===== Boss backgrounds ===== */
+/* Boss backgrounds (Cupcake = candy world) */
 function drawBossBackground(name,t){
   if(name==='Solar Fang'){
-    const grad=ctx.createLinearGradient(0,0,0,720);
-    grad.addColorStop(0,'#ffcc66'); grad.addColorStop(1,'#cc6600'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720);
+    const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffcc66'); grad.addColorStop(1,'#cc6600'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720);
   } else if(name==='Frostbite Warden'){
-    ctx.fillStyle='#aee3ff'; ctx.fillRect(0,0,960,720);
-    ctx.fillStyle='#fff'; for(let i=0;i<50;i++){ const x=(i*37+t*50)%960; const y=(i*59+t*30)%720; ctx.fillRect(x,y,2,2); }
+    ctx.fillStyle='#aee3ff'; ctx.fillRect(0,0,960,720); ctx.fillStyle='#fff'; for(let i=0;i<50;i++){ const x=(i*37+t*50)%960; const y=(i*59+t*30)%720; ctx.fillRect(x,y,2,2); }
   } else if(name==='The Cupcake Incident'){
-    ctx.fillStyle='#ffe6f7'; ctx.fillRect(0,0,960,720);
-    ctx.strokeStyle='#ffb6f2'; ctx.lineWidth=20; for(let x=-100;x<960;x+=80){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+200,720); ctx.stroke(); }
+    const grad = ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffccf9'); grad.addColorStop(1,'#ffe6f7'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720);
+    ctx.strokeStyle='#ff99cc'; ctx.lineWidth=30; for(let x=-100;x<960;x+=120){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+200,720); ctx.stroke(); }
+    for(let i=0;i<5;i++){ const lx=100+i*180, ly=600; ctx.strokeStyle='#663300'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-120); ctx.stroke();
+      ctx.fillStyle=['#ff6666','#66ccff','#99ff99','#ffff66','#ff99ff'][i%5]; ctx.beginPath(); ctx.arc(lx,ly-140,40,0,Math.PI*2); ctx.fill(); }
+    // gumdrops
+    for(let i=0;i<20;i++){ ctx.fillStyle=['#ff66aa','#66ffaa','#aa66ff','#ffee66','#66ccff'][i%5]; ctx.beginPath(); ctx.arc((i*43)%960, 680+Math.sin(t*2+i)*6, 10, 0, Math.PI*2); ctx.fill(); }
   } else if(name==='Storm Herald'){
     const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#222'); g.addColorStop(1,'#000'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720);
   } else if(name==='Void Prophet'){
-    ctx.fillStyle='#090918'; ctx.fillRect(0,0,960,720);
-    ctx.fillStyle='#c9b9ff'; for(let i=0;i<80;i++){ ctx.fillRect((i*97)%960,(i*61)%720,2,2); }
+    ctx.fillStyle='#090918'; ctx.fillRect(0,0,960,720); ctx.fillStyle='#c9b9ff'; for(let i=0;i<80;i++){ ctx.fillRect((i*97)%960,(i*61)%720,2,2); }
   } else {
     ctx.fillStyle='#09090f'; ctx.fillRect(0,0,960,720);
   }
 }
 
-/* ===== Patterns (cover-the-box, stable) ===== */
+/* Patterns (cover-the-box, stable) */
 function spawn(b){ b.t=0; bullets.push(b); return b; }
 function spawnAimed(fx,fy,spd,dmg,col='#fff',r=3){ const dx=HEART.x-fx, dy=HEART.y-fy, L=Math.hypot(dx,dy)||1; return spawn({x:fx,y:fy,vx:(dx/L)*spd,vy:(dy/L)*spd,r,col,dmg}); }
 function ring(C,spd,col,dmg,n=12){ for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg}); } }
 function phase(dur, obj){ let t=0; obj._acc=Object.create(null); return { enter(){t=0; if(obj.enter) obj.enter();}, update(dt){t+=dt; obj.update(dt,t,obj._acc);}, done(){return t>=dur;} }; }
-
 const COVER = {
   rainFull: (col='#fff',vy=300,rate=0.06,dmg=5,band=12,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; for(let i=0;i<band;i++){ const x=ARENA.x + (i+0.5)*(ARENA.w/band); spawn({x, y:ARENA.y-16, vx:(Math.random()*100-50), vy:vy, r:3, col, dmg}); } } } }),
   wallFlood: (col='#fff',vx=300,rows=8,rate=0.5,dmg=6,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; const left=Math.random()<0.5; for(let r=0;r<rows;r++){ const y=ARENA.y + 12 + r*((ARENA.h-24)/(rows-1)); spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y, vx:(left?1:-1)*vx, vy:0, r:3, col, dmg}); } } } }),
@@ -479,169 +414,64 @@ const COVER = {
   spiralFlood: (col='#fff',spd=300,rate=0.04,dmg=6,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; const a=t*2.8; const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2}; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg}); } } }),
   orbitCarpet: (col='#bfb2ff',rad=70,rate=0.5,burst=10,spd=320,dmg=6,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; for(let k=0;k<burst;k++){ const a=k/burst*Math.PI*2; const x=HEART.x+Math.cos(a)*rad, y=HEART.y+Math.sin(a)*rad; const dx=HEART.x-x, dy=HEART.y-y, L=Math.hypot(dx,dy)||1; spawn({x,y,vx:dx/L*spd,vy:dy/L*spd,r:3,col,dmg}); } } } }),
   latticeGrid: (col='#9fe0ff',vy=300,vx=300,rate=0.35,dmg=6,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; const even=((A.step=A.step||0)++%2)===0; if(even){ for(let i=0;i<8;i++){ const x=ARENA.x + 10 + i*((ARENA.w-20)/7); spawn({x,y:ARENA.y-16,vx:0,vy:vy,r:3,col,dmg}); } } else { for(let i=0;i<6;i++){ const y=ARENA.y + 10 + i*((ARENA.h-20)/5); spawn({x:ARENA.x-20,y,vx:vx,vy:0,r:3,col,dmg}); } } } } }),
-  tsunamiRows: (col='#66ccff',vy=300,rows=6,rate=0.45,dmg=6,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; for(let r=0;r<rows;r++){ const x=ARENA.x + 20 + r*((ARENA.w-40)/(rows-1)); spawn({x,y:ARENA.y-16,vx:0,vy:vy,r:3,col,dmg}); spawn({x,y:ARENA.y+ARENA.h+16,vx:0,vy:-vy,r:3,col,dmg}); } } } }),
-  homing: (col='#fff',spd=280,rate=0.38,dmg=7,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; const x=ARENA.x+Math.random()*ARENA.w; spawnAimed(x,ARENA.y-12,spd,dmg,col,4); } } })
+  homing: (col='#fff',spd=280,rate=0.38,dmg=7,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; const x=ARENA.x+Math.random()*ARENA.w; spawnAimed(x,ARENA.y-12,spd,dmg,col,4); } } }),
+  tsunamiRows: (col='#66ccff',vy=300,rows=6,rate=0.45,dmg=6,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; for(let r=0;r<rows;r++){ const x=ARENA.x + 20 + r*((ARENA.w-40)/(rows-1)); spawn({x,y:ARENA.y-16,vx:0,vy:vy,r:3,col,dmg}); spawn({x,y:ARENA.y+ARENA.h+16,vx:0,vy:-vy,r:3,col,dmg}); } } } })
 };
 
-/* ===== Boss roster (12 normal, 2 admin with 10 attacks) ===== */
+/* Boss roster (12 normal, 2 admin) — same as previous build for brevity */
 function B(name,hp,draw,intro,lines,attacks,drop,isAdmin){ return {name,hpMax:hp,draw,intro,lines,attacks,drop,isAdmin}; }
 const BOSSES=[
-  B('Solar Fang',360,()=>drawSolar(time),
-    ["The sun bows to no one.","Your shadow stretches long."],
-    ["The air shimmers with heat.","Solar Fang glares silently.","The battlefield feels hotter…"],
-    ()=>[
-      COVER.fanSweep('#fff3b8',230,0.10,0.8,4,5,3),
-      COVER.ringStorm('#ffd166',240,0.65,5,12,3),
-      COVER.wallFlood('#ffe9a0',240,6,0.55,5,3),
-      COVER.spiralFlood('#ffd166',235,0.06,5,3),
-      COVER.rainFull('#fff1b6',260,0.08,5,10,3)
-    ],'solar',false),
-  B('Ember Seraph',340,()=>drawEmber(time),
-    ["Ash remembers flame.","You match breath with embers."],
-    ["Embers drift upward.","The kiln hums.","Patience. Then step."],
-    ()=>[
-      COVER.rainFull('#ffb7a7',300,0.08,6,12,3),
-      COVER.homing('#ffd3a0',280,0.36,6,3),
-      COVER.wallFlood('#ffa277',300,8,0.36,6,3),
-      COVER.fanSweep('#ffc4a3',290,0.07,1.0,6,6,3),
-      COVER.ringStorm('#ffb286',290,0.44,6,18,3)
-    ],'ember',false),
-  B('Abyss Jester',360,()=>drawAbyss(time),
-    ["The abyss laughs with you.","Eyes open where none should be."],
-    ["You hear faint chuckling.","The darkness ripples.","A coin flips in the dark."],
-    ()=>[
-      COVER.wallFlood('#b0a0ff',300,8,0.28,6,3),
-      COVER.rainFull('#c0b3ff',300,0.07,6,12,3),
-      COVER.homing('#bfb3ff',300,0.34,7,3),
-      COVER.fanSweep('#cfc6ff',300,0.06,1.1,7,7,3),
-      COVER.ringStorm('#b9afff',300,0.40,7,20,3)
-    ],'abyss',false),
-  B('Golden Mantis',380,()=>drawMantis(time),
-    ["Stillness. Then strike.","Measure the gap."],
-    ["He counts your steps.","A blade waits in air.","Intent sharpens."],
-    ()=>[
-      COVER.fanSweep('#ffe88a',300,0.06,1.0,7,7,3),
-      COVER.homing('#ffdf99',300,0.32,7,3),
-      COVER.rainFull('#fff3b8',300,0.08,6,12,3),
-      COVER.wallFlood('#ffe27a',320,10,0.30,7,3),
-      COVER.spiralFlood('#ffd166',320,0.04,7,3)
-    ],'mantis',false),
-  B('Pixel Phantom',350,()=>drawPixel(time),
-    ["gl1tch… r3ady?","hold the frame."],
-    ["Packet loss jitters.","The frame tears.","The picture returns if you steady."],
-    ()=>[
-      COVER.wallFlood('#a8ecff',320,10,0.26,6,3),
-      COVER.spiralFlood('#a8ecff',320,0.035,7,3),
-      COVER.homing('#7fdcff',300,0.30,7,3),
-      COVER.rainFull('#9fe0ff',320,0.08,6,12,3),
-      COVER.ringStorm('#a8ecff',310,0.40,7,20,3)
-    ],'pixel',false),
-  B('Frostbite Warden',390,()=>drawFrost(time),
-    ["Cold clarifies.","Hold steady."],
-    ["Your breath fogs.","Still water reflects.","No ripples."],
-    ()=>[
-      COVER.rainFull('#d0f0ff',320,0.08,6,14,3),
-      COVER.fanSweep('#e6f7ff',310,0.06,1.1,7,7,3),
-      COVER.ringStorm('#d0f0ff',300,0.40,7,22,3),
-      COVER.wallFlood('#c5ecff',320,10,0.32,7,3),
-      COVER.spiralFlood('#bfe7ff',320,0.035,7,3)
-    ],'frost',false),
-  B('Crimson DJ',370,()=>drawDJ(time),
-    ["drop the bass.","on the one."],
-    ["The beat stutters.","Equalizer hums.","Feet want to move."],
-    ()=>[
-      COVER.wallFlood('#ff9aaa',320,10,0.26,7,3),
-      COVER.ringStorm('#ffb0b0',320,0.40,7,22,3),
-      COVER.spiralFlood('#ff99a9',320,0.035,7,3),
-      COVER.rainFull('#ffb7c7',320,0.08,6,14,3),
-      COVER.fanSweep('#ffb0b0',320,0.06,1.2,8,8,3)
-    ],'dj',false),
-  B('Void Prophet',420,()=>drawVoid(time),
-    ["gravity listens.","choose your orbit."],
-    ["Fall inward.","Orbit forms.","Release comes after return."],
-    ()=>[
-      COVER.latticeGrid('#c9b9ff',320,300,0.30,7,3),
-      COVER.orbitCarpet('#bfb2ff',78,320,0.45,7,3),
-      COVER.ringStorm('#d4c8ff',320,0.36,7,22,3),
-      COVER.fanSweep('#c9b9ff',320,0.06,1.1,8,8,3),
-      COVER.homing('#cfc6ff',320,0.30,7,3)
-    ],'void',false),
-  B('Tidecaller Siren',380,()=>drawSiren(time),
-    ["The tide rises.","Breathe."],
-    ["The hall smells like salt.","Foam glows.","Hold your lungs steady."],
-    ()=>[
-      COVER.rainFull('#66ccff',320,0.08,7,14,3),
-      COVER.ringStorm('#88d9ff',320,0.40,7,22,3),
-      COVER.wallFlood('#66ccff',330,10,0.30,7,3),
-      COVER.spiralFlood('#99ddff',320,0.035,7,3),
-      COVER.homing('#aaddff',320,0.30,7,3)
-    ],'siren',false),
-  B('Storm Herald',520,()=>drawStorm(time),
-    ["Thunder answers.","Stand in it."],
-    ["The sky maps itself.","Static tingles.","Boom is a heartbeat."],
-    ()=>[
-      COVER.wallFlood('#ffe066',340,10,0.24,8,3),
-      COVER.rainFull('#ffea80',340,0.06,8,16,3),
-      COVER.spiralFlood('#fff59a',330,0.03,8,3),
-      COVER.ringStorm('#ffe066',330,0.34,8,24,3),
-      COVER.fanSweep('#fff59a',330,0.05,1.2,9,8,3)
-    ],'storm',false),
-  B('Chrono Warden',430,()=>drawChrono(time),
-    ["Time bends.","Heartbeat is a metronome."],
-    ["Moments widen.","Pulse aligns.","Gaps welcome choices."],
-    ()=>[
-      COVER.fanSweep('#a0ffd6',330,0.05,1.2,8,8,3),
-      COVER.orbitCarpet('#b9ffe9',78,330,0.45,7,3),
-      COVER.ringStorm('#64f0c2',330,0.36,7,24,3),
-      COVER.homing('#a0ffd6',330,0.30,7,3),
-      COVER.spiralFlood('#9fffe3',330,0.03,7,3)
-    ],'chrono',false),
-  B('Aurora Weaver',410,()=>drawAurora(time),
-    ["Colors hum.","Hold the thread."],
-    ["Ribbons bloom.","Night weaves.","Glow follows breath."],
-    ()=>[
-      COVER.rainFull('#ffb6f2',330,0.06,7,16,3),
-      COVER.fanSweep('#ff91e6',330,0.05,1.2,9,8,3),
-      COVER.ringStorm('#ffc3f3',330,0.34,7,24,3),
-      COVER.spiralFlood('#ffd6f8',330,0.03,7,3),
-      COVER.wallFlood('#ff9ad6',340,10,0.28,7,3)
-    ],'aurora',false)
+  B('Solar Fang',360,()=>drawSolar(time),["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently.","The battlefield feels hotter…"],()=>[
+    COVER.fanSweep('#fff3b8',230,0.10,0.8,4,5,3), COVER.ringStorm('#ffd166',240,0.65,5,12,3), COVER.wallFlood('#ffe9a0',240,6,0.55,5,3), COVER.spiralFlood('#ffd166',235,0.06,5,3), COVER.rainFull('#fff1b6',260,0.08,5,10,3)
+  ],'solar',false),
+  B('Ember Seraph',340,()=>drawEmber(time),["Ash remembers flame.","You match breath with embers."],["Embers drift upward.","The kiln hums.","Patience. Then step."],()=>[
+    COVER.rainFull('#ffb7a7',300,0.08,6,12,3), COVER.homing('#ffd3a0',280,0.36,6,3), COVER.wallFlood('#ffa277',300,8,0.36,6,3), COVER.fanSweep('#ffc4a3',290,0.07,1.0,6,6,3), COVER.ringStorm('#ffb286',290,0.44,6,18,3)
+  ],'ember',false),
+  B('Abyss Jester',360,()=>drawAbyss(time),["The abyss laughs with you.","Eyes open where none should be."],["You hear faint chuckling.","The darkness ripples.","A coin flips in the dark."],()=>[
+    COVER.wallFlood('#b0a0ff',300,8,0.28,6,3), COVER.rainFull('#c0b3ff',300,0.07,6,12,3), COVER.homing('#bfb3ff',300,0.34,7,3), COVER.fanSweep('#cfc6ff',300,0.06,1.1,7,7,3), COVER.ringStorm('#b9afff',300,0.40,7,20,3)
+  ],'abyss',false),
+  B('Golden Mantis',380,()=>drawMantis(time),["Stillness. Then strike.","Measure the gap."],["He counts your steps.","A blade waits in air.","Intent sharpens."],()=>[
+    COVER.fanSweep('#ffe88a',300,0.06,1.0,7,7,3), COVER.homing('#ffdf99',300,0.32,7,3), COVER.rainFull('#fff3b8',300,0.08,6,12,3), COVER.wallFlood('#ffe27a',320,10,0.30,7,3), COVER.spiralFlood('#ffd166',320,0.04,7,3)
+  ],'mantis',false),
+  B('Pixel Phantom',350,()=>drawPixel(time),["gl1tch… r3ady?","hold the frame."],["Packet loss jitters.","The frame tears.","The picture returns if you steady."],()=>[
+    COVER.wallFlood('#a8ecff',320,10,0.26,6,3), COVER.spiralFlood('#a8ecff',320,0.035,7,3), COVER.homing('#7fdcff',300,0.30,7,3), COVER.rainFull('#9fe0ff',320,0.08,6,12,3), COVER.ringStorm('#a8ecff',310,0.40,7,20,3)
+  ],'pixel',false),
+  B('Frostbite Warden',390,()=>drawFrost(time),["Cold clarifies.","Hold steady."],["Your breath fogs.","Still water reflects.","No ripples."],()=>[
+    COVER.rainFull('#d0f0ff',320,0.08,6,14,3), COVER.fanSweep('#e6f7ff',310,0.06,1.1,7,7,3), COVER.ringStorm('#d0f0ff',300,0.40,7,22,3), COVER.wallFlood('#c5ecff',320,10,0.32,7,3), COVER.spiralFlood('#bfe7ff',320,0.035,7,3)
+  ],'frost',false),
+  B('Crimson DJ',370,()=>drawDJ(time),["drop the bass.","on the one."],["The beat stutters.","Equalizer hums.","Feet want to move."],()=>[
+    COVER.wallFlood('#ff9aaa',320,10,0.26,7,3), COVER.ringStorm('#ffb0b0',320,0.40,7,22,3), COVER.spiralFlood('#ff99a9',320,0.035,7,3), COVER.rainFull('#ffb7c7',320,0.08,6,14,3), COVER.fanSweep('#ffb0b0',320,0.06,1.2,8,8,3)
+  ],'dj',false),
+  B('Void Prophet',420,()=>drawVoid(time),["gravity listens.","choose your orbit."],["Fall inward.","Orbit forms.","Release comes after return."],()=>[
+    COVER.latticeGrid('#c9b9ff',320,300,0.30,7,3), COVER.orbitCarpet('#bfb2ff',78,320,0.45,7,3), COVER.ringStorm('#d4c8ff',320,0.36,7,22,3), COVER.fanSweep('#c9b9ff',320,0.06,1.1,8,8,3), COVER.homing('#cfc6ff',320,0.30,7,3)
+  ],'void',false),
+  B('Tidecaller Siren',380,()=>drawSiren(time),["The tide rises.","Breathe."],["The hall smells like salt.","Foam glows.","Hold your lungs steady."],()=>[
+    COVER.rainFull('#66ccff',320,0.08,7,14,3), COVER.ringStorm('#88d9ff',320,0.40,7,22,3), COVER.wallFlood('#66ccff',330,10,0.30,7,3), COVER.spiralFlood('#99ddff',320,0.035,7,3), COVER.homing('#aaddff',320,0.30,7,3)
+  ],'siren',false),
+  B('Storm Herald',520,()=>drawStorm(time),["Thunder answers.","Stand in it."],["The sky maps itself.","Static tingles.","Boom is a heartbeat."],()=>[
+    COVER.wallFlood('#ffe066',340,10,0.24,8,3), COVER.rainFull('#ffea80',340,0.06,8,16,3), COVER.spiralFlood('#fff59a',330,0.03,8,3), COVER.ringStorm('#ffe066',330,0.34,8,24,3), COVER.fanSweep('#fff59a',330,0.05,1.2,9,8,3)
+  ],'storm',false),
+  B('Chrono Warden',430,()=>drawChrono(time),["Time bends.","Heartbeat is a metronome."],["Moments widen.","Pulse aligns.","Gaps welcome choices."],()=>[
+    COVER.fanSweep('#a0ffd6',330,0.05,1.2,8,8,3), COVER.orbitCarpet('#b9ffe9',78,330,0.45,7,3), COVER.ringStorm('#64f0c2',330,0.36,7,24,3), COVER.homing('#a0ffd6',330,0.30,7,3), COVER.spiralFlood('#9fffe3',330,0.03,7,3)
+  ],'chrono',false),
+  B('Aurora Weaver',410,()=>drawAurora(time),["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves.","Glow follows breath."],()=>[
+    COVER.rainFull('#ffb6f2',330,0.06,7,16,3), COVER.fanSweep('#ff91e6',330,0.05,1.2,9,8,3), COVER.ringStorm('#ffc3f3',330,0.34,7,24,3), COVER.spiralFlood('#ffd6f8',330,0.03,7,3), COVER.wallFlood('#ff9ad6',340,10,0.28,7,3)
+  ],'aurora',false)
 ];
-
 const ADMIN_BOSSES={
-  oblivion: B('Oblivion Herald',720,()=>drawObliv(time),
-    ["entropy remembers you.","endings echo."],
-    ["Closer.","Unmake.","Reverse.","Again."],
-    ()=>[
-      COVER.fanSweep('#fff59a',340,0.045,1.2,10,8,3),
-      COVER.ringStorm('#ffd166',340,0.30,8,26,3),
-      COVER.rainFull('#ffea80',340,0.05,8,16,3),
-      COVER.orbitCarpet('#bfb2ff',80,340,0.40,8,3),
-      COVER.homing('#ffd3a0',340,0.26,8,3),
-      COVER.wallFlood('#c5ecff',340,12,0.26,8,3),
-      COVER.spiralFlood('#a8ecff',340,0.028,8,3),
-      COVER.latticeGrid('#b9afff',340,320,0.30,8,3),
-      COVER.ringStorm('#b9afff',340,0.28,9,28,3),
-      COVER.fanSweep('#fff1b6',340,0.040,1.2,11,8,3)
-    ],'godslayer',true),
-  cupcake: B('The Cupcake Incident',800,()=>drawCupcake(time),
-    ["The frosting trembles ominously.","Sprinkles rain like shrapnel."],
-    ["Sweet doom.","Sugar crash.","Frosting storm.","Sprinkle rain."],
-    ()=>[
-      COVER.rainFull('#ffb7e6',340,0.05,7,16,3),
-      COVER.ringStorm('#ff91e6',320,0.30,8,24,3),
-      COVER.fanSweep('#ffc4f0',330,0.05,1.1,9,8,3),
-      COVER.wallFlood('#ff7acb',340,10,0.30,8,3),
-      COVER.spiralFlood('#ff9ad6',330,0.03,8,3),
-      COVER.orbitCarpet('#ffc3f3',78,330,0.45,7,3),
-      COVER.latticeGrid('#ff91e6',340,320,0.30,9,3),
-      COVER.homing('#ff3a6b',330,0.26,9,3),
-      COVER.ringStorm('#ff7acb',330,0.28,9,26,3),
-      COVER.fanSweep('#ffc3f3',340,0.045,1.2,11,8,3)
-    ],'godslayer',true)
+  oblivion: B('Oblivion Herald',720,()=>drawObliv(time),["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],()=>[
+    COVER.fanSweep('#fff59a',340,0.045,1.2,10,8,3), COVER.ringStorm('#ffd166',340,0.30,8,26,3), COVER.rainFull('#ffea80',340,0.05,8,16,3),
+    COVER.orbitCarpet('#bfb2ff',80,340,0.40,8,3), COVER.homing('#ffd3a0',340,0.26,8,3), COVER.wallFlood('#c5ecff',340,12,0.26,8,3),
+    COVER.spiralFlood('#a8ecff',340,0.028,8,3), COVER.latticeGrid('#b9afff',340,320,0.30,8,3), COVER.ringStorm('#b9afff',340,0.28,9,28,3), COVER.fanSweep('#fff1b6',340,0.040,1.2,11,8,3)
+  ],'godslayer',true),
+  cupcake: B('The Cupcake Incident',800,()=>drawCupcake(time),["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm.","Sprinkle rain."],()=>[
+    COVER.rainFull('#ffb7e6',340,0.05,7,16,3), COVER.ringStorm('#ff91e6',320,0.30,8,24,3), COVER.fanSweep('#ffc4f0',330,0.05,1.1,9,8,3),
+    COVER.wallFlood('#ff7acb',340,10,0.30,8,3), COVER.spiralFlood('#ff9ad6',330,0.03,8,3), COVER.orbitCarpet('#ffc3f3',78,330,0.45,7,3),
+    COVER.latticeGrid('#ff91e6',340,320,0.30,9,3), COVER.homing('#ff3a6b',330,0.26,9,3), COVER.ringStorm('#ff7acb',330,0.28,9,26,3), COVER.fanSweep('#ffc3f3',340,0.045,1.2,11,8,3)
+  ],'godslayer',true)
 };
 
-/* ===== Admin UI ===== */
+/* Admin UI */
 function buildAdminLists(){
   adBoss.innerHTML='';
   BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=(i+1)+'. '+b.name; adBoss.appendChild(o); });
@@ -668,32 +498,24 @@ adClear.onclick=()=>{ bullets.length=0; toastMsg('Bullets cleared'); };
 adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))]; saveWrite(SAVE); toastMsg('All weapons granted'); };
 adSkip.onclick=()=>{ if(turn==='enemy' && attack){ attack.t=999; toastMsg('Skipped'); } };
 
-/* ===== 67×3 Admin trigger ===== */
+/* 67×3 Admin trigger */
 let seq='',count=0;
 addEventListener('keydown',e=>{
-  if(e.key==='6' || e.key==='7'){
-    seq+=e.key;
-    if(seq.endsWith('67')){ count++; seq=''; }
-    if(count>=3){ count=0; openAdmin(); toastMsg('Admin opened'); }
-  } else { seq=''; count=0; }
+  if(e.key==='6' || e.key==='7'){ seq+=e.key; if(seq.endsWith('67')){ count++; seq=''; } if(count>=3){ count=0; openAdmin(); toastMsg('Admin opened'); } }
+  else { seq=''; count=0; }
 },{passive:true});
 
-/* ===== Boss flow ===== */
+/* Boss flow */
 function setBoss(obj,isAdmin=false){
   BOSS={ name:obj.name, hpMax:obj.hpMax, hp:obj.hpMax, draw:obj.draw, intro:obj.intro, lines:obj.lines, attacks:obj.attacks, drop:obj.drop, isAdmin };
   attackSeq=BOSS.attacks(); attackIx=0;
   bossName.textContent=BOSS.name;
-  // Godslayer spawn effects
-  const w=equippedWeapon();
-  if(w.id==='godslayer' && !isAdmin){ BOSS.hp=BOSS.hpMax=1; }
+  const w=equippedWeapon(); if(w.id==='godslayer' && !isAdmin){ BOSS.hp=BOSS.hpMax=1; }
   updateBossBarInstant();
 }
 function initBoss(sel){
-  if(typeof sel==='string' && sel.startsWith('admin:')){
-    const key=sel.split(':')[1]; setBoss(ADMIN_BOSSES[key], true);
-  } else {
-    const ix=(typeof sel==='number'?sel:bossIndex)|0; bossIndex=Math.max(0,Math.min(BOSSES.length-1,ix)); setBoss(BOSSES[bossIndex], false);
-  }
+  if(typeof sel==='string' && sel.startsWith('admin:')){ const key=sel.split(':')[1]; setBoss(ADMIN_BOSSES[key], true); }
+  else { const ix=(typeof sel==='number'?sel:bossIndex)|0; bossIndex=Math.max(0,Math.min(BOSSES.length-1,ix)); setBoss(BOSSES[bossIndex], false); }
   HEART.hp=HEART.hpMax=SAVE.hp; updatePlayerBarInstant(); HEART.i=0; centerHeart();
   turn='player'; showArena=false; arenaEl.style.display='none';
   say(BOSS.intro.join('\n'));
@@ -707,23 +529,17 @@ function startAttack(){
 }
 function endAttack(){
   showArena=false; arenaEl.style.display='none'; uiBar.style.opacity='1';
-  turn='player';
-  say((BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...'));
-  attack=null;
+  turn='player'; say((BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...')); attack=null;
 }
 
-/* ===== Input & actions ===== */
+/* Input & actions */
 const held=new Set();
 addEventListener('keydown',e=>{
-  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){
-    if(turn!=='enemy') return;
-  }
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){ if(turn!=='enemy') return; }
   held.add(e.key);
 },{passive:true});
 addEventListener('keyup',e=>held.delete(e.key),{passive:true});
-uiBar.addEventListener('click',e=>{
-  const b=e.target.closest('.btn'); if(!b) return; onAction(b.dataset.act);
-});
+uiBar.addEventListener('click',e=>{ const b=e.target.closest('.btn'); if(!b) return; onAction(b.dataset.act); });
 addEventListener('keydown',e=>{
   if(turn!=='player') return;
   if(['z','Z','Enter',' '].includes(e.key)) onAction('FIGHT');
@@ -736,27 +552,20 @@ function onAction(act){
   if(turn!=='player') return;
   if(act==='FIGHT'){
     const w=equippedWeapon();
-    if(w.id==='godslayer'){
-      if(BOSS.isAdmin){ BOSS.hp=67; } else { BOSS.hp=0; }
-    } else {
-      const dealt=Math.max(1,Math.floor(24 + w.atk));
-      BOSS.hp=Math.max(0,BOSS.hp-dealt);
-    }
-    updateBossBarInstant();
-    say(`You strike ${BOSS.name}.`);
+    if(w.id==='godslayer'){ if(BOSS.isAdmin){ BOSS.hp=67; } else { BOSS.hp=0; } }
+    else { const dealt=Math.max(1,Math.floor(24 + w.atk)); BOSS.hp=Math.max(0,BOSS.hp-dealt); }
+    updateBossBarInstant(); say(`You strike ${BOSS.name}.`);
     if(BOSS.hp<=0){ win(false); } else setTimeout(()=>startAttack(),120);
   } else if(act==='MERCY'){
     say(`${BOSS.name} isn't ready to be spared.`);
   } else if(act==='ACT'){
-    say(`You steady yourself.`);
-    setTimeout(()=>startAttack(),120);
+    say(`You steady yourself.`); setTimeout(()=>startAttack(),120);
   } else if(act==='ITEM'){
-    HEART.hp=Math.min(HEART.hpMax, HEART.hp+12); updatePlayerBarInstant(); say(`You used a petal. +12 HP`);
-    setTimeout(()=>startAttack(),120);
+    HEART.hp=Math.min(HEART.hpMax, HEART.hp+12); updatePlayerBarInstant(); say(`You used a petal. +12 HP`); setTimeout(()=>startAttack(),120);
   }
 }
 
-/* ===== Movement / bullets / collide ===== */
+/* Movement / bullets / collide */
 function moveHeart(dt){
   if(turn!=='enemy') return;
   let dx=0,dy=0; if(held.has('ArrowLeft')||held.has('a')||held.has('A'))dx-=1; if(held.has('ArrowRight')||held.has('d')||held.has('D'))dx+=1;
@@ -771,41 +580,32 @@ function updateBullets(dt){
   const m=200; bullets=bullets.filter(b=> b.x>ARENA.x-m && b.x<ARENA.x+ARENA.w+m && b.y>ARENA.y-m && b.y<ARENA.y+ARENA.h+m);
 }
 function collide(){
-  if(ADMIN_INVINC || HEART.i>0 || turn!=='enemy') return;
+  if(ADMIN_INVINCIBLE || HEART.i>0 || turn!=='enemy') return;
   for(const b of bullets){
     const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||4)+HEART.r;
     if(dx*dx+dy*dy<=rr*rr){
       const dmg=Math.max(1,Math.floor((b.dmg||3)*DIFF.dmg));
       HEART.hp=Math.max(0, HEART.hp-dmg); updatePlayerBarInstant();
-      HEART.i=0.85;
-      if(HEART.hp<=0) { lose(); }
-      break;
+      HEART.i=0.85; if(HEART.hp<=0){ lose(); } break;
     }
   }
 }
 function lose(){ say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
 
-/* ===== Win / progression / drops ===== */
+/* Win / progression / drops */
 function addDrop(key,isAdmin){
   if(isAdmin){ if(!SAVE.weapons.includes('godslayer')){ SAVE.weapons.push('godslayer'); saveWrite(SAVE); toastMsg('New weapon: Godslayer Blade'); } }
-  else {
-    const map={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
-    const wid=map[key]; if(wid && !SAVE.weapons.includes(wid)){ SAVE.weapons.push(wid); saveWrite(SAVE); toastMsg(`New weapon: ${WEAPONS[wid].name}`); }
-  }
+  else { const map={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
+    const wid=map[key]; if(wid && !SAVE.weapons.includes(wid)){ SAVE.weapons.push(wid); saveWrite(SAVE); toastMsg(`New weapon: ${WEAPONS[wid].name}`); } }
 }
 function win(spared){
-  say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
-  addDrop(BOSS.drop, BOSS.isAdmin);
-  if(BOSS.isAdmin){
-    nextBossPendingIndex = bossIndex;
-  } else {
-    const next=bossIndex+1; nextBossPendingIndex = (next<BOSSES.length)? next : 0;
-  }
+  say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`); addDrop(BOSS.drop, BOSS.isAdmin);
+  if(BOSS.isAdmin){ nextBossPendingIndex = bossIndex; } else { const next=bossIndex+1; nextBossPendingIndex = (next<BOSSES.length)? next : 0; }
   setTimeout(()=>openEquip(),500);
 }
 eqStart.onclick=()=>{ closeEquip(); initBoss(nextBossPendingIndex ?? bossIndex); };
 
-/* ===== Render/loop ===== */
+/* Render/loop */
 function render(){
   drawBossBackground(BOSS.name,time);
   if(BOSS && BOSS.draw) BOSS.draw(time);
@@ -829,10 +629,10 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-/* ===== Start ===== */
+/* Start */
 function updateAllBars(){ updateBossBarInstant(); updatePlayerBarInstant(); }
 buildAdminLists();
-initBoss(bossIndex);
+initBoss(SAVE.bossIndex||0);
 updateAllBars();
 requestAnimationFrame(loop);
 </script>
