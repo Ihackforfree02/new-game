@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Battle — gold SOUL, 12 normal + 2 admin, equip overlay in bottom UI, distinct attacks, improved backgrounds, 67×3 admin</title>
+<title>Battle — gold SOUL, 12 normal + 2 admin, bottom equip, distinct attacks, improved backgrounds</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Consolas,Menlo,monospace}
@@ -17,7 +17,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 #hpFill{background:#7affb7;width:0}
 .sub{font-size:12px;color:#e6dcae}
 
-/* Force black text for names and dialogue */
+/* Black text for names and dialogue */
 #bossName,#playerName,#bubbleText{color:#000}
 
 /* Dialogue */
@@ -31,7 +31,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .lab{font-size:18px;letter-spacing:1px;min-width:88px;color:#fff}
 
 /* Equip overlay (bottom popup) */
-#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:640px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:5;display:none}
+#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:720px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:5;display:none}
 #equipOverlay h4{margin:4px 0 6px 0;font-size:14px;color:#ffd166}
 .itemCard{border:1px solid #30303f;padding:8px;background:#141522;border-radius:6px;margin-bottom:8px}
 .itemHeader{display:flex;justify-content:space-between;align-items:center}
@@ -43,7 +43,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 /* Arena */
 #arena{position:absolute;left:240px;top:418px;width:480px;height:184px;border:3px solid #fff;display:none;box-shadow:0 0 12px rgba(255,255,255,.35);z-index:2}
 
-/* Admin overlay */
+/* Admin overlay (67×3 to open) */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:10}
 #panel{width:880px;max-width:95%;background:#111218;border:2px solid #fff;border-radius:8px;color:#ffd166;padding:14px}
 .tabs{display:flex;gap:8px;margin-bottom:8px}
@@ -89,7 +89,7 @@ canvas{display:block}
     <div class="btn" data-act="EQUIP"><div class="key">E</div><div class="lab">EQUIP</div></div>
   </div>
 
-  <!-- Equip overlay (bottom popup) -->
+  <!-- Equip overlay -->
   <div id="equipOverlay">
     <h4>Equipment</h4>
     <div id="equipList"></div>
@@ -116,7 +116,6 @@ canvas{display:block}
         <button class="tbtn" data-t="power">Power</button>
         <button class="tbtn" data-t="state">State</button>
       </div>
-
       <div id="view-boss" class="view active">
         <div class="row">
           <select id="adBoss" class="sel" style="min-width:360px"></select>
@@ -133,7 +132,6 @@ canvas{display:block}
           <button id="adApplySpeed" class="btn2">Apply</button>
         </div>
       </div>
-
       <div id="view-power" class="view">
         <div class="row">
           <button id="adHeal" class="btn2">Heal player</button>
@@ -146,7 +144,6 @@ canvas{display:block}
           <button id="adSkip" class="btn2">Skip current attack</button>
         </div>
       </div>
-
       <div id="view-state" class="view">
         <div class="row"><div class="badge" id="stTurn">turn: player</div><div class="badge" id="stArena">arena: hidden</div><div class="badge" id="stBul">bullets: 0</div></div>
       </div>
@@ -157,9 +154,10 @@ canvas{display:block}
 <script>
 "use strict";
 
-/* Elements */
+/* Canvas and elements */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
+
 const bossName=document.getElementById('bossName'), bossFill=document.getElementById('bossFill'), bossVal=document.getElementById('bossVal');
 const hpFill=document.getElementById('hpFill'), hpVal=document.getElementById('hpVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
@@ -185,7 +183,7 @@ function updateStateBadges(){ stTurn.textContent='turn: '+turn; stArena.textCont
 function setTab(name){ tbtns.forEach(b=>b.classList.toggle('active', b.dataset.t===name)); Object.entries(views).forEach(([k,v])=>v.classList.toggle('active', k===name)); }
 
 /* Save/data */
-const SAVE_KEY='battle_bottom_equip_v1';
+const SAVE_KEY='battle_bottom_equip_fix_v1';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -219,6 +217,7 @@ const WEAPONS={
   godslayer:{id:'godslayer',name:'Godslayer Blade',atk:999,desc:'Normal bosses spawn at 1 HP; admin hits set to 67 HP.'}
 };
 function equippedWeapon(){ return WEAPONS[SAVE.currentWeapon]||WEAPONS.stick; }
+
 function renderEquip(){
   equipList.innerHTML='';
   (SAVE.weapons||[]).forEach(id=>{
@@ -261,22 +260,20 @@ equipClose.onclick=()=>{ equipOverlay.style.display='none'; };
 function updateBossBar(){ if(!BOSS) return; const r=Math.max(0,Math.min(1,BOSS.hp/BOSS.hpMax)); bossFill.style.width=(440*r)+'px'; bossVal.textContent=`${Math.floor(Math.max(0,BOSS.hp))}/${Math.floor(BOSS.hpMax)}`; }
 function updatePlayerBar(){ const r=Math.max(0,Math.min(1,HEART.hp/HEART.hpMax)); hpFill.style.width=(260*r)+'px'; hpFill.style.background=r<0.25?'#ff5e6b':r<0.5?'#ffd166':'#7affb7'; hpVal.textContent=`${Math.floor(Math.max(0,HEART.hp))}/${Math.floor(HEART.hpMax)}`; }
 
-/* Gold Undertale SOUL — layered, pulsing shine */
+/* Gold SOUL */
 function drawSOUL(x,y,scale=4){
-  const base='#ffd700';
-  ctx.save();
-  const pulse = 0.2+0.1*Math.sin(time*2.5);
   const grad=ctx.createRadialGradient(x,y,scale, x,y,scale*6);
+  const pulse = 0.2+0.1*Math.sin(time*2.5);
   grad.addColorStop(0, `rgba(255,215,0,${0.35+pulse})`);
   grad.addColorStop(1, 'rgba(255,215,0,0)');
+  ctx.save();
   ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(x,y,scale*6,0,Math.PI*2); ctx.fill();
   const mask=["00100100","01111110","11111111","11111111","11111111","01111110","00111100","00011000"];
   ctx.translate(x-(mask[0].length*scale)/2, y-(mask.length*scale)/2);
   for(let r=0;r<mask.length;r++){
     for(let c=0;c<mask[r].length;c++){
       if(mask[r][c]==='1'){
-        const gx = x + c*scale, gy = y + r*scale;
-        const shine = 0.8 + 0.2*Math.sin((gx+gy+time*60)/30);
+        const shine = 0.8 + 0.2*Math.sin((c*scale+r*scale+time*60)/30);
         ctx.fillStyle = `hsl(48,95%,${50+shine*10}%)`;
         ctx.fillRect(c*scale, r*scale, scale, scale);
       }
@@ -291,7 +288,7 @@ const ARENA={x:240,y:418,w:480,h:184};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:320,i:0,hp:SAVE.hp,hpMax:SAVE.hp};
 function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
 
-/* Patterns (distinct building blocks) */
+/* Patterns */
 let bullets=[];
 function phase(dur, obj){ let t=0; obj._acc=Object.create(null); return { enter(){t=0; obj.enter&&obj.enter();}, update(dt){t+=dt; obj.update(dt,t,obj._acc);}, done(){return t>=dur;} }; }
 function spawn(b){ b.t=0; bullets.push(b); return b; }
@@ -306,7 +303,7 @@ const PAT = {
   arcs:(col,spd,rate,n,dmg,dur)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; spawn({x:cx+Math.cos(a)*60,y:cy+Math.sin(a)*40,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg}); } } } })
 };
 
-/* Idle draws */
+/* Idle icon draws */
 function drawSolar(t){ const cx=480, cy=240+Math.sin(t*2)*3; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,40,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#000'; const blink=(Math.sin(t*4)>0.9)?0:1; ctx.fillRect(cx-12,cy-10,6,blink*6); ctx.fillRect(cx+6,cy-10,6,blink*6); }
 function drawEmber(t){ const cx=480, cy=240; ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.arc(cx,cy,30+Math.sin(t*3)*2,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#ffc2a4'; ctx.fillRect(cx-50,cy-10,30,14+Math.sin(t*5)*4); ctx.fillRect(cx+20,cy-10,30,14+Math.cos(t*5)*4); }
 function drawAbyss(t){ const cx=480, cy=240; ctx.fillStyle='#a89bff'; ctx.fillRect(cx-30,cy-30,60,60); ctx.fillStyle='#fff'; ctx.fillRect(cx-15,cy-10,10,10); ctx.fillRect(cx+5,cy-10,10,10); ctx.strokeStyle='#000'; ctx.beginPath(); ctx.arc(cx,cy+10,15,0,Math.PI,false); ctx.stroke(); }
@@ -339,7 +336,7 @@ function bgAurora(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop
 function bgObliv(){ ctx.fillStyle='#0b0b0f'; ctx.fillRect(0,0,960,720); ctx.strokeStyle='rgba(255,214,102,0.25)'; ctx.lineWidth=1; for(let i=0;i<12;i++){ ctx.strokeRect(120+i*50,120+i*30,720-i*100,480-i*60); } }
 function bgCandy(){ const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffccf9'); grad.addColorStop(1,'#ffe6f7'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720); ctx.strokeStyle='#ff99cc'; ctx.lineWidth=30; for(let x=-100;x<960;x+=120){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+200,720); ctx.stroke(); } for(let i=0;i<5;i++){ const lx=100+i*180, ly=600; ctx.strokeStyle='#663300'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-120); ctx.stroke(); ctx.fillStyle=['#ff6666','#66ccff','#99ff99','#ffff66','#ff99ff'][i%5]; ctx.beginPath(); ctx.arc(lx,ly-140,40,0,Math.PI*2); ctx.fill(); } }
 
-/* Boss roster — 12 normal + 2 admin-only */
+/* Boss roster */
 function B(name,hp,draw,bg,intro,lines,attacks,drop,isAdmin=false){ return {name,hpMax:hp,hp:hp,draw,bg,intro,lines,attacks,drop,isAdmin}; }
 const BOSSES=[
   B('Solar Fang',360,()=>drawSolar(time),bgSolar,["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently."],
@@ -367,7 +364,7 @@ const BOSSES=[
   B('Aurora Weaver',410,()=>drawAurora(time),bgAurora,["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves."],
     ()=>[PAT.rain('#ffb6f2',330,0.06,16,7,2.8),PAT.arcs('#ffc3f3',260,0.40,14,7,2.8),PAT.ring('#ffd6f8',330,0.34,22,7,2.8)],'aurora',false),
 
-  // Admin-only (13,14)
+  // Admin-only
   B('Oblivion Herald',720,()=>drawObliv(time),bgObliv,["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],
     ()=>[PAT.rain('#fff59a',340,0.05,18,8,3.2),PAT.ring('#ffd166',340,0.28,26,9,3.2),PAT.spiral('#a8ecff',340,0.028,8,3.2),PAT.walls('#c5ecff',340,12,0.28,8,3.2)],'godslayer',true),
   B('The Cupcake Incident',800,()=>drawCupcake(time),bgCandy,["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm."],
@@ -380,7 +377,6 @@ let attack=null, attackSeq=null, attackIx=0;
 let time=0,last=performance.now();
 let showArena=false, turn='player';
 let ADMIN_INVINC=false;
-let nextBossPendingIndex=null;
 
 function setBossByObj(obj){
   const hpMax=Math.max(1,obj.hpMax|0);
@@ -408,7 +404,7 @@ function endAttack(){
   updateStateBadges();
 }
 
-/* ACT and ITEM logic */
+/* ACT and ITEM */
 const ACTS=[
   {id:'compliment',name:'Compliment',effect:()=>{ DIFF={...DIFF, spd:Math.max(0.88,DIFF.spd-0.08)}; say('You compliment. The air cools.'); }},
   {id:'taunt',name:'Taunt',effect:()=>{ DIFF={...DIFF, spd:DIFF.spd+0.06, dmg:Math.max(0.8,DIFF.dmg-0.12)}; say('You taunt. It rushes, softer.'); }},
@@ -423,26 +419,25 @@ function useItem(){
   setTimeout(()=>startAttack(),140);
 }
 
-/* Drops — swords & consumables */
+/* Drops */
 function addDrop(key,isAdmin){
   if(isAdmin){
-    if(!SAVE.weapons.includes('godslayer')){ SAVE.weapons.push('godslayer'); say('Drop: Godslayer Blade acquired!'); }
+    if(!SAVE.weapons.includes('godslayer')){ SAVE.weapons.push('godslayer'); }
     const ex=SAVE.items.find(i=>i.id==='ambrosia'); if(ex) ex.count++; else SAVE.items.push({id:'ambrosia',name:'Ambrosia',heal:50,count:1});
-    saveWrite(SAVE); renderEquip(); renderConsumables();
-  } else {
-    const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
-    const healMap={solar:'emberleaf',ember:'embershade',abyss:'nightmint',mantis:'goldtea',pixel:'glitchgel',frost:'snowdew',dj:'beatjuice',void:'voidsalts',siren:'tidebrew',storm:'shocktonic',chrono:'timecordial',aurora:'auroratea'};
-    const names={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea'};
-    const wid=weaponMap[key]; if(wid && !SAVE.weapons.includes(wid)){ SAVE.weapons.push(wid); say(`Drop: ${WEAPONS[wid].name} acquired!`); }
-    const healId=healMap[key]; if(healId){ const ex=SAVE.items.find(i=>i.id===healId); if(ex) ex.count++; else SAVE.items.push({id:healId,name:names[healId]||healId,heal:18,count:1}); }
-    saveWrite(SAVE); renderEquip(); renderConsumables();
+    saveWrite(SAVE); renderEquip(); renderConsumables(); return;
   }
+  const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
+  const healMap={solar:'emberleaf',ember:'embershade',abyss:'nightmint',mantis:'goldtea',pixel:'glitchgel',frost:'snowdew',dj:'beatjuice',void:'voidsalts',siren:'tidebrew',storm:'shocktonic',chrono:'timecordial',aurora:'auroratea'};
+  const names={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea'};
+  const wid=weaponMap[key]; if(wid && !SAVE.weapons.includes(wid)) SAVE.weapons.push(wid);
+  const healId=healMap[key]; if(healId){ const ex=SAVE.items.find(i=>i.id===healId); if(ex) ex.count++; else SAVE.items.push({id:healId,name:names[healId]||healId,heal:18,count:1}); }
+  saveWrite(SAVE); renderEquip(); renderConsumables();
 }
 function win(spared){
   say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
   addDrop(BOSS.drop, BOSS.isAdmin);
-  const next=bossIndex+1; nextBossPendingIndex=(next<BOSSES.length? next : 0);
-  setTimeout(()=>initBoss(nextBossPendingIndex),600);
+  const next=bossIndex+1; const nextIndex=(next<BOSSES.length? next : 0);
+  setTimeout(()=>initBoss(nextIndex),600);
 }
 
 /* Input & admin trigger 67×3 */
@@ -470,7 +465,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{
   if(['ArrowLeft','a','A'].includes(e.key)) held.delete('left');
   if(['ArrowRight','d','D'].includes(e.key)) held.delete('right');
-  if(['ArrowUp','w','W'].includes(e.key)) held delete('up');
+  if(['ArrowUp','w','W'].includes(e.key)) held.delete('up');     // fixed
   if(['ArrowDown','s','S'].includes(e.key)) held.delete('down');
 },{passive:true});
 
@@ -520,7 +515,7 @@ function collide(){
 }
 function lose(){ say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
 
-/* Admin UI logic */
+/* Admin UI */
 function buildAdminLists(){
   adBoss.innerHTML='';
   BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=(i+1)+'. '+b.name+(b.isAdmin?' [ADMIN ONLY]':''); adBoss.appendChild(o); });
