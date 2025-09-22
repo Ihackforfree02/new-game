@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Battle — gold SOUL, 12 normal + 2 admin, distinct attacks, improved backgrounds, equip & inventory, 67×3 admin</title>
+<title>Battle — gold SOUL, 12 normal + 2 admin, equip overlay in bottom UI, distinct attacks, improved backgrounds, 67×3 admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Consolas,Menlo,monospace}
@@ -30,6 +30,16 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .key{width:22px;height:22px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;background:#fff}
 .lab{font-size:18px;letter-spacing:1px;min-width:88px;color:#fff}
 
+/* Equip overlay (bottom popup) */
+#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:640px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:5;display:none}
+#equipOverlay h4{margin:4px 0 6px 0;font-size:14px;color:#ffd166}
+.itemCard{border:1px solid #30303f;padding:8px;background:#141522;border-radius:6px;margin-bottom:8px}
+.itemHeader{display:flex;justify-content:space-between;align-items:center}
+.itemName{font-weight:700}
+.itemDesc{font-size:12px;color:#c9c9e0}
+.btn3{padding:6px 10px;border:1px solid #ffd166;background:#1a1b29;color:#ffd166;cursor:pointer;border-radius:4px}
+.btnGroup{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
 /* Arena */
 #arena{position:absolute;left:240px;top:418px;width:480px;height:184px;border:3px solid #fff;display:none;box-shadow:0 0 12px rgba(255,255,255,.35);z-index:2}
 
@@ -46,16 +56,6 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .btn2{padding:6px 10px;border:1px solid #fff;background:#212238;color:#ffd166;cursor:pointer}
 .btn2:hover{filter:brightness(1.12)}
 .badge{border:1px solid #3a3a4a;background:#0f1020;color:#cfd;padding:2px 6px;border-radius:4px;font-size:12px}
-
-/* Equip & inventory side panel (always available, no turn cost) */
-#side{position:absolute;right:8px;top:64px;width:220px;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:10px;border-radius:8px;z-index:3}
-#side h4{margin:4px 0 6px 0;font-size:14px;color:#ffd166}
-.itemCard{border:1px solid #30303f;padding:8px;background:#141522;border-radius:6px;margin-bottom:8px}
-.itemHeader{display:flex;justify-content:space-between;align-items:center}
-.itemName{font-weight:700}
-.itemDesc{font-size:12px;color:#c9c9e0}
-.btn3{padding:6px 10px;border:1px solid #ffd166;background:#1a1b29;color:#ffd166;cursor:pointer;border-radius:4px}
-.btnGroup{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 
 /* Canvas */
 canvas{display:block}
@@ -86,6 +86,21 @@ canvas{display:block}
     <div class="btn" data-act="ACT"><div class="key">A</div><div class="lab">ACT</div></div>
     <div class="btn" data-act="ITEM"><div class="key">I</div><div class="lab">ITEM</div></div>
     <div class="btn" data-act="MERCY"><div class="key">M</div><div class="lab">MERCY</div></div>
+    <div class="btn" data-act="EQUIP"><div class="key">E</div><div class="lab">EQUIP</div></div>
+  </div>
+
+  <!-- Equip overlay (bottom popup) -->
+  <div id="equipOverlay">
+    <h4>Equipment</h4>
+    <div id="equipList"></div>
+    <div class="btnGroup">
+      <button id="btnUnequip" class="btn3">Unequip</button>
+    </div>
+    <h4 style="margin-top:10px">Consumables</h4>
+    <div id="consumableList"></div>
+    <div class="btnGroup" style="margin-top:8px">
+      <button id="equipClose" class="btn3">Close</button>
+    </div>
   </div>
 
   <!-- Admin overlay -->
@@ -127,7 +142,7 @@ canvas{display:block}
           <button id="adClear" class="btn2">Clear bullets</button>
         </div>
         <div class="row">
-          <button id="adGiveAll" class="btn2">Give all items</button>
+          <button id="adGiveAll" class="btn2">Give all gear & items</button>
           <button id="adSkip" class="btn2">Skip current attack</button>
         </div>
       </div>
@@ -137,17 +152,6 @@ canvas{display:block}
       </div>
     </div>
   </div>
-
-  <!-- Side equip & inventory -->
-  <div id="side">
-    <h4>Equipment</h4>
-    <div id="equipList"></div>
-    <div class="btnGroup">
-      <button id="btnUnequip" class="btn3">Unequip</button>
-    </div>
-    <h4 style="margin-top:10px">Consumables</h4>
-    <div id="consumableList"></div>
-  </div>
 </div>
 
 <script>
@@ -156,11 +160,13 @@ canvas{display:block}
 /* Elements */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
-
 const bossName=document.getElementById('bossName'), bossFill=document.getElementById('bossFill'), bossVal=document.getElementById('bossVal');
 const hpFill=document.getElementById('hpFill'), hpVal=document.getElementById('hpVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiBar=document.getElementById('uiBar'), arenaEl=document.getElementById('arena');
+
+const equipOverlay=document.getElementById('equipOverlay'), equipList=document.getElementById('equipList'), consumableList=document.getElementById('consumableList');
+const btnUnequip=document.getElementById('btnUnequip'), equipClose=document.getElementById('equipClose');
 
 const admin=document.getElementById('admin'), adClose=document.getElementById('adClose');
 const tbtns=[...document.querySelectorAll('.tbtn')];
@@ -170,11 +176,7 @@ const adDiff=document.getElementById('adDiff'), adApplyDiff=document.getElementB
 const adSpeed=document.getElementById('adSpeed'), adApplySpeed=document.getElementById('adApplySpeed');
 const adHeal=document.getElementById('adHeal'), adInvinc=document.getElementById('adInvinc'), adKillBoss=document.getElementById('adKillBoss'), adClear=document.getElementById('adClear');
 const adGiveAll=document.getElementById('adGiveAll'), adSkip=document.getElementById('adSkip');
-
 const stTurn=document.getElementById('stTurn'), stArena=document.getElementById('stArena'), stBul=document.getElementById('stBul');
-
-const equipList=document.getElementById('equipList'), consumableList=document.getElementById('consumableList');
-const btnUnequip=document.getElementById('btnUnequip');
 
 /* Helpers */
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
@@ -183,7 +185,7 @@ function updateStateBadges(){ stTurn.textContent='turn: '+turn; stArena.textCont
 function setTab(name){ tbtns.forEach(b=>b.classList.toggle('active', b.dataset.t===name)); Object.entries(views).forEach(([k,v])=>v.classList.toggle('active', k===name)); }
 
 /* Save/data */
-const SAVE_KEY='battle_equip_inventory_v1';
+const SAVE_KEY='battle_bottom_equip_v1';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -228,7 +230,7 @@ function renderEquip(){
     head.appendChild(name); head.appendChild(atk);
     const desc=document.createElement('div'); desc.className='itemDesc'; desc.textContent=w.desc;
     const btns=document.createElement('div'); btns.className='btnGroup';
-    const btnEq=document.createElement('button'); btnEq.className='btn3'; btnEq.textContent='Equip';
+    const btnEq=document.createElement('button'); btnEq.className='btn3'; btnEq.textContent='Equip (no turn)';
     btnEq.onclick=()=>{ SAVE.currentWeapon=w.id; saveWrite(SAVE); renderEquip(); };
     btns.appendChild(btnEq);
     card.appendChild(head); card.appendChild(desc); card.appendChild(btns);
@@ -253,6 +255,7 @@ function renderConsumables(){
   });
 }
 btnUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); renderEquip(); };
+equipClose.onclick=()=>{ equipOverlay.style.display='none'; };
 
 /* Bars */
 function updateBossBar(){ if(!BOSS) return; const r=Math.max(0,Math.min(1,BOSS.hp/BOSS.hpMax)); bossFill.style.width=(440*r)+'px'; bossVal.textContent=`${Math.floor(Math.max(0,BOSS.hp))}/${Math.floor(BOSS.hpMax)}`; }
@@ -260,15 +263,13 @@ function updatePlayerBar(){ const r=Math.max(0,Math.min(1,HEART.hp/HEART.hpMax))
 
 /* Gold Undertale SOUL — layered, pulsing shine */
 function drawSOUL(x,y,scale=4){
-  const base='#ffd700'; // gold
-  // outer glow
+  const base='#ffd700';
   ctx.save();
   const pulse = 0.2+0.1*Math.sin(time*2.5);
   const grad=ctx.createRadialGradient(x,y,scale, x,y,scale*6);
   grad.addColorStop(0, `rgba(255,215,0,${0.35+pulse})`);
   grad.addColorStop(1, 'rgba(255,215,0,0)');
   ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(x,y,scale*6,0,Math.PI*2); ctx.fill();
-  // heart pixels
   const mask=["00100100","01111110","11111111","11111111","11111111","01111110","00111100","00011000"];
   ctx.translate(x-(mask[0].length*scale)/2, y-(mask.length*scale)/2);
   for(let r=0;r<mask.length;r++){
@@ -281,9 +282,7 @@ function drawSOUL(x,y,scale=4){
       }
     }
   }
-  // specular highlight
-  ctx.globalAlpha=0.25;
-  ctx.fillStyle='#fff'; ctx.fillRect(2*scale, 1*scale, scale, scale);
+  ctx.globalAlpha=0.25; ctx.fillStyle='#fff'; ctx.fillRect(2*scale, 1*scale, scale, scale);
   ctx.restore();
 }
 
@@ -292,12 +291,11 @@ const ARENA={x:240,y:418,w:480,h:184};
 const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:6,sp:320,i:0,hp:SAVE.hp,hpMax:SAVE.hp};
 function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
 
-/* Patterns (distinct building blocks to mix per boss) */
+/* Patterns (distinct building blocks) */
 let bullets=[];
 function phase(dur, obj){ let t=0; obj._acc=Object.create(null); return { enter(){t=0; obj.enter&&obj.enter();}, update(dt){t+=dt; obj.update(dt,t,obj._acc);}, done(){return t>=dur;} }; }
 function spawn(b){ b.t=0; bullets.push(b); return b; }
 function spawnAimed(fx,fy,spd,dmg,col='#fff',r=3){ const dx=HEART.x-fx, dy=HEART.y-fy, L=Math.hypot(dx,dy)||1; return spawn({x:fx,y:fy,vx:(dx/L)*spd,vy:(dy/L)*spd,r,col,dmg}); }
-
 const PAT = {
   rain:(col,vy,rate,band,dmg,dur)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; for(let i=0;i<band;i++){ const x=ARENA.x+(i+0.5)*(ARENA.w/band); spawn({x,y:ARENA.y-16,vx:((i%2)?60:-60),vy:vy,r:3,col,dmg}); } } } }),
   walls:(col,vx,rows,rate,dmg,dur)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const left=((A.flip=A.flip?!A.flip:true)); for(let r=0;r<rows;r++){ const y=ARENA.y+12+r*((ARENA.h-24)/(rows-1)); spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y, vx:(left?1:-1)*vx, vy:0, r:3, col, dmg}); } } } }),
@@ -308,11 +306,40 @@ const PAT = {
   arcs:(col,spd,rate,n,dmg,dur)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; spawn({x:cx+Math.cos(a)*60,y:cy+Math.sin(a)*40,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg}); } } } })
 };
 
-/* Idle draws (icons) — already present above */
+/* Idle draws */
+function drawSolar(t){ const cx=480, cy=240+Math.sin(t*2)*3; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,40,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#000'; const blink=(Math.sin(t*4)>0.9)?0:1; ctx.fillRect(cx-12,cy-10,6,blink*6); ctx.fillRect(cx+6,cy-10,6,blink*6); }
+function drawEmber(t){ const cx=480, cy=240; ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.arc(cx,cy,30+Math.sin(t*3)*2,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#ffc2a4'; ctx.fillRect(cx-50,cy-10,30,14+Math.sin(t*5)*4); ctx.fillRect(cx+20,cy-10,30,14+Math.cos(t*5)*4); }
+function drawAbyss(t){ const cx=480, cy=240; ctx.fillStyle='#a89bff'; ctx.fillRect(cx-30,cy-30,60,60); ctx.fillStyle='#fff'; ctx.fillRect(cx-15,cy-10,10,10); ctx.fillRect(cx+5,cy-10,10,10); ctx.strokeStyle='#000'; ctx.beginPath(); ctx.arc(cx,cy+10,15,0,Math.PI,false); ctx.stroke(); }
+function drawMantis(t){ const cx=480, cy=238+Math.sin(t*2.2)*2; ctx.fillStyle='#ffd166'; ctx.fillRect(cx-35,cy-20,70,40); ctx.fillStyle='#ffe88a'; ctx.fillRect(cx-45,cy-12,25,8); ctx.fillRect(cx+20,cy-12,25,8); }
+function drawPixel(t){ const cx=480, cy=240; ctx.fillStyle='#a8ecff'; ctx.fillRect(cx-30+Math.sin(t*20)*4,cy-30,60,60); ctx.fillStyle='#0d0e18'; ctx.fillRect(cx-10,cy-10,20,20); }
+function drawFrost(t){ const cx=480, cy=240; ctx.fillStyle='#d0f0ff'; ctx.fillRect(cx-40,cy-40,80,80); ctx.fillStyle='rgba(255,255,255,'+(0.5+0.5*Math.sin(t*3))+')'; ctx.beginPath(); ctx.arc(cx+50,cy-10,10+Math.sin(t*2)*3,0,Math.PI*2); ctx.fill(); }
+function drawDJ(t){ const cx=480, cy=242+Math.sin(t*3)*2; ctx.fillStyle='#ffb0b0'; ctx.beginPath(); ctx.arc(cx,cy,28,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#ff99a9'; ctx.fillRect(cx-50,cy-8,30,16); ctx.fillRect(cx+20,cy-8,30,16); }
+function drawVoid(t){ const cx=480, cy=236+Math.sin(t*2)*2; ctx.strokeStyle='#c9b9ff'; ctx.lineWidth=3; for(let r=20;r<=40;r+=10){ ctx.beginPath(); ctx.arc(cx,cy,r+Math.sin(t*2)*2,0,Math.PI*2); ctx.stroke(); } }
+function drawSiren(t){ const cx=480, cy=240; ctx.fillStyle='#66ccff'; ctx.beginPath(); ctx.arc(cx,cy,30,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#88d9ff'; for(let i=0;i<6;i++){ const a=t*1.5+i; ctx.beginPath(); ctx.arc(cx+Math.cos(a)*40,cy+Math.sin(a)*12,4,0,Math.PI*2); ctx.fill(); } }
+function drawStorm(t){ const cx=480, cy=238+Math.sin(t*2)*2; ctx.fillStyle='#ffd455'; ctx.beginPath(); ctx.arc(cx,cy,35,0,Math.PI*2); ctx.fill(); if(Math.random()<0.1){ ctx.strokeStyle='#fff'; ctx.beginPath(); ctx.moveTo(cx,cy-40); ctx.lineTo(cx+10,cy); ctx.lineTo(cx-10,cy+40); ctx.stroke(); } }
+function drawChrono(t){ const cx=480, cy=238+Math.sin(t*2)*2; ctx.strokeStyle='#64f0c2'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,34,0,Math.PI*2); ctx.stroke(); ctx.strokeStyle='#a0ffd6'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*2)*24, cy+Math.sin(t*2)*24); ctx.stroke(); }
+function drawAurora(t){ const cx=480, cy=240; for(let i=0;i<5;i++){ const y=cy-40+i*16, col=['#ff91e6','#ffc3f3','#ffd6f8','#ffb6f2','#ffc3f3'][i]; ctx.strokeStyle=col; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(cx-60, y+Math.sin(t*2+i)*4); ctx.lineTo(cx+60, y-Math.sin(t*2+i)*4); ctx.stroke(); } }
+function drawObliv(t){ const cx=480, cy=236+Math.sin(t*2.4)*2; ctx.fillStyle='#241c28'; ctx.fillRect(cx-40,cy-40,80,80); ctx.strokeStyle='#ffd166'; ctx.strokeRect(cx-20,cy-20,40,40); }
+function drawCupcake(t){ const cx=480, cy=240; ctx.fillStyle='#ff7acb'; ctx.beginPath(); ctx.moveTo(cx-40,cy+40); ctx.lineTo(cx+40,cy+40); ctx.lineTo(cx+30,cy+80); ctx.lineTo(cx-30,cy+80); ctx.closePath(); ctx.fill(); ctx.fillStyle='#ffc3f3'; ctx.beginPath(); ctx.arc(cx,cy,40,Math.PI,0); ctx.arc(cx,cy-20,30,Math.PI,0); ctx.arc(cx,cy-40,20,Math.PI,0); ctx.fill(); ctx.fillStyle='#ff3a6b'; ctx.beginPath(); ctx.arc(cx,cy-60+Math.sin(t*3)*2,10,0,Math.PI*2); ctx.fill(); const colors=['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff']; for(let i=0;i<12;i++){ const a=t*2+i/12*Math.PI*2; const x=cx+Math.cos(a)*50; const y=cy-20+Math.sin(a)*30; ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(x,y,4,8); } }
 
-/* Detailed backgrounds per boss — defined below */
+/* Backgrounds */
+function bgDefault(){ ctx.fillStyle='#09090f'; ctx.fillRect(0,0,960,720); }
+function bgSolar(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#ffe08a'); g.addColorStop(0.5,'#ffb347'); g.addColorStop(1,'#cc6600'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<12;i++){ ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); const y=120+i*40; ctx.moveTo(0,y+Math.sin(time+i)*6); ctx.lineTo(960,y-Math.sin(time+i)*6); ctx.stroke(); } }
+function bgEmber(){ const g=ctx.createLinearGradient(0,0,960,0); g.addColorStop(0,'#2b1a12'); g.addColorStop(1,'#7a341c'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<100;i++){ ctx.fillStyle='rgba(255,180,120,'+(Math.random()*0.4+0.1)+')'; ctx.fillRect(Math.random()*960,Math.random()*720,2,6); } }
+function bgAbyss(){ ctx.fillStyle='#0a0a14'; ctx.fillRect(0,0,960,720); for(let i=0;i<80;i++){ ctx.fillStyle='rgba(168,155,255,'+(Math.random()*0.35+0.1)+')'; ctx.beginPath(); ctx.arc((i*97)%960,(i*61)%720,Math.random()*3+1,0,Math.PI*2); ctx.fill(); } }
+function bgMantis(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#3a2d00'); g.addColorStop(1,'#c9a400'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<10;i++){ ctx.strokeStyle='rgba(255,220,120,0.4)'; ctx.lineWidth=12; ctx.beginPath(); ctx.moveTo(100+i*80,720); ctx.lineTo(200+i*80,0); ctx.stroke(); } }
+function bgPixel(){ ctx.fillStyle='#0d0e18'; ctx.fillRect(0,0,960,720); for(let y=0;y<720;y+=16){ for(let x=0;x<960;x+=16){ const c=((x+y)>>4)%2?'#152238':'#0f1426'; ctx.fillStyle=c; ctx.fillRect(x,y,16,16); } } }
+function bgFrost(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#e8f7ff'); g.addColorStop(1,'#aee3ff'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<60;i++){ ctx.fillStyle='#fff'; const x=(i*37+time*50)%960; const y=(i*59+time*30)%720; ctx.fillRect(x,y,3,3); } }
+function bgDJ(){ const g=ctx.createLinearGradient(0,0,960,0); g.addColorStop(0,'#200014'); g.addColorStop(0.5,'#400026'); g.addColorStop(1,'#600038'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<8;i++){ const h=80+Math.sin(time*3+i)*40; ctx.fillStyle='rgba(255,155,170,0.4)'; ctx.fillRect(80+i*100,360-h,20,h*2); } }
+function bgVoid(){ ctx.fillStyle='#090918'; ctx.fillRect(0,0,960,720); for(let i=0;i<120;i++){ const a=i/60*Math.PI*2+time*0.3; const x=480+Math.cos(a)*220; const y=360+Math.sin(a)*120; ctx.fillStyle='rgba(200,185,255,0.2)'; ctx.fillRect(x,y,2,2); } }
+function bgSiren(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#00324a'); g.addColorStop(1,'#006b99'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<12;i++){ ctx.strokeStyle='rgba(255,255,255,0.16)'; ctx.lineWidth=8; ctx.beginPath(); const y=200+i*30; ctx.moveTo(0,y+Math.sin(time+i)*8); ctx.quadraticCurveTo(480,y,960,y-Math.sin(time+i)*8); ctx.stroke(); } }
+function bgStorm(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a0a0a'); g.addColorStop(1,'#222'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); if(Math.random()<0.03){ ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2; ctx.beginPath(); const x=100+Math.random()*760; ctx.moveTo(x,0); ctx.lineTo(x+20,120); ctx.lineTo(x-10,240); ctx.lineTo(x+15,360); ctx.lineTo(x-5,480); ctx.stroke(); } }
+function bgChrono(){ ctx.fillStyle='#0c1f1d'; ctx.fillRect(0,0,960,720); ctx.strokeStyle='#64f0c2'; ctx.lineWidth=3; for(let r=40;r<=180;r+=28){ ctx.beginPath(); ctx.arc(480,360,r+Math.sin(time*2)*4,0,Math.PI*2); ctx.stroke(); } }
+function bgAurora(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a0b1a'); g.addColorStop(1,'#101536'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<6;i++){ const y=120+i*90; const h=40+Math.sin(time+i)*12; const col=['#ff91e6','#ffc3f3','#ffd6f8','#b0a7ff','#a2f3ff','#ffd6f8'][i%6]; ctx.fillStyle=col; ctx.globalAlpha=0.35; ctx.fillRect(0,y,960,h); ctx.globalAlpha=1; } }
+function bgObliv(){ ctx.fillStyle='#0b0b0f'; ctx.fillRect(0,0,960,720); ctx.strokeStyle='rgba(255,214,102,0.25)'; ctx.lineWidth=1; for(let i=0;i<12;i++){ ctx.strokeRect(120+i*50,120+i*30,720-i*100,480-i*60); } }
+function bgCandy(){ const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffccf9'); grad.addColorStop(1,'#ffe6f7'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720); ctx.strokeStyle='#ff99cc'; ctx.lineWidth=30; for(let x=-100;x<960;x+=120){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+200,720); ctx.stroke(); } for(let i=0;i<5;i++){ const lx=100+i*180, ly=600; ctx.strokeStyle='#663300'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-120); ctx.stroke(); ctx.fillStyle=['#ff6666','#66ccff','#99ff99','#ffff66','#ff99ff'][i%5]; ctx.beginPath(); ctx.arc(lx,ly-140,40,0,Math.PI*2); ctx.fill(); } }
 
-/* Boss roster — 12 normal + 2 admin-only accessible via admin list */
+/* Boss roster — 12 normal + 2 admin-only */
 function B(name,hp,draw,bg,intro,lines,attacks,drop,isAdmin=false){ return {name,hpMax:hp,hp:hp,draw,bg,intro,lines,attacks,drop,isAdmin}; }
 const BOSSES=[
   B('Solar Fang',360,()=>drawSolar(time),bgSolar,["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently."],
@@ -340,7 +367,7 @@ const BOSSES=[
   B('Aurora Weaver',410,()=>drawAurora(time),bgAurora,["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves."],
     ()=>[PAT.rain('#ffb6f2',330,0.06,16,7,2.8),PAT.arcs('#ffc3f3',260,0.40,14,7,2.8),PAT.ring('#ffd6f8',330,0.34,22,7,2.8)],'aurora',false),
 
-  // Admin-only bosses (13,14) — only loadable via admin panel
+  // Admin-only (13,14)
   B('Oblivion Herald',720,()=>drawObliv(time),bgObliv,["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],
     ()=>[PAT.rain('#fff59a',340,0.05,18,8,3.2),PAT.ring('#ffd166',340,0.28,26,9,3.2),PAT.spiral('#a8ecff',340,0.028,8,3.2),PAT.walls('#c5ecff',340,12,0.28,8,3.2)],'godslayer',true),
   B('The Cupcake Incident',800,()=>drawCupcake(time),bgCandy,["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm."],
@@ -399,15 +426,15 @@ function useItem(){
 /* Drops — swords & consumables */
 function addDrop(key,isAdmin){
   if(isAdmin){
-    if(!SAVE.weapons.includes('godslayer')){ SAVE.weapons.push('godslayer'); saveWrite(SAVE); say('Drop: Godslayer Blade acquired!'); }
-    // Admin also drops a big heal
-    const ex=SAVE.items.find(i=>i.id==='ambrosia'); if(ex) ex.count++; else SAVE.items.push({id:'ambrosia',name:'Ambrosia',heal:50,count:1}); saveWrite(SAVE); renderConsumables();
+    if(!SAVE.weapons.includes('godslayer')){ SAVE.weapons.push('godslayer'); say('Drop: Godslayer Blade acquired!'); }
+    const ex=SAVE.items.find(i=>i.id==='ambrosia'); if(ex) ex.count++; else SAVE.items.push({id:'ambrosia',name:'Ambrosia',heal:50,count:1});
+    saveWrite(SAVE); renderEquip(); renderConsumables();
   } else {
     const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
     const healMap={solar:'emberleaf',ember:'embershade',abyss:'nightmint',mantis:'goldtea',pixel:'glitchgel',frost:'snowdew',dj:'beatjuice',void:'voidsalts',siren:'tidebrew',storm:'shocktonic',chrono:'timecordial',aurora:'auroratea'};
+    const names={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea'};
     const wid=weaponMap[key]; if(wid && !SAVE.weapons.includes(wid)){ SAVE.weapons.push(wid); say(`Drop: ${WEAPONS[wid].name} acquired!`); }
-    const healId=healMap[key]; const names={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea'};
-    if(healId){ const ex=SAVE.items.find(i=>i.id===healId); if(ex) ex.count++; else SAVE.items.push({id:healId,name:names[healId]||healId,heal:18,count:1}); }
+    const healId=healMap[key]; if(healId){ const ex=SAVE.items.find(i=>i.id===healId); if(ex) ex.count++; else SAVE.items.push({id:healId,name:names[healId]||healId,heal:18,count:1}); }
     saveWrite(SAVE); renderEquip(); renderConsumables();
   }
 }
@@ -432,8 +459,7 @@ document.addEventListener('keydown',e=>{
     else if(e.key==='a'||e.key==='A') onAction('ACT');
     else if(e.key==='i'||e.key==='I') onAction('ITEM');
     else if(e.key==='m'||e.key==='M') onAction('MERCY');
-    // Equip menu on screen has buttons, no turn cost; also allow hotkeys
-    else if(e.key==='u'||e.key==='U'){ SAVE.currentWeapon='stick'; saveWrite(SAVE); renderEquip(); }
+    else if(e.key==='e'||e.key==='E') onAction('EQUIP');
   } else {
     if(['ArrowLeft','a','A'].includes(e.key)) held.add('left');
     if(['ArrowRight','d','D'].includes(e.key)) held.add('right');
@@ -444,11 +470,16 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{
   if(['ArrowLeft','a','A'].includes(e.key)) held.delete('left');
   if(['ArrowRight','d','D'].includes(e.key)) held.delete('right');
-  if(['ArrowUp','w','W'].includes(e.key)) held.delete('up');
+  if(['ArrowUp','w','W'].includes(e.key)) held delete('up');
   if(['ArrowDown','s','S'].includes(e.key)) held.delete('down');
 },{passive:true});
 
 function onAction(act){
+  if(act==='EQUIP'){
+    equipOverlay.style.display='block';
+    renderEquip(); renderConsumables();
+    return; // no turn cost
+  }
   if(turn!=='player') return;
   if(act==='FIGHT'){
     const w=equippedWeapon();
@@ -489,13 +520,10 @@ function collide(){
 }
 function lose(){ say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
 
-/* Admin UI logic — admin-only bosses appear beyond index 12 */
+/* Admin UI logic */
 function buildAdminLists(){
   adBoss.innerHTML='';
-  BOSSES.forEach((b,i)=>{
-    const isAdminOnly=b.isAdmin;
-    const o=document.createElement('option'); o.value='main:'+i; o.textContent=(i+1)+'. '+b.name+(isAdminOnly?' [ADMIN ONLY]':''); adBoss.appendChild(o);
-  });
+  BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=(i+1)+'. '+b.name+(b.isAdmin?' [ADMIN ONLY]':''); adBoss.appendChild(o); });
   adBoss.value='main:'+bossIndex;
   adDiff.value=(Object.keys(DIFFS).find(k=>DIFFS[k]===DIFF) || 'Normal');
   adSpeed.value=GLOBAL_SPEED.toFixed(2);
@@ -512,30 +540,11 @@ adHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerBar(); };
 adInvinc.onclick=()=>{ ADMIN_INVINC=!ADMIN_INVINC; say('Invincibility '+(ADMIN_INVINC?'ON':'OFF')); };
 adKillBoss.onclick=()=>{ if(BOSS){ BOSS.hp=1; updateBossBar(); } };
 adClear.onclick=()=>{ bullets.length=0; };
-adGiveAll.onclick=()=>{ // give all weapons & items
-  SAVE.weapons=[...new Set(Object.keys(WEAPONS))];
-  const extraItems=[{id:'ambrosia',name:'Ambrosia',heal:50,count:2},{id:'auroratea',name:'Aurora Tea',heal:18,count:3},{id:'shocktonic',name:'Shock Tonic',heal:18,count:3}];
-  extraItems.forEach(it=>{ const ex=SAVE.items.find(i=>i.id===it.id); if(ex) ex.count+=it.count; else SAVE.items.push(it); });
-  saveWrite(SAVE); renderEquip(); renderConsumables(); say('All gear & items granted');
-};
+adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))];
+  const extra=[{id:'ambrosia',name:'Ambrosia',heal:50,count:2},{id:'auroratea',name:'Aurora Tea',heal:18,count:3},{id:'shocktonic',name:'Shock Tonic',heal:18,count:3}];
+  extra.forEach(it=>{ const ex=SAVE.items.find(i=>i.id===it.id); if(ex) ex.count+=it.count; else SAVE.items.push(it); });
+  saveWrite(SAVE); renderEquip(); renderConsumables(); say('All gear & items granted'); };
 adSkip.onclick=()=>{ if(turn==='enemy' && attack){ while(!attack.done()) attack.update(0.3); endAttack(); } };
-
-/* Backgrounds draw */
-function bgDefault(){ ctx.fillStyle='#09090f'; ctx.fillRect(0,0,960,720); }
-function bgSolar(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#ffe08a'); g.addColorStop(0.5,'#ffb347'); g.addColorStop(1,'#cc6600'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<12;i++){ ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); const y=120+i*40; ctx.moveTo(0,y+Math.sin(time+i)*6); ctx.lineTo(960,y-Math.sin(time+i)*6); ctx.stroke(); } }
-function bgEmber(){ const g=ctx.createLinearGradient(0,0,960,0); g.addColorStop(0,'#2b1a12'); g.addColorStop(1,'#7a341c'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<100;i++){ ctx.fillStyle='rgba(255,180,120,'+(Math.random()*0.4+0.1)+')'; ctx.fillRect(Math.random()*960,Math.random()*720,2,6); } }
-function bgAbyss(){ ctx.fillStyle='#0a0a14'; ctx.fillRect(0,0,960,720); for(let i=0;i<80;i++){ ctx.fillStyle='rgba(168,155,255,'+(Math.random()*0.35+0.1)+')'; ctx.beginPath(); ctx.arc((i*97)%960,(i*61)%720,Math.random()*3+1,0,Math.PI*2); ctx.fill(); } }
-function bgMantis(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#3a2d00'); g.addColorStop(1,'#c9a400'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<10;i++){ ctx.strokeStyle='rgba(255,220,120,0.4)'; ctx.lineWidth=12; ctx.beginPath(); ctx.moveTo(100+i*80,720); ctx.lineTo(200+i*80,0); ctx.stroke(); } }
-function bgPixel(){ ctx.fillStyle='#0d0e18'; ctx.fillRect(0,0,960,720); for(let y=0;y<720;y+=16){ for(let x=0;x<960;x+=16){ const c=((x+y)>>4)%2?'#152238':'#0f1426'; ctx.fillStyle=c; ctx.fillRect(x,y,16,16); } } }
-function bgFrost(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#e8f7ff'); g.addColorStop(1,'#aee3ff'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<60;i++){ ctx.fillStyle='#fff'; const x=(i*37+time*50)%960; const y=(i*59+time*30)%720; ctx.fillRect(x,y,3,3); } }
-function bgDJ(){ const g=ctx.createLinearGradient(0,0,960,0); g.addColorStop(0,'#200014'); g.addColorStop(0.5,'#400026'); g.addColorStop(1,'#600038'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<8;i++){ const h=80+Math.sin(time*3+i)*40; ctx.fillStyle='rgba(255,155,170,0.4)'; ctx.fillRect(80+i*100,360-h,20,h*2); } }
-function bgVoid(){ ctx.fillStyle='#090918'; ctx.fillRect(0,0,960,720); for(let i=0;i<120;i++){ const a=i/60*Math.PI*2+time*0.3; const x=480+Math.cos(a)*220; const y=360+Math.sin(a)*120; ctx.fillStyle='rgba(200,185,255,0.2)'; ctx.fillRect(x,y,2,2); } }
-function bgSiren(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#00324a'); g.addColorStop(1,'#006b99'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<12;i++){ ctx.strokeStyle='rgba(255,255,255,0.16)'; ctx.lineWidth=8; ctx.beginPath(); const y=200+i*30; ctx.moveTo(0,y+Math.sin(time+i)*8); ctx.quadraticCurveTo(480,y,960,y-Math.sin(time+i)*8); ctx.stroke(); } }
-function bgStorm(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a0a0a'); g.addColorStop(1,'#222'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); if(Math.random()<0.03){ ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2; ctx.beginPath(); const x=100+Math.random()*760; ctx.moveTo(x,0); ctx.lineTo(x+20,120); ctx.lineTo(x-10,240); ctx.lineTo(x+15,360); ctx.lineTo(x-5,480); ctx.stroke(); } }
-function bgChrono(){ ctx.fillStyle='#0c1f1d'; ctx.fillRect(0,0,960,720); ctx.strokeStyle='#64f0c2'; ctx.lineWidth=3; for(let r=40;r<=180;r+=28){ ctx.beginPath(); ctx.arc(480,360,r+Math.sin(time*2)*4,0,Math.PI*2); ctx.stroke(); } }
-function bgAurora(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a0b1a'); g.addColorStop(1,'#101536'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<6;i++){ const y=120+i*90; const h=40+Math.sin(time+i)*12; const col=['#ff91e6','#ffc3f3','#ffd6f8','#b0a7ff','#a2f3ff','#ffd6f8'][i%6]; ctx.fillStyle=col; ctx.globalAlpha=0.35; ctx.fillRect(0,y,960,h); ctx.globalAlpha=1; } }
-function bgObliv(){ ctx.fillStyle='#0b0b0f'; ctx.fillRect(0,0,960,720); ctx.strokeStyle='rgba(255,214,102,0.25)'; ctx.lineWidth=1; for(let i=0;i<12;i++){ ctx.strokeRect(120+i*50,120+i*30,720-i*100,480-i*60); } }
-function bgCandy(){ const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffccf9'); grad.addColorStop(1,'#ffe6f7'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720); ctx.strokeStyle='#ff99cc'; ctx.lineWidth=30; for(let x=-100;x<960;x+=120){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+200,720); ctx.stroke(); } for(let i=0;i<5;i++){ const lx=100+i*180, ly=600; ctx.strokeStyle='#663300'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-120); ctx.stroke(); ctx.fillStyle=['#ff6666','#66ccff','#99ff99','#ffff66','#ff99ff'][i%5]; ctx.beginPath(); ctx.arc(lx,ly-140,40,0,Math.PI*2); ctx.fill(); } }
 
 /* Render/loop */
 function render(){
