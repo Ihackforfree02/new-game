@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Undertale Gold — Battle (full build, profile color, hidden admin)</title>
+<title>Undertale Gold — Battle (12 bosses, full build, profile color, hidden admin)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"/>
 <style>
 /* Centered stage */
@@ -220,7 +220,7 @@ tabs.forEach(b=>{
 });
 
 /* -------- Save -------- */
-const SAVE_KEY='ug_battle_full_v2';
+const SAVE_KEY='ug_battle_full_v3';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -286,6 +286,9 @@ function dVoid(t){ const x=480,y=236+Math.sin(t*2.2)*2; drawBaseDetailed(x,y,{au
 function dSiren(t){ const x=480,y=240+Math.sin(t*2.4)*2; drawBaseDetailed(x,y,{aura:'#66ccff',aura2:'#88d9ff',head:'#aaddff',body:'#66ccff',accent:'#99ddff',emblem:'#66ccff'},t); }
 function dStorm(t){ const x=480,y=238+Math.sin(t*2.4)*2; drawBaseDetailed(x,y,{aura:'#fff59a',aura2:'#fffac4',head:'#fffbd1',body:'#ffd455',accent:'#ffec8a',emblem:'#ffe066'},t); }
 function dObliv(t){ const x=480,y=236+Math.sin(t*2.4)*2; drawBaseDetailed(x,y,{aura:'#1a141c',aura2:'#221a27',head:'#2a2230',body:'#0b0a0d',accent:'#3b3244',emblem:'#ffd166'},t); }
+/* New bosses */
+function dChrono(t){ const x=480,y=238+Math.sin(t*2.0)*2; drawBaseDetailed(x,y,{aura:'#a0ffd6',aura2:'#c2ffe7',head:'#e9fff7',body:'#64f0c2',accent:'#b9ffe9',emblem:'#a0ffd6'},t); }
+function dAurora(t){ const x=480,y=240+Math.sin(t*2.1)*2; drawBaseDetailed(x,y,{aura:'#ffb6f2',aura2:'#ffc9f6',head:'#ffe6fb',body:'#ff91e6',accent:'#ffc3f3',emblem:'#ffd6f8'},t); }
 
 /* -------- Spawning & phases -------- */
 function spawn(b){ b.t=0; bullets.push(b); return b; }
@@ -301,48 +304,84 @@ function ring(C,spd,col,dmg,n=12){ for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; 
 function phaseWrap(dur, update){ let t=0; return { enter(){t=0;}, update(dt){t+=dt; update(dt,t);}, done(){return t>=dur;} }; }
 function phase(dur,...parts){ let t=0; return { enter(){t=0;parts.forEach(p=>p.enter&&p.enter());}, update(dt){t+=dt;parts.forEach(p=>p.update&&p.update(dt));}, done(){return t>=dur;} }; }
 
-/* -------- Patterns (varied) -------- */
+/* -------- Patterns library -------- */
 /* Solar */
 const pSolarFan=(d=3)=>{let t=0,g=0,rate=.22/DIFF.rate;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+18};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const base=rand(-0.4,0.4);for(const a of [base-0.7,base,base+0.7])spawn({x:c.x,y:c.y,vx:Math.cos(a)*250*DIFF.spd,vy:Math.sin(a)*250*DIFF.spd,r:3,col:'#fff3b8',dmg:5});}},done(){return t>=d;}}};
 const pSolarRing=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(C,255,'#ffd166',6,14)}},done(){return t>=d;}}};
 const pSolarWall=(d=3)=>{let t=0,g=0,rate=.36/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;for(let i=0;i<5;i++){const y=ARENA.y+20+i*30;spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:(left?1:-1)*260*DIFF.spd,vy:0,r:3,col:'#ffe9a0',dmg:6});}}},done(){return t>=d;}}};
+const pSolarSpiral=(d=3)=>{let t=0,g=0,rate=.2/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const a=t*2.4;spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+10,vx:Math.cos(a)*250*DIFF.spd,vy:Math.sin(a)*250*DIFF.spd,r:3,col:'#ffd166',dmg:6});}},done(){return t>=d;}}};
+const pSolarCross=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const mid={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};['h','v'].forEach(ax=>{for(let k=-3;k<=3;k++){if(ax==='h') spawn({x:ARENA.x-20,y:mid.y+k*20,vx:270*DIFF.spd,vy:0,r:3,col:'#fff1b6',dmg:5}); else spawn({x:mid.x+k*20,y:ARENA.y-20,vx:0,vy:270*DIFF.spd,r:3,col:'#fff1b6',dmg:5});}})}},done(){return t>=d;}}};
 
 /* Ember */
 const pEmberRain=(d=3.2)=>{let t=0,g=0,rate=.16/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(10,ARENA.w-10);spawn({x,y:ARENA.y-18,vx:rand(-60,60),vy:240*DIFF.spd,r:3,col:'#ffb7a7',dmg:4});}},done(){return t>=d;}}};
 const pEmberHoming=(d=3)=>{let t=0,g=0,rate=.46/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w);spawnAimed(x,ARENA.y-10,210,5,'#ffd3a0',4,DIFF.lead*0.6);}},done(){return t>=d;}}};
 const pEmberSweep=(d=3)=>{let t=0,g=0,rate=.42/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const y=ARENA.y+rand(22,ARENA.h-22);spawn({x:ARENA.x-24,y,vx:270*DIFF.spd,vy:0,r:3,col:'#ffa277',dmg:5});spawn({x:ARENA.x+ARENA.w+24,y,vx:-270*DIFF.spd,vy:0,r:3,col:'#ffa277',dmg:5});}},done(){return t>=d;}}};
+const pEmberArc=(d=3)=>{let t=0,g=0,rate=.28/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+6};for(let k=0;k<9;k++){const a=(-Math.PI/2)+k*(Math.PI/8);spawn({x:c.x,y:c.y,vx:Math.cos(a)*240*DIFF.spd,vy:Math.sin(a)*240*DIFF.spd,r:3,col:'#ffc4a3',dmg:5});}}},done(){return t>=d;}}};
+const pEmberBurst=(d=3)=>{let t=0,g=0,rate=.55/DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(C,235,'#ffb286',5,12)}},done(){return t>=d;}}};
 
 /* Abyss */
 const pAbyssBounce=(d=3)=>{let t=0,g=0,rate=.28/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const y=ARENA.y+rand(24,ARENA.h-24);const vx=(Math.random()<0.5?1:-1)*260*DIFF.spd;spawn({x:vx>0?ARENA.x-20:ARENA.x+ARENA.w+20,y,vx,vy:0,r:3,col:'#b0a0ff',dmg:5,bounce:1});}for(const b of bullets){if(b.bounce && b.x>ARENA.x&&b.x<ARENA.x+ARENA.w && (b.y<ARENA.y+6||b.y>ARENA.y+ARENA.h-6)){b.vy*=-1;b.bounce--;}}},done(){return t>=d;}}};
 const pAbyssFake=(d=3)=>{let t=0,g=0,rate=.44/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const real=Math.random()<0.65;const left=Math.random()<0.5;const y=ARENA.y+rand(12,ARENA.h-12);spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:(left?1:-1)*(real?275:160)*DIFF.spd,vy:0,r:3,col:real?'#a89bff':'#444',dmg:real?5:1});}},done(){return t>=d;}}};
 const pAbyssClone=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(20,ARENA.w-20);const s=spawnAimed(x,ARENA.y-10,225,5,'#bfb3ff',3,DIFF.lead);s.split=0.45;}for(const b of bullets){if(b.split){b.split-=dt;if(b.split<=0&&!b.shot){b.shot=true;for(const a of [-0.45,0,0.45])spawn({x:b.x,y:b.y,vx:b.vx+Math.cos(a)*120,vy:b.vy+Math.sin(a)*120,r:3,col:'#cfc6ff',dmg:4});}}}},done(){return t>=d;}}};
+const pAbyssRain=(d=3)=>{let t=0,g=0,rate=.2/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w);spawn({x,y:ARENA.y-18,vx:rand(-40,40),vy:250*DIFF.spd,r:3,col:'#c0b3ff',dmg:4});}},done(){return t>=d;}}};
+const pAbyssRing=(d=3)=>{let t=0,g=0,rate=.6/DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(C,245,'#b9afff',6,16)}},done(){return t>=d;}}};
 
 /* Mantis */
 const pMantisFan=(d=3)=>{let t=0,g=0,rate=.3/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+36};const base=t*1.8;for(let k=0;k<7;k++){const a=base+k*(Math.PI*2/7);spawn({x:c.x,y:c.y,vx:Math.cos(a)*255*DIFF.spd,vy:Math.sin(a)*255*DIFF.spd,r:3,col:'#ffe88a',dmg:5});}}},done(){return t>=d;}}};
 const pMantisDive=(d=3)=>{let t=0,g=0,rate=.42/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(24,ARENA.w-24);const s=spawnAimed(x,ARENA.y-10,330,7,'#ffdf99',4,DIFF.lead*0.6);s.delay=0.25;s.vx*=0.6;s.vy*=0.6;}for(const b of bullets){if(b.delay){b.delay-=dt;if(b.delay<=0){b.vx*=1.6;b.vy*=1.6;b.delay=0;}}}},done(){return t>=d;}}};
 const pMantisRain=(d=3)=>{let t=0,g=0,rate=.22/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<7;i++){const x=ARENA.x+20+i*(ARENA.w-40)/6;spawn({x,y:ARENA.y-18,vx:0,vy:230*DIFF.spd,r:3,col:'#fff3b8',dmg:4});}}},done(){return t>=d;}}};
+const pMantisLine=(d=3)=>{let t=0,g=0,rate=.4/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const y=ARENA.y+ARENA.h-10;for(let i=0;i<8;i++){const x=ARENA.x+10+i*(ARENA.w-20)/7;spawn({x,y,vx:0,vy:-260*DIFF.spd,r:3,col:'#ffe27a',dmg:5});}}},done(){return t>=d;}}};
+const pMantisArc=(d=3)=>{let t=0,g=0,rate=.34/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h-6};for(let k=0;k<9;k++){const a=(Math.PI/2)+k*(Math.PI/10);spawn({x:c.x,y:c.y,vx:Math.cos(a)*260*DIFF.spd,vy:Math.sin(a)*260*DIFF.spd,r:3,col:'#ffd166',dmg:5});}}},done(){return t>=d;}}};
 
 /* Pixel */
 const pPixelLanes=(d=3)=>{let t=0,g=0,rate=.18/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const y=ARENA.y+rand(14,ARENA.h-14);const left=Math.random()<0.5;spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:(left?1:-1)*270*DIFF.spd,vy:0,r:3,col:'#a8ecff',dmg:5});}},done(){return t>=d;}}};
 const pPixelTeleport=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const n=10;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;spawn({x:C.x,y:C.y,vx:Math.cos(a)*230*DIFF.spd,vy:Math.sin(a)*230*DIFF.spd,r:3,col:'#bdf4ff',dmg:5,tele:0.35+Math.random()*0.2});}}for(const b of bullets){if(b.tele){b.tele-=dt;if(b.tele<=0){b.x=ARENA.x+rand(0,ARENA.w);b.y=ARENA.y+rand(0,ARENA.h);b.tele=0;}}}},done(){return t>=d;}}};
 const pPixelLag=(d=3)=>{let t=0,g=0,rate=.46/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const bb=spawnAimed(ARENA.x+rand(0,ARENA.w),ARENA.y-10,170,5,'#7fdcff',3,DIFF.lead*0.5);bb.speedUp=0.7;}for(const b of bullets){if(b.speedUp){b.speedUp-=dt;if(b.speedUp<=0){b.vx*=1.9;b.vy*=1.9;b.speedUp=0;}}}},done(){return t>=d;}}};
+const pPixelGrid=(d=3)=>{let t=0,g=0,rate=.6/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<5;i++){const x=ARENA.x+20+i*(ARENA.w-40)/4;spawn({x,y:ARENA.y-18,vx:0,vy:250*DIFF.spd,r:3,col:'#9fe0ff',dmg:5});}}},done(){return t>=d;}}};
+const pPixelBurst=(d=3)=>{let t=0,g=0,rate=.55/DIFF.rate;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(c,235,'#a8ecff',6,10)}},done(){return t>=d;}}};
 
 /* Frost */
 const pFrostWall=(d=3)=>{let t=0,g=0,rate=.46/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<6;i++){const x=ARENA.x+40+i*70;spawn({x,y:ARENA.y-18,vx:0,vy:235*DIFF.spd,r:3,col:'#d0f0ff',dmg:5});}}},done(){return t>=d;}}};
 const pFrostFan=(d=3)=>{let t=0,g=0,rate=.34/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+10};const n=9,flip=(Math.floor(t*3)%2)===0;for(let k=0;k<n;k++){const a=((k/(n-1))-0.5)*(Math.PI/1.8)*(flip?-1:1);spawn({x:C.x,y:C.y,vx:Math.cos(a)*235*DIFF.spd,vy:Math.sin(a)*235*DIFF.spd,r:3,col:'#e6f7ff',dmg:5});}}},done(){return t>=d;}}};
 const pFrostPulse=(d=3)=>{let t=0,g=0,rate=.7/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;HEART.sp=260;setTimeout(()=>HEART.sp=320,600);ring({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2},220,'#d0f0ff',5,10)}},done(){return t>=d;}}};
+const pFrostRain=(d=3)=>{let t=0,g=0,rate=.26/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const x=ARENA.x+rand(0,ARENA.w);spawn({x,y:ARENA.y-18,vx:0,vy:260*DIFF.spd,r:3,col:'#bfe7ff',dmg:5});}}},done(){return t>=d;}}};
+const pFrostShards=(d=3)=>{let t=0,g=0,rate=.42/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let k=0;k<8;k++){const y=ARENA.y+10+k*(ARENA.h-20)/7;spawn({x:ARENA.x-20,y,vx:280*DIFF.spd,vy:0,r:3,col:'#c5ecff',dmg:5});}}},done(){return t>=d;}}};
 
 /* DJ */
 const pDJLanes=(d=3)=>{let t=0,g=0,rate=.2/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const n=5;for(let i=0;i<n;i++){const y=ARENA.y+20+i*(ARENA.h-40)/(n-1);const left=Math.random()<0.5;spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:(left?1:-1)*(260+Math.sin(t*6+i)*40)*DIFF.spd,vy:0,r:3,col:'#ff9aaa',dmg:5});}}},done(){return t>=d;}}};
 const pDJDrop=(d=3)=>{let t=0,g=0,rate=.72/DIFF.rate;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(c,270,'#ffb0b0',6,10)}},done(){return t>=d;}}};
 const pDJSpiral=(d=3)=>{let t=0,g=0,rate=.22/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const a=t*2.1;spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx:Math.cos(a)*245*DIFF.spd,vy:Math.sin(a)*245*DIFF.spd,r:3,col:'#ff99a9',dmg:5});}},done(){return t>=d;}}};
+const pDJBeat=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;const pulse=(Math.sin(t*6)>0.85);if(pulse){for(let i=0;i<10;i++){const y=ARENA.y+rand(10,ARENA.h-10);spawn({x:ARENA.x-20,y,vx:300*DIFF.spd,vy:0,r:3,col:'#ffb7c7',dmg:5});}}},done(){return t>=d;}}};
+const pDJWave=(d=3)=>{let t=0,g=0,rate=.28/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<6;i++){const x=ARENA.x+15+i*(ARENA.w-30)/5;spawn({x,y:ARENA.y-16,vx:0,vy:245*DIFF.spd,r:3,col:'#ffb0b0',dmg:5});}}},done(){return t>=d;}}};
 
-/* Void */
+/* Void + Siren + Storm (already defined elsewhere) */
 const pVoidWell=(d=3)=>{let t=0;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;const pull=(BOSS.flags.pullReduce||1);const dx=C.x-HEART.x,dy=C.y-HEART.y;HEART.x+=dx*0.38*pull*dt;HEART.y+=dy*0.38*pull*dt;if(Math.random()<0.2){const a=Math.random()*Math.PI*2;spawn({x:C.x,y:C.y,vx:Math.cos(a)*270*DIFF.spd,vy:Math.sin(a)*270*DIFF.spd,r:3,col:'#c9b9ff',dmg:6});}},done(){return t>=d;}}};
 const pVoidOrbit=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const n=8;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;spawn({x:HEART.x+Math.cos(a)*60,y:HEART.y+Math.sin(a)*60,vx:0,vy:0,r:3,col:'#bfb2ff',dmg:5,orbit:true,ang:a});}}for(const bb of bullets){if(bb.orbit){bb.ang+=dt*2.0;bb.x=HEART.x+Math.cos(bb.ang)*70;bb.y=HEART.y+Math.sin(bb.ang)*70;if(Math.random()<0.03){const dx=HEART.x-bb.x,dy=HEART.y-bb.y;const L=Math.hypot(dx,dy)||1;bb.vx=dx/L*285*DIFF.spd;bb.vy=dy/L*285*DIFF.spd;bb.orbit=false;}}}},done(){return t>=d;}}};
 const pVoidCollapse=(d=3)=>{let t=0,g=0,rate=.38/DIFF.rate;let rad=Math.max(ARENA.w,ARENA.h)*0.55;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;rad=Math.max(24,rad-140*dt);if(g>=rate){g=0;const n=10;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;spawn({x:C.x+Math.cos(a)*rad,y:C.y+Math.sin(a)*rad,vx:-Math.cos(a)*230*DIFF.spd,vy:-Math.sin(a)*230*DIFF.spd,r:3,col:'#d4c8ff',dmg:6});}}},done(){return t>=d;}}};
 
-/* -------- Boss roster (10) -------- */
+const pSirenWave=(d=3)=>{let t=0,g=0,rate=.25/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<8;i++){const x=ARENA.x+20+i*(ARENA.w-40)/7;spawn({x,y:ARENA.y-18,vx:0,vy:220*DIFF.spd,r:3,col:'#66ccff',dmg:5});}}},done(){return t>=d;}}};
+const pSirenBubble=(d=3)=>{let t=0,g=0,rate=.42/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const cx=ARENA.x+rand(0,ARENA.w);spawnAimed(cx,ARENA.y-10,190,5,'#99ddff',5,DIFF.lead*0.5);}},done(){return t>=d;}}};
+const pSirenTsunami=(d=3)=>{let t=0,g=0,rate=.5/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};ring(c,240,'#88d9ff',6,14)}},done(){return t>=d;}}};
+
+const pStormZig=(d=3)=>{let t=0,g=0,rate=.22/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;const y=ARENA.y+rand(14,ARENA.h-14);const v=(left?1:-1)*(280+Math.sin(t*8)*50)*DIFF.spd;spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:v,vy:0,r:3,col:'#ffe066',dmg:7,zig:1});}for(const b of bullets){if(b.zig){b.vy=Math.sin((b.t||0)*12)*90;}}},done(){return t>=d;}}};
+const pStormBolts=(d=3)=>{let t=0,g=0,rate=.32/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;for(let i=0;i<4;i++){const x=ARENA.x+rand(20,ARENA.w-20);spawn({x,y:ARENA.y-18,vx:0,vy:320*DIFF.spd,r:4,col:'#ffea80',dmg:8});}}},done(){return t>=d;}}};
+const pStormChain=(d=3)=>{let t=0,g=0,rate=.42/DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const c={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};const n=10;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;const b=spawn({x:c.x,y:c.y,vx:Math.cos(a)*275*DIFF.spd,vy:Math.sin(a)*275*DIFF.spd,r:3,col:'#fff59a',dmg:7});b.chain=0.35;}}for(const bb of bullets){if(bb.chain){bb.chain-=dt;if(bb.chain<=0&&!bb.split){bb.split=true;for(const a of [-0.35,0,0.35])spawn({x:bb.x,y:bb.y,vx:bb.vx+Math.cos(a)*140,vy:bb.vy+Math.sin(a)*140,r:3,col:'#fff59a',dmg:6});}}}},done(){return t>=d;}}};
+
+/* Chrono (new): reuse frost/pixel/void with time vibes */
+const pChronoPulse=(d=3)=>pFrostPulse(d);
+const pChronoOrbit=(d=3)=>pVoidOrbit(d);
+const pChronoLag=(d=3)=>pPixelLag(d);
+const pChronoRing=(d=3)=>pSolarRing(d);
+const pChronoBolts=(d=3)=>pStormBolts(d);
+
+/* Aurora (new): colorful waves and fans) */
+const pAuroraWave=(d=3)=>pSirenWave(d);
+const pAuroraFan=(d=3)=>pFrostFan(d);
+const pAuroraTeleport=(d=3)=>pPixelTeleport(d);
+const pAuroraRain=(d=3)=>pEmberRain(d);
+const pAuroraRing=(d=3)=>pPixelBurst(d);
+
+/* -------- Boss roster (12, each with 5 attacks) -------- */
 const BOSSES = [
   { key:'solar', name:'Solar Fang', hpMax:380, draw:dSolar,
     intro:["The sun bows to no one.","Step into the flare, "+PLAYER_NAME+".","Hold."],
@@ -354,7 +393,13 @@ const BOSSES = [
       {name:'Focus', say:"Steady breath.", effect:s=>{HEART.i=Math.max(HEART.i,0.7);}},
       {name:'Taunt', say:"Heat rises.", effect:s=>{s.flags.boost=1.15;}}
     ],
-    attacks:()=>[ phase(3,pSolarFan(3)), phase(3,pSolarRing(3)), phase(3,pSolarWall(3)) ]
+    attacks:()=>[
+      phase(3,pSolarFan(3)),
+      phase(3,pSolarRing(3)),
+      phase(3,pSolarWall(3)),
+      phase(3,pSolarSpiral(3)),
+      phase(3,pSolarCross(3))
+    ]
   },
   { key:'ember', name:'Ember Seraph', hpMax:360, draw:dEmber,
     intro:["Ash remembers flame.","We move softly.","Match my tempo."],
@@ -366,7 +411,13 @@ const BOSSES = [
       {name:'Hum', say:"On pitch.", effect:s=>{s.mercy=(s.mercy||0)+1;}},
       {name:'Smile', say:"Warmth spreads.", effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+6); updateHPUI();}}
     ],
-    attacks:()=>[ phase(3.2,pEmberRain(3.2)), phase(3,pEmberHoming(3)), phase(3,pEmberSweep(3)) ]
+    attacks:()=>[
+      phase(3.2,pEmberRain(3.2)),
+      phase(3,pEmberHoming(3)),
+      phase(3,pEmberSweep(3)),
+      phase(3,pEmberArc(3)),
+      phase(3,pEmberBurst(3))
+    ]
   },
   { key:'abyss', name:'Abyss Jester', hpMax:370, draw:dAbyss,
     intro:["Smile through the dark.","Ready to play?","Look twice."],
@@ -378,7 +429,13 @@ const BOSSES = [
       {name:'Compliment', say:"Flattery accepted.", effect:s=>{s.mercy=(s.mercy||0)+1;}},
       {name:'Ignore', say:"Bold.", effect:s=>{s.flags.boost=1.06;}}
     ],
-    attacks:()=>[ phase(3,pAbyssBounce(3)), phase(3,pAbyssFake(3)), phase(3,pAbyssClone(3)) ]
+    attacks:()=>[
+      phase(3,pAbyssBounce(3)),
+      phase(3,pAbyssFake(3)),
+      phase(3,pAbyssClone(3)),
+      phase(3,pAbyssRain(3)),
+      phase(3,pAbyssRing(3))
+    ]
   },
   { key:'mantis', name:'Golden Mantis', hpMax:400, draw:dMantis,
     intro:["Stillness. Then strike.","Measure the gap.","Blink and step."],
@@ -390,7 +447,13 @@ const BOSSES = [
       {name:'Calm', say:"Breath lowers.", effect:s=>{HEART.i=Math.max(HEART.i,0.65);}},
       {name:'Dodge', say:"Good step.", effect:s=>{s.mercy=(s.mercy||0)+1;}}
     ],
-    attacks:()=>[ phase(3,pMantisFan(3)), phase(3,pMantisDive(3)), phase(3,pMantisRain(3)) ]
+    attacks:()=>[
+      phase(3,pMantisFan(3)),
+      phase(3,pMantisDive(3)),
+      phase(3,pMantisRain(3)),
+      phase(3,pMantisLine(3)),
+      phase(3,pMantisArc(3))
+    ]
   },
   { key:'pixel', name:'Pixel Phantom', hpMax:360, draw:dPixel,
     intro:["gl1tch... r3ady?","rendering fear...","hold the frame."],
@@ -402,7 +465,13 @@ const BOSSES = [
       {name:'Reboot', say:"temp calm.", effect:s=>{HEART.i=Math.max(HEART.i,0.75);}},
       {name:'Ignore', say:"…", effect:s=>{}}
     ],
-    attacks:()=>[ phase(3,pPixelLanes(3)), phase(3,pPixelTeleport(3)), phase(3,pPixelLag(3)) ]
+    attacks:()=>[
+      phase(3,pPixelLanes(3)),
+      phase(3,pPixelTeleport(3)),
+      phase(3,pPixelLag(3)),
+      phase(3,pPixelGrid(3)),
+      phase(3,pPixelBurst(3))
+    ]
   },
   { key:'frost', name:'Frostbite Warden', hpMax:390, draw:dFrost,
     intro:["Cold clarifies.","Hold steady.","No flinching."],
@@ -414,7 +483,13 @@ const BOSSES = [
       {name:'Warmth', say:"Fingers thaw.", effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+5); updateHPUI();}},
       {name:'Apologize', say:"Forgiven.", effect:s=>{s.mercy=(s.mercy||0)+1;}}
     ],
-    attacks:()=>[ phase(3,pFrostWall(3)), phase(3,pFrostFan(3)), phase(3,pFrostPulse(3)) ]
+    attacks:()=>[
+      phase(3,pFrostWall(3)),
+      phase(3,pFrostFan(3)),
+      phase(3,pFrostPulse(3)),
+      phase(3,pFrostRain(3)),
+      phase(3,pFrostShards(3))
+    ]
   },
   { key:'dj', name:'Crimson DJ', hpMax:380, draw:dDJ,
     intro:["drop the bass.","move your feet.","on the one."],
@@ -426,7 +501,13 @@ const BOSSES = [
       {name:'Sync', say:"locked in.", effect:s=>{s.flags.nextSlow=0.9;}},
       {name:'Boo', say:"lol.", effect:s=>{}}
     ],
-    attacks:()=>[ phase(3,pDJLanes(3)), phase(3,pDJDrop(3)), phase(3,pDJSpiral(3)) ]
+    attacks:()=>[
+      phase(3,pDJLanes(3)),
+      phase(3,pDJDrop(3)),
+      phase(3,pDJSpiral(3)),
+      phase(3,pDJBeat(3)),
+      phase(3,pDJWave(3))
+    ]
   },
   { key:'void', name:'Void Prophet', hpMax:420, draw:dVoid,
     intro:["gravity listens.","do you?","choose your orbit."],
@@ -438,19 +519,31 @@ const BOSSES = [
       {name:'Meditate', say:"settled.", effect:s=>{HEART.i=Math.max(HEART.i,0.8);}},
       {name:'Resist', say:"counter-force.", effect:s=>{s.flags.pullReduce=0.7;}}
     ],
-    attacks:()=>[ phase(3,pVoidWell(3)), phase(3,pVoidOrbit(3)), phase(3,pVoidCollapse(3)) ]
+    attacks:()=>[
+      phase(3,pVoidWell(3)),
+      phase(3,pVoidOrbit(3)),
+      phase(3,pVoidCollapse(3)),
+      phase(3,pAbyssRing(3)),
+      phase(3,pPixelTeleport(3))
+    ]
   },
   { key:'siren', name:'Tidecaller Siren', hpMax:380, draw:dSiren,
     intro:["The tide rises.","Can you breathe?"],
-    lines:["Splash.","Drown.","Flow."],
+    lines:["Splash.","Drown.","Flow.","Still."],
     mercyNeed:3,
-    actDefs=[
+    actDefs:[
       {name:'Listen', say:"You match the swell.", effect:s=>{s.mercy=(s.mercy||0)+1; s.flags.nextSlow=0.85;}},
       {name:'Compliment', say:"She softens.", effect:s=>{s.mercy=(s.mercy||0)+1;}},
       {name:'Hold Breath', say:"You steady your lungs.", effect:s=>{HEART.i=Math.max(HEART.i,0.75);}},
       {name:'Reach Out', say:"A calm passes.", effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+5); updateHPUI();}}
     ],
-    attacks:()=>[ phase(3,pSirenTsunami(3)), phase(3,pSirenTsunami(3)), phase(3,pEmberHoming(3)) ]
+    attacks:()=>[
+      phase(3,pSirenWave(3)),
+      phase(3,pSirenBubble(3)),
+      phase(3,pSirenTsunami(3)),
+      phase(3,pEmberSweep(3)),
+      phase(3,pPixelLanes(3))
+    ]
   },
   { key:'storm', name:'Storm Herald', hpMax:520, draw:dStorm,
     intro:["Thunder answers.","Lightning chooses those who stand still in it."],
@@ -462,7 +555,49 @@ const BOSSES = [
       {name:'Sync Breath', say:"Timing improves.", effect:s=>{s.flags.nextSlow=0.85;}},
       {name:'Taunt', say:"Sky gets angrier.", effect:s=>{s.flags.boost=1.25;}}
     ],
-    attacks:()=>[ phase(3,pStormZig(3)), phase(3,pStormBolts(3)), phase(3,pStormChain(3)) ]
+    attacks:()=>[
+      phase(3,pStormZig(3)),
+      phase(3,pStormBolts(3)),
+      phase(3,pStormChain(3)),
+      phase(3,pSolarCross(3)),
+      phase(3,pEmberHoming(3))
+    ]
+  },
+  { key:'chrono', name:'Chrono Warden', hpMax:430, draw:dChrono,
+    intro:["Time bends around will.","Your heartbeat is a metronome."],
+    lines:["Tick.","Tock.","Pause.","Resume."],
+    mercyNeed:4,
+    actDefs:[
+      {name:'Breathe', say:"Your pace steadies.", effect:s=>{HEART.i=Math.max(HEART.i,0.8);}},
+      {name:'Observe', say:"Gaps widen.", effect:s=>{s.flags.nextSlow=0.85;}},
+      {name:'Respect', say:"Acknowledged.", effect:s=>{s.mercy=(s.mercy||0)+1;}},
+      {name:'Defy', say:"Then race me.", effect:s=>{s.flags.boost=1.15;}}
+    ],
+    attacks:()=>[
+      phase(3,pChronoPulse(3)),
+      phase(3,pChronoOrbit(3)),
+      phase(3,pChronoLag(3)),
+      phase(3,pChronoRing(3)),
+      phase(3,pChronoBolts(3))
+    ]
+  },
+  { key:'aurora', name:'Aurora Weaver', hpMax:410, draw:dAurora,
+    intro:["Colors hum in the air.","Hold the thread."],
+    lines:["Weave.","Glow.","Bloom.","Shift."],
+    mercyNeed:3,
+    actDefs:[
+      {name:'Compliment', say:"She brightens.", effect:s=>{s.mercy=(s.mercy||0)+1;}},
+      {name:'Listen', say:"You match the tone.", effect:s=>{s.mercy=(s.mercy||0)+1; s.flags.nextSlow=0.9;}},
+      {name:'Reach', say:"She softens.", effect:s=>{HEART.i=Math.max(HEART.i,0.8);}},
+      {name:'Spin', say:"Threads tighten.", effect:s=>{s.flags.boost=1.1;}}
+    ],
+    attacks:()=>[
+      phase(3,pAuroraWave(3)),
+      phase(3,pAuroraFan(3)),
+      phase(3,pAuroraTeleport(3)),
+      phase(3,pAuroraRain(3)),
+      phase(3,pAuroraRing(3))
+    ]
   }
 ];
 
@@ -479,16 +614,16 @@ const ADMIN_BOSS={
     {name:'Accept', say:"peace is choice.", effect:s=>{s.mercy=(s.mercy||0)+1;}}
   ],
   attacks:()=>[
-    phase(3,pStormZig(3)),       // 1
-    phase(3,pSolarRing(3)),      // 2
-    phase(3,pStormBolts(3)),     // 3
-    phase(3,pVoidOrbit(3)),      // 4
-    phase(3,pPixelTeleport(3)),  // 5
-    phase(3,pFrostPulse(3)),     // 6
-    phase(3,pStormChain(3)),     // 7
-    phase(3,pEmberHoming(3)),    // 8
-    phase(3,pSirenTsunami(3)),   // 9
-    phase(3,pVoidCollapse(3))    // 10
+    phase(3,pStormZig(3)),
+    phase(3,pSolarRing(3)),
+    phase(3,pStormBolts(3)),
+    phase(3,pVoidOrbit(3)),
+    phase(3,pPixelTeleport(3)),
+    phase(3,pFrostPulse(3)),
+    phase(3,pStormChain(3)),
+    phase(3,pEmberHoming(3)),
+    phase(3,pSirenTsunami(3)),
+    phase(3,pVoidCollapse(3))
   ]
 };
 
@@ -737,4 +872,3 @@ cv.focus();
 </script>
 </body>
 </html>
-```[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/simongarton/pi/tree/44f2eb228db9aebcaa3b37256592cd504fec423a/weather%2Fweather.py?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "1")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/simongarton/pi/tree/44f2eb228db9aebcaa3b37256592cd504fec423a/sense-hat%2Fheart.py?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "2")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/glennklockwood/raspberrypi/tree/7b04fb9d975cb631627b6aaa939fa9fc8521d8c2/led-matrix-heart.py?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "3")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/tonyyuanzaizai/Match3/tree/dcca184c1e27f0a6ff75e8e42ad63f5b7e211c29/match3_cpp%2FGameData.cpp?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "4")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/ElroyDolleman/PicrossPhaser/tree/ccbaed3e481cf1c04a15b7c93ea9936e09d2ca15/source%2Fgrid%2Fpictures.ts?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "5")
