@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Undertale Gold — Battle (improved heart, boss drops, equips, admin bosses)</title>
+<title>Undertale Gold — Battle (admin panel, lore, equips, OP controls, boss order)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"/>
 <style>
 html,body{
@@ -20,24 +20,36 @@ html,body{
 #bossFill{background:#ff5e6b;width:100%}
 #hpFill{background:#7affb7;width:100%}
 /* Dialogue */
-#bubble{position:absolute;left:50%;bottom:136px;transform:translateX(-50%);width:90%;min-height:96px;background:#0b0b0b;border:2px solid #ffd166;padding:12px;display:none;z-index:3}
+#bubble{
+  position:absolute;left:50%;bottom:136px;transform:translateX(-50%);
+  width:90%;min-height:96px;background:rgba(11,11,11,0.85);border-radius:6px;border:2px solid #ffd166;padding:12px;display:none;z-index:3
+}
 #bubbleText{white-space:pre-line;line-height:1.5}
 /* Bottom UI */
-#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:920px;height:108px;background:#0b0b0b;border:2px solid #262626;display:flex;align-items:center;justify-content:space-around;z-index:3}
+#uiBar{
+  position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
+  width:920px;height:108px;background:#111;border:2px solid #444;
+  display:flex;align-items:center;justify-content:space-around;z-index:3
+}
 .btn{cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px}
 .key{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
-.lab{font-size:20px;letter-spacing:1px}
+.lab{font-size:20px;letter-spacing:1px;min-width:84px}
+.btn:hover .lab{color:#fff}
 /* Arena */
-#arenaBox{position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;pointer-events:none;z-index:2}
+#arenaBox{
+  position:absolute;left:240px;top:420px;width:480px;height:180px;border:3px solid #fff;display:none;pointer-events:none;z-index:2;
+  box-shadow:0 0 12px rgba(255,255,255,0.35);
+}
 /* Toast */
 #toast{position:absolute;left:50%;top:18px;transform:translateX(-50%);background:#111;border:1px solid #fff;color:#ffd166;padding:6px 10px;font-size:12px;opacity:0;transition:opacity .22s;pointer-events:none;z-index:5}
 #toast.show{opacity:1}
 /* Admin overlay */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10}
-#panel{width:740px;max-width:95%;background:#0e0e0e;border:2px solid #fff;padding:14px;color:#ffd166}
+#panel{width:740px;max-width:95%;background:#0e0e0e;border:2px solid #fff;border-radius:6px;padding:14px;color:#ffd166}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
-.sel,.inp{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
-.btn2{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer}
+.sel,.inp,textarea{background:#111;color:#ffd166;border:1px solid #333;padding:6px 8px}
+.btn2{padding:6px 10px;border:1px solid #fff;background:transparent;color:#ffd166;cursor:pointer;transition:background .15s}
+.btn2:hover{background:#1b1b1f}
 /* Equip overlay */
 #equip{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);z-index:9}
 #equipPanel{width:820px;max-width:95%;background:#0f0f12;border:2px solid #ffd166;color:#ffd166;padding:14px}
@@ -60,7 +72,7 @@ html,body{
       <div class="bar" style="width:440px"><div id="bossFill" class="fill"></div></div>
       <div id="bossVal" style="font-size:12px">0/0</div>
     </div>
-    <div class="hcol" style="align-items:flex-end;min-width:240px">
+    <div class="hcol" style="align-items:flex-end;min-width:260px">
       <div id="playerName" style="color:#9be7c0">Traveler</div>
       <div class="bar" style="width:260px"><div id="hpFill" class="fill"></div></div>
       <div id="hpVal" style="font-size:12px">50/50</div>
@@ -85,22 +97,52 @@ html,body{
   <div id="admin">
     <div id="panel">
       <div style="font-size:18px;font-weight:700;margin-bottom:8px">Admin</div>
-      <div class="row">
-        <select id="adBoss" class="sel" style="min-width:260px"></select>
-        <button id="adLoadBoss" class="btn2">Load</button>
-        <button id="adEnd" class="btn2">End attack</button>
-        <button id="adWin" class="btn2">Win</button>
-        <button id="adClose" class="btn2">Close [X]</button>
+
+      <div class="row" style="gap:8px;flex-wrap:nowrap">
+        <button class="btn2" data-tab="boss">Boss</button>
+        <button class="btn2" data-tab="power">Power</button>
+        <button class="btn2" data-tab="lore">Lore</button>
+        <button id="adClose" class="btn2" style="margin-left:auto">Close [X]</button>
       </div>
-      <div class="row">
-        <label>Difficulty</label>
-        <select id="adDiff" class="sel"><option>Normal</option><option>Hard</option><option>Insane</option></select>
-        <button id="adApplyDiff" class="btn2">Apply</button>
+
+      <div id="adView-boss">
+        <div class="row">
+          <select id="adBoss" class="sel" style="min-width:260px"></select>
+          <button id="adLoadBoss" class="btn2">Load</button>
+          <button id="adEnd" class="btn2">End attack</button>
+          <button id="adWin" class="btn2">Win</button>
+        </div>
+        <div class="row">
+          <label>Difficulty</label>
+          <select id="adDiff" class="sel"><option>Normal</option><option>Hard</option><option>Insane</option></select>
+          <button id="adApplyDiff" class="btn2">Apply</button>
+          <label>Global speed</label>
+          <input id="adSpeed" class="inp" type="number" step="0.05" min="0.5" max="2" value="1.00"/>
+          <button id="adApplySpeed" class="btn2">Apply</button>
+        </div>
       </div>
-      <div class="row">
-        <label>Global speed</label>
-        <input id="adSpeed" class="inp" type="number" step="0.05" min="0.5" max="2" value="1.00"/>
-        <button id="adApplySpeed" class="btn2">Apply</button>
+
+      <div id="adView-power" style="display:none">
+        <div class="row">
+          <button id="adHealFull" class="btn2">Heal player to max</button>
+          <button id="adInvinc" class="btn2">Toggle invincibility</button>
+          <button id="adKillBoss" class="btn2">Set boss HP to 1</button>
+          <button id="adGiveAll" class="btn2">Give all weapons</button>
+        </div>
+        <div class="row">
+          <button id="adMaxMercy" class="btn2">Set mercy to max</button>
+          <button id="adSkipWave" class="btn2">Skip current attack</button>
+          <button id="adClearBullets" class="btn2">Clear bullets</button>
+        </div>
+      </div>
+
+      <div id="adView-lore" style="display:none">
+        <div class="row" style="flex-direction:column;align-items:stretch">
+          <label>World lore</label>
+          <textarea id="adLoreBox" rows="8" class="inp" placeholder="Write your world lore here..."></textarea>
+          <div style="font-size:12px;color:#c9c9d6">Saved locally; appended to boss intro screens.</div>
+          <button id="adSaveLore" class="btn2" style="margin-top:6px">Save lore</button>
+        </div>
       </div>
     </div>
   </div>
@@ -131,41 +173,64 @@ html,body{
 <script>
 "use strict";
 
-/* Profile */
+/* ---------------- Profile ---------------- */
 const LS_PROFILE='utg_shared_profile_v1';
 function loadProfile(){ try{ return JSON.parse(localStorage.getItem(LS_PROFILE))||{}; }catch{ return {}; } }
 const PROFILE=loadProfile();
 const PLAYER_NAME=(PROFILE.name||'Traveler').slice(0,16);
 const HEART_COLOR=PROFILE.glow||'#ffd166';
 
-/* Elements */
+/* ---------------- Elements ---------------- */
 const cv=document.getElementById('cv');
 const ctx=cv.getContext('2d',{alpha:false,desynchronized:true});
 ctx.imageSmoothingEnabled=false;
+
 const bossName=document.getElementById('bossName'), bossVal=document.getElementById('bossVal'), bossFill=document.getElementById('bossFill');
 const playerNameEl=document.getElementById('playerName'); playerNameEl.textContent=PLAYER_NAME;
 const hpVal=document.getElementById('hpVal'), hpFill=document.getElementById('hpFill'), eqVal=document.getElementById('eqVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiBar=document.getElementById('uiBar'), arenaBox=document.getElementById('arenaBox'), toast=document.getElementById('toast');
-const admin=document.getElementById('admin'), adBoss=document.getElementById('adBoss');
-const adLoadBoss=document.getElementById('adLoadBoss'), adEnd=document.getElementById('adEnd'), adWin=document.getElementById('adWin'), adClose=document.getElementById('adClose');
-const adDiff=document.getElementById('adDiff'), adApplyDiff=document.getElementById('adApplyDiff');
-const adSpeed=document.getElementById('adSpeed'), adApplySpeed=document.getElementById('adApplySpeed');
+
+/* Admin refs */
+const admin=document.getElementById('admin');
+const adClose=document.getElementById('adClose');
+const adBoss=document.getElementById('adBoss');
+const adLoadBoss=document.getElementById('adLoadBoss');
+const adEnd=document.getElementById('adEnd');
+const adWin=document.getElementById('adWin');
+const adDiff=document.getElementById('adDiff');
+const adApplyDiff=document.getElementById('adApplyDiff');
+const adSpeed=document.getElementById('adSpeed');
+const adApplySpeed=document.getElementById('adApplySpeed');
+const adHealFull=document.getElementById('adHealFull');
+const adInvinc=document.getElementById('adInvinc');
+const adKillBoss=document.getElementById('adKillBoss');
+const adGiveAll=document.getElementById('adGiveAll');
+const adMaxMercy=document.getElementById('adMaxMercy');
+const adSkipWave=document.getElementById('adSkipWave');
+const adClearBullets=document.getElementById('adClearBullets');
+const adLoreBox=document.getElementById('adLoreBox');
+const adSaveLore=document.getElementById('adSaveLore');
+const adTabs=[...document.querySelectorAll('#panel .btn2[data-tab]')];
+const adViewBoss=document.getElementById('adView-boss');
+const adViewPower=document.getElementById('adView-power');
+const adViewLore=document.getElementById('adView-lore');
+
+/* Equip refs */
 const equip=document.getElementById('equip'), equipClose=document.getElementById('equipClose'), equipList=document.getElementById('equipList');
 const btnStart=document.getElementById('btnStart'), btnUnequip=document.getElementById('btnUnequip'), equippedName=document.getElementById('equippedName');
 
-/* Save */
-const SAVE_KEY='ug_refined_v1';
+/* ---------------- Save & constants ---------------- */
+const SAVE_KEY='ug_refined_v2';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
 
-/* Constants */
 const ARENA={x:240,y:420,w:480,h:180};
 const TURN={PLAYER:'p',ENEMY:'e',TRANS:'t',WIN:'w',LOSE:'l'};
 const DIFFS={ Normal:{spd:1.10,rate:1.10,dmg:1.40,lead:0.08}, Hard:{spd:1.28,rate:1.28,dmg:1.75,lead:0.10}, Insane:{spd:1.46,rate:1.40,dmg:2.10,lead:0.12} };
 
-/* Weapons & drops — boosted ATK, admin drops are legendary */
+/* ---------------- Weapons & drops ---------------- */
 const WEAPONS={
   stick:{id:'stick',name:'Stick',atk:0,desc:'Basic stick',source:'default'},
   solar:{id:'solar',name:'Solar Brand',atk:7,desc:'+7 ATK. Burns bright.',source:'solar'},
@@ -189,6 +254,7 @@ function ensureInventory(){
   if(!SAVE.difficulty) SAVE.difficulty='Normal';
   if(typeof SAVE.bossIndex!=='number') SAVE.bossIndex=0;
   if(typeof SAVE.hp!=='number') SAVE.hp=50;
+  if(typeof SAVE.lore!=='string') SAVE.lore='';
   saveWrite(SAVE);
 }
 function hasWeapon(id){ return (SAVE.weapons||[]).includes(id); }
@@ -200,7 +266,7 @@ function addWeaponByBossKey(k,isAdmin=false){
 function equippedWeapon(){ return WEAPONS[SAVE.currentWeapon]||WEAPONS.stick; }
 function equippedLabel(){ const w=equippedWeapon(); return `${w.name} (+${w.atk} ATK)`; }
 
-/* Player */
+/* ---------------- Player ---------------- */
 let DIFF=DIFFS[SAVE.difficulty||'Normal']||DIFFS.Normal;
 let GLOBAL_SPEED=1.0;
 const HEART={ x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:5,sp:320,i:0,
@@ -208,19 +274,41 @@ const HEART={ x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:5,sp:320,i:0,
   _px:0,_py:0,_pdt:1/60, glow:true
 };
 function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
-function updateHPUI(){ const frac=Math.max(0,HEART.hp/HEART.hpMax); hpFill.style.width=(260*frac)+'px'; hpVal.textContent=`${HEART.hp}/${HEART.hpMax}`; eqVal.textContent=equippedLabel(); }
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
 function hideSay(){ bubble.style.display='none'; }
 function toastMsg(m){ toast.textContent=m; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1100); }
 
-/* State */
+/* Smooth bars */
+let bossHPDisplay=HEART.hp, playerHPDisplay=HEART.hp;
+function resetBars(){ bossHPDisplay=BOSS?BOSS.hp:0; playerHPDisplay=HEART.hp; }
+function updateBars(dt){
+  bossHPDisplay += (BOSS.hp - bossHPDisplay) * Math.min(1, dt*8);
+  playerHPDisplay += (HEART.hp - playerHPDisplay) * Math.min(1, dt*8);
+
+  const bf=Math.max(0, bossHPDisplay/BOSS.hpMax);
+  bossFill.style.width=(440*bf)+'px';
+  bossVal.textContent=`${Math.round(bossHPDisplay)}/${BOSS.hpMax}`;
+
+  const pf=Math.max(0, playerHPDisplay/HEART.hpMax);
+  let col='#7affb7'; if(pf<0.5) col='#ffd166'; if(pf<0.25) col='#ff5e6b';
+  hpFill.style.background=col;
+  hpFill.style.width=(260*pf)+'px';
+  hpVal.textContent=`${Math.round(playerHPDisplay)}/${HEART.hpMax}`;
+  eqVal.textContent=equippedLabel();
+}
+
+/* ---------------- State ---------------- */
 let time=0, turn=TURN.PLAYER, mode='main', waveCount=0;
 let bullets=[], attack=null, attackSeq=null, attackIx=0, damagePopup=null, showArena=false;
 let bossIndex=(typeof SAVE.bossIndex==='number')?SAVE.bossIndex:0;
-let BOSS=null;
-let IS_ADMIN=false;
+let BOSS=null, IS_ADMIN=false;
+let ADMIN_INVINCIBLE=false;
 
-/* Helpers & drawing */
+/* Progression */
+let nextBossPendingIndex = null;      // next normal boss after equip
+let lastAdminWinReturnIndex = null;   // where to return after admin boss
+
+/* ---------------- Helpers & drawing ---------------- */
 const rand=(a,b)=>Math.random()*(b-a)+a;
 function glow(x,y,r,fill,a=0.25){ ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=fill; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
@@ -275,7 +363,7 @@ function spawnAimed(fx,fy,speed,dmg,col='#fff',r=3,lead=DIFF.lead){
 function ring(C,spd,col,dmg,n=12){ for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg}); } }
 function phase(dur,...parts){ return { t:0, enter(){this.t=0;parts.forEach(p=>p.enter&&p.enter());}, update(dt){this.t+=dt;parts.forEach(p=>p.update&&p.update(dt));}, done(){return this.t>=dur;} }; }
 
-/* Patterns (reused) */
+/* Patterns */
 const pFan = (col='#fff',spd=250,dmg=5,rate=.22)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){} ,update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const base=(Math.random()*0.8-0.4);for(const a of [base-0.7,base,base+0.7])spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+18,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
 const pRing = (col='#fff',spd=240,dmg=6,rate=.5)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;ring(C,spd,col,dmg,12)}},done(){return t>=d;}}};
 const pWall = (col='#fff',vx=260,dmg=5,rate=.36)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const left=Math.random()<0.5;for(let i=0;i<5;i++){const y=ARENA.y+20+i*30;spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24,y,vx:(left?1:-1)*vx*DIFF.spd,vy:0,r:3,col,dmg});}}},done(){return t>=d;}}};
@@ -285,7 +373,7 @@ const pSpiral = (col='#fff',spd=245,dmg=5,rate=.22)=>(d=3)=>{let t=0,g=0;rate/=D
 const pOrbitThenShoot=(col='#bfb2ff',rad=70,spd=300,dmg=6,rate=.5)=>(d=3)=>{let t=0,g=0;rate/=DIFF.rate;return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>=rate){g=0;const n=8;for(let k=0;k<n;k++){const a=k/n*Math.PI*2;spawn({x:HEART.x+Math.cos(a)*60,y:HEART.y+Math.sin(a)*60,vx:0,vy:0,r:3,col,dmg,orbit:true,ang:a});}}for(const bb of bullets){if(bb.orbit){bb.ang+=dt*2.0;bb.x=HEART.x+Math.cos(bb.ang)*rad;bb.y=HEART.y+Math.sin(bb.ang)*rad;if(Math.random()<0.03){const dx=HEART.x-bb.x,dy=HEART.y-bb.y;const L=Math.hypot(dx,dy)||1;bb.vx=dx/L*spd*DIFF.spd;bb.vy=dy/L*spd*DIFF.spd;bb.orbit=false;}}}},done(){return t>=d;}}};
 const pPullWell=(col='#c9b9ff',pull=0.38,ringRate=0.2,spd=280,dmg=7)=>(d=3)=>{let t=0;const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};return{enter(){},update(dt){dt*=GLOBAL_SPEED;t+=dt;const dx=C.x-HEART.x,dy=C.y-HEART.y;HEART.x+=dx*pull*dt;HEART.y+=dy*pull*dt;if(Math.random()<ringRate){const a=Math.random()*Math.PI*2;spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd*DIFF.spd,vy:Math.sin(a)*spd*DIFF.spd,r:3,col,dmg});}},done(){return t>=d;}}};
 
-/* Boss roster (6 bosses, 5 attacks each) */
+/* ---------------- Boss roster (normal only) ---------------- */
 const BOSSES = [
   { key:'solar', name:'Solar Fang', hpMax:360, draw:dSolar,
     intro:["The sun bows to no one.","Step into the flare, "+PLAYER_NAME+"."],
@@ -313,7 +401,7 @@ const BOSSES = [
       {name:'Listen',say:"Silence shared.",effect:s=>{s.mercy=(s.mercy||0)+1; s.flags.nextSlow=0.85;}},
       {name:'Apologize',say:"Forgiven.",effect:s=>{s.mercy=(s.mercy||0)+1;}},
       {name:'Hum',say:"On pitch.",effect:s=>{s.mercy=(s.mercy||0)+1;}},
-      {name:'Smile',say:"Warmth spreads.",effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+6); updateHPUI();}}
+      {name:'Smile',say:"Warmth spreads.",effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+6);}}
     ],
     attacks:()=>[
       phase(3.2, pRain('#ffb7a7',240,4,.16)(3.2)),
@@ -348,7 +436,7 @@ const BOSSES = [
     actDefs:[
       {name:'Shiver',say:"Accepted.",effect:s=>{s.mercy=(s.mercy||0)+1;}},
       {name:'Respect',say:"Noted.",effect:s=>{s.mercy=(s.mercy||0)+1; s.flags.nextSlow=0.85;}},
-      {name:'Warmth',say:"Fingers thaw.",effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+5); updateHPUI();}},
+      {name:'Warmth',say:"Fingers thaw.",effect:s=>{HEART.hp=Math.min(HEART.hpMax,HEART.hp+5);}},
       {name:'Apologize',say:"Forgiven.",effect:s=>{s.mercy=(s.mercy||0)+1;}}
     ],
     attacks:()=>[
@@ -397,7 +485,7 @@ const BOSSES = [
   }
 ];
 
-/* Admin bosses (10 attacks) */
+/* ---------------- Admin bosses (panel-only) ---------------- */
 const ADMIN_BOSSES = {
   oblivion: {
     key:'oblivion', name:'Oblivion Herald', hpMax:720, draw:dObliv,
@@ -431,7 +519,7 @@ const ADMIN_BOSSES = {
     actDefs:[
       {name:'Apologize',say:"Too late.",effect:s=>{s.flags.boost=1.25;}},
       {name:'Compliment',say:"Cupcake ignores you.",effect:s=>{}},
-      {name:'Taste',say:"It burns sweet.",effect:s=>{HEART.hp=Math.max(1,HEART.hp-6); updateHPUI();}},
+      {name:'Taste',say:"It burns sweet.",effect:s=>{HEART.hp=Math.max(1,HEART.hp-6);}},
       {name:'Dance',say:"Sprinkles swirl faster.",effect:s=>{s.flags.nextSlow=0.9;}}
     ],
     attacks:()=>[
@@ -449,7 +537,14 @@ const ADMIN_BOSSES = {
   }
 };
 
-/* Admin helpers */
+/* ---------------- Admin UI logic ---------------- */
+function showAdminView(name){
+  adViewBoss.style.display = (name==='boss')?'block':'none';
+  adViewPower.style.display = (name==='power')?'block':'none';
+  adViewLore.style.display = (name==='lore')?'block':'none';
+}
+adTabs.forEach(btn=>btn.addEventListener('click',()=>showAdminView(btn.dataset.tab),{passive:true}));
+
 function buildAdminLists(){
   adBoss.innerHTML='';
   BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=`${i+1}. ${b.name}`; adBoss.appendChild(o); });
@@ -457,11 +552,28 @@ function buildAdminLists(){
   adBoss.value='main:'+bossIndex;
   adDiff.value=SAVE.difficulty||'Normal';
   adSpeed.value=(GLOBAL_SPEED||1).toFixed(2);
+  adLoreBox.value = SAVE.lore || '';
 }
-function openAdmin(){ admin.style.display='flex'; buildAdminLists(); }
+function openAdmin(){ admin.style.display='flex'; buildAdminLists(); showAdminView('boss'); }
 function closeAdmin(){ admin.style.display='none'; }
 
-/* Equip menu */
+adClose.onclick=()=> closeAdmin();
+adLoadBoss.onclick=()=>{ const v=adBoss.value; if(v.startsWith('admin:')) initBoss(v); else initBoss(parseInt(v.split(':')[1],10)||0); };
+adEnd.onclick=()=>{ if(turn===TURN.ENEMY) endAttack(); };
+adWin.onclick=()=>{ if(BOSS){ BOSS.hp=0; updateBossBar(); win(false); } };
+adApplyDiff.onclick=()=>{ const d=adDiff.value; SAVE.difficulty=d; DIFF=DIFFS[d]||DIFFS.Normal; saveWrite(SAVE); toastMsg(`Difficulty: ${d}`); };
+adApplySpeed.onclick=()=>{ const v=parseFloat(adSpeed.value)||1; GLOBAL_SPEED=Math.max(0.5,Math.min(2,v)); toastMsg(`Speed x${GLOBAL_SPEED.toFixed(2)}`); };
+
+adHealFull.onclick=()=>{ HEART.hp=HEART.hpMax; toastMsg('Player healed'); };
+adInvinc.onclick=()=>{ ADMIN_INVINCIBLE=!ADMIN_INVINCIBLE; toastMsg(`Invincibility ${ADMIN_INVINCIBLE?'ON':'OFF'}`); };
+adKillBoss.onclick=()=>{ if(BOSS){ BOSS.hp=1; updateBossBar(); toastMsg('Boss HP set to 1'); } };
+adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))]; saveWrite(SAVE); toastMsg('All weapons granted'); };
+adMaxMercy.onclick=()=>{ if(BOSS){ BOSS.mercy=BOSS.mercyNeed; toastMsg('Mercy set to max'); } };
+adSkipWave.onclick=()=>{ if(turn===TURN.ENEMY && attack){ attack.t=999; toastMsg('Attack skipped'); } };
+adClearBullets.onclick=()=>{ bullets.length=0; toastMsg('Bullets cleared'); };
+adSaveLore.onclick=()=>{ SAVE.lore=adLoreBox.value||''; saveWrite(SAVE); toastMsg('Lore saved'); };
+
+/* ---------------- Equip system ---------------- */
 function buildEquipList(){
   equippedName.textContent = (WEAPONS[SAVE.currentWeapon]||WEAPONS.stick).name;
   equipList.innerHTML='';
@@ -485,9 +597,39 @@ function openEquip(){ buildEquipList(); equip.style.display='flex'; }
 function closeEquip(){ equip.style.display='none'; }
 equipClose.onclick=closeEquip;
 btnUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); updateHPUI(); buildEquipList(); toastMsg('Unequipped'); };
-btnStart.onclick=()=>{ closeEquip(); say('Ready.'); };
 
-/* Boss flow */
+/* After-win next boss handoff */
+btnStart.onclick=()=>{
+  closeEquip();
+  if(nextBossPendingIndex!==null){
+    const target = nextBossPendingIndex;
+    nextBossPendingIndex = null;
+    initBoss(target);
+  } else {
+    say('Ready.');
+  }
+};
+
+/* Inline equip (like item menu) */
+function equipInlineList(){
+  const owned = SAVE.weapons || [];
+  if(owned.length===0) return "No weapons.";
+  return owned.map((id,i)=>{
+    const w = WEAPONS[id] || WEAPONS.stick;
+    const mark = (SAVE.currentWeapon===id) ? ' (equipped)' : '';
+    return ` ${i+1}. ${w.name} +${w.atk} ATK${mark}`;
+  }).join('\n');
+}
+function doEquipInline(i){
+  const owned = SAVE.weapons || [];
+  const id = owned[i];
+  if(!id) { say('No such weapon.'); return; }
+  SAVE.currentWeapon = id; saveWrite(SAVE);
+  say(`Equipped ${WEAPONS[id].name} (+${WEAPONS[id].atk} ATK).`);
+  endPlayerTurn();
+}
+
+/* ---------------- Boss flow ---------------- */
 function setBossFromObj(obj,isAdmin=false){
   BOSS={ key:obj.key,name:obj.name,hpMax:obj.hpMax,hp:obj.hpMax,draw:obj.draw,
     intro:[...obj.intro],lines:[...obj.lines],mercyNeed:obj.mercyNeed,mercy:0,
@@ -496,6 +638,7 @@ function setBossFromObj(obj,isAdmin=false){
   IS_ADMIN=isAdmin;
   attackSeq=BOSS.attacks(); attackIx=0; waveCount=0;
   bossName.textContent=BOSS.name; bossFill.style.width='100%'; bossVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`;
+  resetBars();
 }
 function initBoss(sel){
   if(typeof sel==='string' && sel.startsWith('admin:')){
@@ -503,29 +646,29 @@ function initBoss(sel){
   } else {
     const ix=(typeof sel==='number'?sel:bossIndex)|0; bossIndex=Math.max(0,Math.min(BOSSES.length-1,ix)); setBossFromObj(BOSSES[bossIndex], false);
   }
-  HEART.hp=HEART.hpMax=Math.max(1,SAVE.hp||50); updateHPUI(); HEART.i=0; centerHeart();
+  HEART.hp=HEART.hpMax=Math.max(1,SAVE.hp||50); HEART.i=0; centerHeart();
   turn=TURN.PLAYER; mode='main'; showArena=false; arenaBox.style.display='none';
-  say((BOSS.intro||[]).join('\n'));
+  const loreLine=(SAVE.lore && SAVE.lore.trim())?`\n— Lore —\n${SAVE.lore.trim()}`:'';
+  say(((BOSS.intro||[]).join('\n'))+loreLine);
   saveWrite({...SAVE,bossIndex, hp:HEART.hpMax});
 }
 function updateBossBar(){ const frac=Math.max(0,BOSS.hp/BOSS.hpMax); bossFill.style.width=(440*frac)+'px'; bossVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; }
 
-/* Input & movement */
+/* ---------------- Input & movement ---------------- */
 const held=new Set();
 addEventListener('keydown',e=>{
   // X exits overlays and menus
   if(e.key==='x'||e.key==='X'||e.key==='Escape'){
     if(admin.style.display==='flex'){ closeAdmin(); return; }
     if(equip.style.display==='flex'){ closeEquip(); return; }
-    if(mode==='act'||mode==='item'){ mode='main'; say('Your turn.'); return; }
+    if(mode==='act'||mode==='item'||mode==='equip'){ mode='main'; say('Your turn.'); return; }
   }
   // movement allowed only during enemy turn
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){
     if(!(turn===TURN.ENEMY && mode==='main')) return;
   }
   held.add(e.key);
-  // Open equip with E on player turn
-  if((e.key==='e'||e.key==='E') && turn===TURN.PLAYER && mode==='main'){ openEquip(); return; }
+  // Open hidden admin triggers
   handleHiddenTriggers(e.key);
 },{passive:true});
 addEventListener('keyup',e=>held.delete(e.key),{passive:true});
@@ -540,25 +683,26 @@ function moveHeart(dt){
   HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
 }
 
-/* Bullets & collide */
+/* ---------------- Bullets & collide ---------------- */
 function updateBullets(dt){
   const s=(BOSS.flags.nextSlow||1)*GLOBAL_SPEED;
   for(const b of bullets){ b.t=(b.t||0)+dt; b.x+=b.vx*dt*s; b.y+=b.vy*dt*s; }
   const m=240; bullets=bullets.filter(b=> b.x>ARENA.x-m && b.x<ARENA.x+ARENA.w+m && b.y>ARENA.y-m && b.y<ARENA.y+ARENA.h+m );
 }
 function collide(){
+  if(ADMIN_INVINCIBLE) return;
   if(HEART.i>0) return;
   for(const b of bullets){
     const dx=b.x-HEART.x, dy=b.y-HEART.y; const rr=(b.r||4)+HEART.r;
     if(dx*dx+dy*dy<=rr*rr){
       const dmg=Math.max(1,Math.floor((b.dmg||3)*(BOSS.flags.boost||1)));
-      HEART.hp=Math.max(0, HEART.hp-dmg); updateHPUI(); HEART.i=0.85; // i-frames
+      HEART.hp=Math.max(0, HEART.hp-dmg); HEART.i=0.85; // i-frames
       break;
     }
   }
 }
 
-/* Turns */
+/* ---------------- Turns ---------------- */
 function startAttack(){
   bullets.length=0; showArena=true; arenaBox.style.display='block';
   hideSay(); uiBar.style.opacity='0'; uiBar.style.pointerEvents='none';
@@ -567,7 +711,9 @@ function startAttack(){
 function endAttack(){
   showArena=false; arenaBox.style.display='none'; uiBar.style.opacity='1'; uiBar.style.pointerEvents='auto';
   BOSS.flags.nextSlow=1; BOSS.flags.boost=1;
-  turn=TURN.PLAYER; mode='main'; waveCount++; say(BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...'); attack=null;
+  turn=TURN.PLAYER; mode='main'; waveCount++;
+  say((BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...')+'\n(Hint: Press E to EQUIP inline)');
+  attack=null;
 }
 function bossHit(baseDmg){
   const w=equippedWeapon();
@@ -577,32 +723,68 @@ function bossHit(baseDmg){
   damagePopup={x:480,y:200,t:0,text:String(dealt)};
 }
 
-/* UI */
+/* ---------------- UI actions ---------------- */
 uiBar.addEventListener('click', e=>{
   const btn=e.target.closest('.btn'); if(!btn) return; handleAction(btn.dataset.act);
 });
+
 addEventListener('keydown', e=>{
   if(turn!==TURN.PLAYER) return;
+
   if(mode==='main'){
     if(['z','Z','Enter',' '].includes(e.key)) handleAction('FIGHT');
     if(e.key==='a'||e.key==='A') handleAction('ACT');
     if(e.key==='i'||e.key==='I') handleAction('ITEM');
     if(e.key==='m'||e.key==='M') handleAction('MERCY');
+    if(e.key==='e'||e.key==='E') handleAction('EQUIP'); // inline equip menu
   }else if(mode==='act'){
     if('1234'.includes(e.key)) doAct(parseInt(e.key,10)-1);
   }else if(mode==='item'){
     if('1234'.includes(e.key)){ const msg=useItem(parseInt(e.key,10)-1); say(msg); endPlayerTurn(); }
+  }else if(mode==='equip'){
+    const ownedCount = (SAVE.weapons||[]).length;
+    if(/[1-9]/.test(e.key)){
+      const ix = parseInt(e.key,10)-1;
+      if(ix>=0 && ix<ownedCount) doEquipInline(ix);
+    }
   }
 },{passive:true});
 
 function handleAction(act){
   if(turn!==TURN.PLAYER || mode!=='main'){ if(act==='MERCY') tryMercy(); return; }
-  if(act==='FIGHT'){ say(`${PLAYER_NAME} strikes!`); bossHit(24); endPlayerTurn(); }
-  if(act==='ACT'){ mode='act'; const list=BOSS.actDefs.map((a,i)=>` ${i+1}. ${a.name}`).join('\n'); say(`ACT on ${BOSS.name}:\n${list}\n(Use 1-4, X to exit)`); }
-  if(act==='ITEM'){ mode='item'; say(`ITEMS:\n${itemsList()}\nPick 1-4 (X to exit)`); }
-  if(act==='MERCY'){ tryMercy(); }
-  if(act==='EQUIP'){ openEquip(); }
+
+  if(act==='FIGHT'){
+    say(`${PLAYER_NAME} strikes!`);
+    bossHit(24);
+    endPlayerTurn();
+    return;
+  }
+
+  if(act==='ACT'){
+    mode='act';
+    const list=BOSS.actDefs.map((a,i)=>` ${i+1}. ${a.name}`).join('\n');
+    say(`ACT on ${BOSS.name}:\n${list}\n(Use 1-4, X to exit)`);
+    return;
+  }
+
+  if(act==='ITEM'){
+    mode='item';
+    say(`ITEMS:\n${itemsList()}\nPick 1-4 (X to exit)`);
+    return;
+  }
+
+  if(act==='MERCY'){
+    tryMercy();
+    return;
+  }
+
+  if(act==='EQUIP'){
+    mode='equip';
+    say(`EQUIP:\n${equipInlineList()}\nPick 1-${(SAVE.weapons||[]).length} (X to exit)`);
+    return;
+  }
 }
+
 function doAct(i){
   const a=BOSS.actDefs[i]; if(!a){ say('No such ACT.'); return; }
   a.effect(BOSS); say(a.say);
@@ -615,13 +797,13 @@ function tryMercy(){
   else say(`${BOSS.name} isn't ready to be spared.`);
 }
 
-/* Items */
+/* ---------------- Items ---------------- */
 let inventory=SAVE.inventory || [];
 function itemsList(){ if(inventory.length===0) return "No items."; return inventory.map((it,i)=>` ${i+1}. ${it.name} (${it.count}) — ${it.desc}`).join('\n'); }
 function useItem(i){
   const it=inventory[i]; if(!it||it.count<=0) return "Empty.";
   if(it.type==='heal'){
-    HEART.hp=Math.min(HEART.hpMax, HEART.hp+(it.amount||10)); updateHPUI();
+    HEART.hp=Math.min(HEART.hpMax, HEART.hp+(it.amount||10));
     it.count--; if(it.count<=0) inventory.splice(i,1);
     SAVE.inventory=inventory; saveWrite(SAVE);
     return `You used ${it.name}. +${it.amount} HP`;
@@ -629,17 +811,36 @@ function useItem(i){
   return "Nothing happened.";
 }
 
-/* Win/lose + drops */
+/* ---------------- Win/lose + progression ---------------- */
 function lose(){ if(turn===TURN.LOSE) return; turn=TURN.LOSE; say('You fall. The hall dims.'); setTimeout(()=>initBoss(IS_ADMIN?'admin:oblivion':bossIndex),900); }
+
 function win(spared){
-  if(turn===TURN.WIN) return; turn=TURN.WIN; say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
-  if(IS_ADMIN) addWeaponByBossKey(BOSS.key,true); else if(BOSS.drop) addWeaponByBossKey(BOSS.key,false);
-  setTimeout(()=>{ if(IS_ADMIN){ say('Admin trial complete.'); setTimeout(()=>initBoss(bossIndex),1000); }
-    else { const next=bossIndex+1; if(next<BOSSES.length) initBoss(next); else { say('Ending: You carried your choices.'); setTimeout(()=>initBoss(0),1100); } }
-  }, 950);
+  if(turn===TURN.WIN) return; turn=TURN.WIN;
+  say(`${spared?'You spared':'You defeated'} ${BOSS.name}.`);
+
+  // Drops
+  if(IS_ADMIN) addWeaponByBossKey(BOSS.key,true);
+  else if(BOSS.drop) addWeaponByBossKey(BOSS.key,false);
+
+  // Decide next target
+  if(IS_ADMIN){
+    lastAdminWinReturnIndex = bossIndex; // go back to current normal boss
+    nextBossPendingIndex = bossIndex;
+  } else {
+    const next = bossIndex + 1;
+    if(next < BOSSES.length){
+      nextBossPendingIndex = next;
+    } else {
+      nextBossPendingIndex = 0;
+      say('Ending: You carried your choices.');
+    }
+  }
+
+  // Open equip overlay after a beat; Start loads next
+  setTimeout(()=>{ openEquip(); }, 450);
 }
 
-/* Admin triggers: 67x3 + words */
+/* ---------------- Hidden Admin Triggers: 67×3 + words ---------------- */
 const ADMIN_TRIG_WORDS=['skibidi','overdrive'];
 const ADMIN_TRIG_MAXLEN=Math.max(...ADMIN_TRIG_WORDS.map(w=>w.length),7);
 let secretBuf='', pairCount=0, secretCooldown=0, wordBuf='';
@@ -663,15 +864,7 @@ function handleHiddenTriggers(k){
   }
 }
 
-/* Admin actions */
-adLoadBoss.onclick=()=>{ const v=adBoss.value; if(v.startsWith('admin:')) initBoss(v); else initBoss(parseInt(v.split(':')[1],10)||0); };
-adEnd.onclick = ()=>{ if(turn===TURN.ENEMY) endAttack(); };
-adWin.onclick = ()=>{ if(BOSS){ BOSS.hp=0; updateBossBar(); win(false); } };
-adClose.onclick=()=> closeAdmin();
-adApplyDiff.onclick=()=>{ const d=adDiff.value; SAVE.difficulty=d; DIFF=DIFFS[d]||DIFFS.Normal; saveWrite(SAVE); toastMsg(`Difficulty: ${d}`); };
-adApplySpeed.onclick=()=>{ const v=parseFloat(adSpeed.value)||1; GLOBAL_SPEED=Math.max(0.5,Math.min(2,v)); toastMsg(`Speed x${GLOBAL_SPEED.toFixed(2)}`); };
-
-/* Render + loop */
+/* ---------------- Render + main loop ---------------- */
 function render(){
   ctx.fillStyle='#08070a'; ctx.fillRect(0,0,960,720);
   ctx.fillStyle='#141018'; for(let i=0;i<64;i++){const x=(i*137)%960, y=(i*173)%720; ctx.fillRect(x,y,2,2);}
@@ -705,16 +898,16 @@ function loop(now){
     if(HEART.hp<=0) lose();
     if(attack&&attack.done&&attack.done()) endAttack();
   }
+  updateBars(dt);
   render();
   requestAnimationFrame(loop);
 }
 
-/* Start */
+/* ---------------- Start ---------------- */
 ensureInventory();
-let inventory=SAVE.inventory;
-updateHPUI();
+updateBars(0.016);
 buildAdminLists();
-openEquip(); // pre-battle
+openEquip(); // pre-battle equip on load
 initBoss((bossIndex>=0 && bossIndex<BOSSES.length)? bossIndex : 0);
 requestAnimationFrame(loop);
 cv.focus();
