@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Battle — stable build (12 bosses, 2 admin, working bars, candy cupcake, undertale soul)</title>
+<title>Battle — stable build (12 bosses, 2 admin, working UI, bars, candy cupcake, Undertale SOUL)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"/>
 <style>
 html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -14,8 +14,8 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .hcol{display:flex;flex-direction:column;gap:6px}
 .bar{height:10px;background:#16161c;border:1px solid #2a2a33;position:relative}
 .fill{position:absolute;left:0;top:0;bottom:0}
-#bossFill{background:#ff5e6b;width:440px}
-#hpFill{background:#7affb7;width:260px}
+#bossFill{background:#ff5e6b;width:0}
+#hpFill{background:#7affb7;width:0}
 .sub{font-size:12px;color:#e6dcae}
 
 /* Dialogue */
@@ -36,7 +36,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 #toast{position:absolute;left:50%;top:18px;transform:translateX(-50%);background:#111;border:1px solid #fff;color:#ffd166;padding:6px 10px;font-size:12px;opacity:0;transition:opacity .18s;pointer-events:none;z-index:5}
 #toast.show{opacity:1}
 
-/* Admin overlay */
+/* Admin overlay (ESC to toggle) */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:10}
 #panel{width:880px;max-width:95%;background:#111218;border:2px solid #fff;border-radius:8px;color:#ffd166;padding:14px}
 .tabs{display:flex;gap:8px;margin-bottom:8px}
@@ -99,7 +99,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
     <div id="panel">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <div style="font-size:18px;font-weight:700">Admin</div>
-        <div style="font-size:12px;color:#c9c9dd">Press 6 then 7 three times to open</div>
+        <div style="font-size:12px;color:#c9c9dd">Press ESC to toggle</div>
         <button id="adClose" class="btn2" style="margin-left:auto">Close [X]</button>
       </div>
       <div class="tabs">
@@ -167,15 +167,14 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 <script>
 "use strict";
 
-/* ========== Elements ========== */
+/* Elements */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false,desynchronized:true});
 const bossName=document.getElementById('bossName'), bossFill=document.getElementById('bossFill'), bossVal=document.getElementById('bossVal');
 const hpFill=document.getElementById('hpFill'), hpVal=document.getElementById('hpVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiBar=document.getElementById('uiBar'), arenaEl=document.getElementById('arena');
 const toast=document.getElementById('toast');
-const admin=document.getElementById('admin');
-const adClose=document.getElementById('adClose');
+const admin=document.getElementById('admin'); const adClose=document.getElementById('adClose');
 const tbtns=[...document.querySelectorAll('.tbtn')];
 const views={boss:document.getElementById('view-boss'), power:document.getElementById('view-power'), lore:document.getElementById('view-lore')};
 const adBoss=document.getElementById('adBoss'), adLoadBoss=document.getElementById('adLoadBoss'), adEnd=document.getElementById('adEnd'), adWin=document.getElementById('adWin');
@@ -186,15 +185,16 @@ const adGiveAll=document.getElementById('adGiveAll'), adSkip=document.getElement
 const loreCanvas=document.getElementById('loreCanvas'), loreCtx=loreCanvas.getContext('2d');
 const loreTextEl=document.getElementById('loreText');
 const equip=document.getElementById('equip'), eqClose=document.getElementById('eqClose'), eqList=document.getElementById('equipList'), eqUnequip=document.getElementById('eqUnequip'), eqStart=document.getElementById('eqStart');
+
 ctx.imageSmoothingEnabled=false;
 
-/* ========== Helpers ========== */
-function toastMsg(m){ toast.textContent=m; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),950); }
+/* Utils */
+function toastMsg(m){ toast.textContent=m; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1000); }
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
 function hideSay(){ bubble.style.display='none'; }
 
-/* ========== Save/data ========== */
-const SAVE_KEY='battle_super_stable_v1';
+/* Save/data */
+const SAVE_KEY='battle_release_v1';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
@@ -209,7 +209,7 @@ const DIFFS={ Normal:{spd:1.0,rate:1.0,dmg:1.0}, Hard:{spd:1.18,rate:1.18,dmg:1.
 let DIFF=DIFFS[SAVE.difficulty]||DIFFS.Normal;
 let GLOBAL_SPEED=1.0;
 
-/* ========== Heart selection & draw ========== */
+/* Heart selection & Undertale-style draw */
 const LS_PROFILE='utg_shared_profile_v1';
 const PROFILE = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_PROFILE))||{} }catch{return {}} })();
 function styleToColor(style){ switch((style||'').toLowerCase()){
@@ -238,7 +238,7 @@ function drawUndertaleHeart(x,y,scale=4,selected=getSelectedHeart()){
   ctx.restore();
 }
 
-/* ========== Weapons & equip ========== */
+/* Equip & weapons */
 const WEAPONS={
   stick:{id:'stick',name:'Stick',atk:0,desc:'Basic starter'},
   solar:{id:'solar',name:'Solar Brand',atk:7,desc:'+7 ATK'},
@@ -253,7 +253,7 @@ const WEAPONS={
   storm:{id:'storm',name:'Thunder Knuckles',atk:10,desc:'+10 ATK'},
   chrono:{id:'chrono',name:'Chrono Edge',atk:8,desc:'+8 ATK'},
   aurora:{id:'aurora',name:'Aurora Ribbon',atk:7,desc:'+7 ATK'},
-  godslayer:{id:'godslayer',name:'Godslayer Blade',atk:999,desc:'Normal bosses spawn 1 HP; admin hits snap to 67 HP.'}
+  godslayer:{id:'godslayer',name:'Godslayer Blade',atk:999,desc:'Normal bosses spawn at 1 HP; admin hits snap to 67 HP.'}
 };
 function equippedWeapon(){ return WEAPONS[SAVE.currentWeapon]||WEAPONS.stick; }
 function equipRenderList(){
@@ -261,12 +261,11 @@ function equipRenderList(){
   (SAVE.weapons||[]).forEach(id=>{
     const w=WEAPONS[id]; if(!w) return;
     const card=document.createElement('div'); card.className='itemCard';
-    const left=document.createElement('div');
-    left.innerHTML=`<div class="itemName">${w.name}${SAVE.currentWeapon===id?' (equipped)':''}</div><div class="itemDesc">+${w.atk} ATK — ${w.desc}</div>`;
+    card.innerHTML=`<div><div class="itemName">${w.name}${SAVE.currentWeapon===id?' (equipped)':''}</div><div class="itemDesc">+${w.atk} ATK — ${w.desc}</div></div>`;
     const btn=document.createElement('button'); btn.className='btn3'; btn.textContent='Equip';
     btn.onclick=()=>{ SAVE.currentWeapon=w.id; saveWrite(SAVE); equipRenderList(); toastMsg(\`Equipped ${w.name}\`); };
-    const right=document.createElement('div'); right.appendChild(btn);
-    card.appendChild(left); card.appendChild(right); eqList.appendChild(card);
+    const right=document.createElement('div'); right.appendChild(btn); card.appendChild(right);
+    eqList.appendChild(card);
   });
 }
 function openEquip(){ equipRenderList(); equip.style.display='flex'; }
@@ -274,13 +273,13 @@ function closeEquip(){ equip.style.display='none'; }
 eqClose.onclick=closeEquip;
 eqUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); equipRenderList(); toastMsg('Unequipped'); };
 
-/* ========== Arena/player/bullets ========== */
+/* Arena/player/bullets */
 const ARENA={x:240,y:418,w:480,h:184};
 const HEART={ x:ARENA.x+ARENA.w/2, y:ARENA.y+ARENA.h/2, r:6, sp:320, i:0, hp: SAVE.hp, hpMax: SAVE.hp };
 let bullets=[];
 function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
 
-/* ========== State & bars ========== */
+/* State & bars */
 let time=0,last=performance.now();
 let showArena=false, turn='player', attack=null, attackIx=0, attackSeq=null;
 let BOSS=null, bossIndex=SAVE.bossIndex;
@@ -291,16 +290,16 @@ function updateBossBarInstant(){
   if(!BOSS || !isFinite(BOSS.hp) || !isFinite(BOSS.hpMax)) return;
   const ratio = Math.max(0, Math.min(1, BOSS.hp / BOSS.hpMax));
   bossFill.style.width = (440 * ratio) + 'px';
-  bossVal.textContent = `${Math.max(0,Math.floor(BOSS.hp))}/${Math.max(1,Math.floor(BOSS.hpMax))}`;
+  bossVal.textContent = `${Math.floor(Math.max(0,BOSS.hp))}/${Math.floor(Math.max(1,BOSS.hpMax))}`;
 }
 function updatePlayerBarInstant(){
   const ratio = Math.max(0, Math.min(1, HEART.hp / HEART.hpMax));
   hpFill.style.width = (260 * ratio) + 'px';
   hpFill.style.background = (ratio < 0.25 ? '#ff5e6b' : ratio < 0.5 ? '#ffd166' : '#7affb7');
-  hpVal.textContent = `${Math.max(0,Math.floor(HEART.hp))}/${Math.max(1,Math.floor(HEART.hpMax))}`;
+  hpVal.textContent = `${Math.floor(Math.max(0,HEART.hp))}/${Math.floor(Math.max(1,HEART.hpMax))}`;
 }
 
-/* ========== Lore + portraits ========== */
+/* Lore + portraits */
 const LORE={
   'Solar Fang': { title:'Solar Fang — The Lion of Noon', text:`Born where dunes meet the horizon, Solar Fang guarded a city of mirrors.\nEach noon, he walked the glass streets, returning lost light to wandering travelers.\nWhen the city fell, he swallowed a sun fragment. It burns in his chest to this day.` },
   'Ember Seraph': { title:'Ember Seraph — Choir of Ash', text:`A singer whose voice soothed the dying flame of an ancient kiln.\nThey learned the language of embers — quiet heat and slow patience.\nNow they test your breath, to see if you can carry warmth without burning.` },
@@ -344,7 +343,7 @@ function updateLore(name){
   drawLorePortrait(name);
 }
 
-/* ========== Idle boss draws (simple animations) ========== */
+/* Idle boss draws (simple animations) */
 function drawSolar(t){ const cx=480, cy=240+Math.sin(t*2)*3; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,40,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#000'; const blink=(Math.sin(t*4)>0.9)?0:1; ctx.fillRect(cx-12,cy-10,6,blink*6); ctx.fillRect(cx+6,cy-10,6,blink*6); }
 function drawEmber(t){ const cx=480, cy=240; ctx.fillStyle='#ffa277'; ctx.beginPath(); ctx.arc(cx,cy,30+Math.sin(t*3)*2,0,Math.PI*2); ctx.fill();
@@ -375,7 +374,7 @@ function drawCupcake(t){ const cx=480, cy=240;
   ctx.fillStyle='#ff3a6b'; ctx.beginPath(); ctx.arc(cx,cy-60+Math.sin(t*3)*2,10,0,Math.PI*2); ctx.fill();
   const colors=['#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff']; for(let i=0;i<12;i++){ const a=t*2+i/12*Math.PI*2; const x=cx+Math.cos(a)*50; const y=cy-20+Math.sin(a)*30; ctx.fillStyle=colors[i%colors.length]; ctx.fillRect(x,y,4,8); } }
 
-/* ========== Boss backgrounds ========== */
+/* Boss backgrounds */
 function drawBossBackground(name,t){
   if(name==='Solar Fang'){
     const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'#ffcc66'); grad.addColorStop(1,'#cc6600'); ctx.fillStyle=grad; ctx.fillRect(0,0,960,720);
@@ -396,10 +395,9 @@ function drawBossBackground(name,t){
   }
 }
 
-/* ========== Patterns (stable accumulators) ========== */
+/* Patterns (stable accumulators) */
 function spawn(b){ b.t=0; bullets.push(b); return b; }
 function spawnAimed(fx,fy,spd,dmg,col='#fff',r=3){ const dx=HEART.x-fx, dy=HEART.y-fy, L=Math.hypot(dx,dy)||1; return spawn({x:fx,y:fy,vx:(dx/L)*spd,vy:(dy/L)*spd,r,col,dmg}); }
-function ring(C,spd,col,dmg,n=12){ for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg}); } }
 function phase(dur, obj){ let t=0; obj._acc=Object.create(null); return { enter(){t=0; if(obj.enter) obj.enter();}, update(dt){t+=dt; obj.update(dt,t,obj._acc);}, done(){return t>=dur;} }; }
 
 const COVER = {
@@ -413,7 +411,7 @@ const COVER = {
   homing: (col='#fff',spd=280,rate=0.38,dmg=7,dur=3)=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; if(A.g>=rate){ A.g=0; const x=ARENA.x+Math.random()*ARENA.w; spawnAimed(x,ARENA.y-12,spd,dmg,col,4); } } })
 };
 
-/* ========== Boss roster (12 normal, 2 admin) ========== */
+/* Boss roster (12 normal) */
 function B(name,hp,draw,intro,lines,attacks,drop,isAdmin){ return {name,hpMax:hp,draw,intro,lines,attacks,drop,isAdmin}; }
 
 const BOSSES=[
@@ -530,21 +528,24 @@ const ADMIN_BOSSES={
   ],'godslayer',true)
 };
 
-/* ========== Admin UI ========== */
+/* Admin UI */
+function setTab(name){ tbtns.forEach(b=>b.classList.toggle('active', b.dataset.t===name)); Object.entries(views).forEach(([k,v])=>v.classList.toggle('active', k===name)); }
+tbtns.forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+adClose.onclick=()=>toggleAdmin(false);
 function buildAdminLists(){
   adBoss.innerHTML='';
   BOSSES.forEach((b,i)=>{ const o=document.createElement('option'); o.value='main:'+i; o.textContent=(i+1)+'. '+b.name; adBoss.appendChild(o); });
-  for(const k of Object.keys(ADMIN_BOSSES)){ const o=document.createElement('option'); o.value='admin:'+k; o.textContent=ADMIN_BOSSES[k].name; adBoss.appendChild(o); }
+  Object.keys(ADMIN_BOSSES).forEach(k=>{ const o=document.createElement('option'); o.value='admin:'+k; o.textContent=ADMIN_BOSSES[k].name; adBoss.appendChild(o); });
   adBoss.value='main:'+bossIndex;
   adDiff.value=SAVE.difficulty||'Normal';
   adSpeed.value=GLOBAL_SPEED.toFixed(2);
   updateLore(BOSSES[bossIndex].name);
 }
-function openAdmin(){ admin.style.display='flex'; buildAdminLists(); setTab('boss'); }
-function closeAdmin(){ admin.style.display='none'; }
-function setTab(name){ tbtns.forEach(b=>b.classList.toggle('active', b.dataset.t===name)); Object.entries(views).forEach(([k,v])=>v.classList.toggle('active', k===name)); }
-tbtns.forEach(b=>b.onclick=()=>setTab(b.dataset.t));
-adClose.onclick=closeAdmin;
+function toggleAdmin(force){
+  const open = force!==undefined? force : admin.style.display!=='flex';
+  if(open){ admin.style.display='flex'; setTab('boss'); buildAdminLists(); toastMsg('Admin opened'); }
+  else { admin.style.display='none'; }
+}
 adLoadBoss.onclick=()=>{ const v=adBoss.value; if(v.startsWith('admin:')) initBoss(v); else initBoss(parseInt(v.split(':')[1],10)||0); updateLore(BOSS.name); };
 adEnd.onclick=()=>{ if(turn==='enemy') endAttack(); };
 adWin.onclick=()=>{ if(BOSS){ BOSS.hp=1; updateBossBarInstant(); win(false); } };
@@ -555,18 +556,12 @@ adInvinc.onclick=()=>{ ADMIN_INVINCIBLE=!ADMIN_INVINCIBLE; toastMsg(`Invincibili
 adKillBoss.onclick=()=>{ if(BOSS){ BOSS.hp=1; updateBossBarInstant(); toastMsg('Boss set to 1 HP'); } };
 adClear.onclick=()=>{ bullets.length=0; toastMsg('Bullets cleared'); };
 adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))]; saveWrite(SAVE); toastMsg('All weapons granted'); };
-adSkip.onclick=()=>{ if(turn==='enemy' && attack){ attack.t=999; toastMsg('Skipped'); } };
+adSkip.onclick=()=>{ if(turn==='enemy' && attack){ attack._acc=(attack._acc||{}); attack._acc.skip=true; } };
 
-/* ========== 67×3 Admin trigger ========== */
-let seq='',count=0;
-addEventListener('keydown',e=>{
-  if(e.key==='6' || e.key==='7'){ seq+=e.key; if(seq.endsWith('67')){ count++; seq=''; } if(count>=3){ count=0; openAdmin(); toastMsg('Admin opened'); } }
-  else { seq=''; count=0; }
-},{passive:true});
-
-/* ========== Boss flow ========== */
+/* Boss flow */
 function setBoss(obj,isAdmin=false){
-  BOSS={ name:obj.name, hpMax:Math.max(1,obj.hpMax|0), hp:Math.max(1,obj.hpMax|0), draw:obj.draw, intro:obj.intro, lines:obj.lines, attacks:obj.attacks, drop:obj.drop, isAdmin };
+  const hpMax=Math.max(1, obj.hpMax|0);
+  BOSS={ name:obj.name, hpMax, hp:hpMax, draw:obj.draw, intro:obj.intro, lines:obj.lines, attacks:obj.attacks, drop:obj.drop, isAdmin };
   attackSeq=BOSS.attacks(); attackIx=0;
   bossName.textContent=BOSS.name;
   const w=equippedWeapon(); if(w.id==='godslayer' && !isAdmin){ BOSS.hp=BOSS.hpMax=1; }
@@ -582,7 +577,7 @@ function initBoss(sel){
   saveWrite({...SAVE,bossIndex});
 }
 function startAttack(){
-  if(!attackSeq || !attackSeq.length){ return; }
+  if(!attackSeq || !attackSeq.length) return;
   bullets.length=0; showArena=true; arenaEl.style.display='block'; hideSay(); uiBar.style.opacity='0.6';
   attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter&&attack.enter();
   turn='enemy';
@@ -592,21 +587,29 @@ function endAttack(){
   turn='player'; say((BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...')); attack=null;
 }
 
-/* ========== Input & actions ========== */
+/* Input & actions with good keybinds */
 const held=new Set();
-addEventListener('keydown',e=>{
-  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){ if(turn!=='enemy') return; }
-  held.add(e.key);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ toggleAdmin(); return; }
+  if(turn==='player'){
+    if(['z','Z','Enter',' '].includes(e.key)) onAction('FIGHT');
+    else if(e.key==='a'||e.key==='A') onAction('ACT');
+    else if(e.key==='i'||e.key==='I') onAction('ITEM');
+    else if(e.key==='m'||e.key==='M') onAction('MERCY');
+  } else if(turn==='enemy'){
+    if(['ArrowLeft','a','A'].includes(e.key)) held.add('left');
+    if(['ArrowRight','d','D'].includes(e.key)) held.add('right');
+    if(['ArrowUp','w','W'].includes(e.key)) held.add('up');
+    if(['ArrowDown','s','S'].includes(e.key)) held.add('down');
+  }
 },{passive:true});
-addEventListener('keyup',e=>held.delete(e.key),{passive:true});
+document.addEventListener('keyup',e=>{
+  if(['ArrowLeft','a','A'].includes(e.key)) held.delete('left');
+  if(['ArrowRight','d','D'].includes(e.key)) held.delete('right');
+  if(['ArrowUp','w','W'].includes(e.key)) held.delete('up');
+  if(['ArrowDown','s','S'].includes(e.key)) held.delete('down');
+},{passive:true});
 uiBar.addEventListener('click',e=>{ const b=e.target.closest('.btn'); if(!b) return; onAction(b.dataset.act); });
-addEventListener('keydown',e=>{
-  if(turn!=='player') return;
-  if(['z','Z','Enter',' '].includes(e.key)) onAction('FIGHT');
-  if(e.key==='a'||e.key==='A') onAction('ACT');
-  if(e.key==='i'||e.key==='I') onAction('ITEM');
-  if(e.key==='m'||e.key==='M') onAction('MERCY');
-},{passive:true});
 
 function onAction(act){
   if(turn!=='player') return;
@@ -625,11 +628,11 @@ function onAction(act){
   }
 }
 
-/* ========== Movement / bullets / collide ========== */
+/* Movement / bullets / collide */
 function moveHeart(dt){
   if(turn!=='enemy') return;
-  let dx=0,dy=0; if(held.has('ArrowLeft')||held.has('a')||held.has('A'))dx-=1; if(held.has('ArrowRight')||held.has('d')||held.has('D'))dx+=1;
-  if(held.has('ArrowUp')||held.has('w')||held.has('W'))dy-=1; if(held.has('ArrowDown')||held.has('s')||held.has('S'))dy+=1;
+  let dx=(held.has('left')?-1:0)+(held.has('right')?1:0);
+  let dy=(held.has('up')?-1:0)+(held.has('down')?1:0);
   const L=Math.hypot(dx,dy)||1;
   HEART.x=Math.max(ARENA.x+HEART.r,Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
   HEART.y=Math.max(ARENA.y+HEART.r,Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
@@ -652,7 +655,7 @@ function collide(){
 }
 function lose(){ say('You fall. The hall dims.'); setTimeout(()=>initBoss(bossIndex),900); }
 
-/* ========== Win / progression / drops ========== */
+/* Win / progression / drops */
 function addDrop(key,isAdmin){
   if(isAdmin){ if(!SAVE.weapons.includes('godslayer')){ SAVE.weapons.push('godslayer'); saveWrite(SAVE); toastMsg('New weapon: Godslayer Blade'); } }
   else { const map={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora'};
@@ -665,7 +668,7 @@ function win(spared){
 }
 eqStart.onclick=()=>{ closeEquip(); initBoss(nextBossPendingIndex ?? bossIndex); };
 
-/* ========== Render/loop ========== */
+/* Render/loop */
 function render(){
   drawBossBackground(BOSS?BOSS.name:'',time);
   if(BOSS && BOSS.draw) BOSS.draw(time);
@@ -680,7 +683,7 @@ function loop(now){
   if(HEART.i>0) HEART.i=Math.max(0, HEART.i-dt);
   if(turn==='enemy'){
     moveHeart(dt);
-    if(attack && attack.update) attack.update(dt);
+    if(attack && attack.update){ attack.update(dt); if(attack._acc && attack._acc.skip) attack=_forceEndAttack(); }
     updateBullets(dt);
     collide();
     if(attack && attack.done && attack.done()) endAttack();
@@ -688,8 +691,9 @@ function loop(now){
   render();
   requestAnimationFrame(loop);
 }
+function _forceEndAttack(){ endAttack(); return null; }
 
-/* ========== Start ========== */
+/* Start */
 function updateAllBars(){ updateBossBarInstant(); updatePlayerBarInstant(); }
 function buildAdminListsInit(){ buildAdminLists(); }
 buildAdminListsInit();
