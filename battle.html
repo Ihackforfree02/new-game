@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Battle — smaller golden SOUL, humanoid/monster bosses, better attacks, admin-only god bosses, no items</title>
+<title>Battle — unique boss attacks, 4 ACTs to MERCY, healing item drops, improved admin health control</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <style>
 html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Consolas,Menlo,monospace}
@@ -23,7 +23,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 #bubbleText{white-space:pre-line;line-height:1.5}
 
 /* Bottom action UI */
-#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:860px;height:96px;background:#111;border:2px solid #3a3a44;display:flex;align-items:center;justify-content:space-around;z-index:3}
+#uiBar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:940px;height:96px;background:#111;border:2px solid #3a3a44;display:flex;align-items:center;justify-content:space-around;z-index:3}
 .btn{cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px}
 .key{width:22px;height:22px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;background:#fff}
 .lab{font-size:18px;letter-spacing:1px;min-width:88px;color:#fff}
@@ -37,11 +37,13 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .actName{font-weight:700}
 .actDesc{font-size:12px;color:#c9c9e0;margin-top:4px}
 
-/* Equip overlay (weapons only + stats) */
-#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:700px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:6;display:none}
+/* Equip overlay (two columns + stats) */
+#equipOverlay{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:860px;max-width:95%;background:#0e0f16;border:2px solid #ffd166;color:#ffd166;padding:12px;border-radius:8px;z-index:6;display:none}
 #equipHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 #stats{display:flex;gap:10px}
 .stat{background:#151728;border:1px solid #2d3050;border-radius:6px;padding:6px 8px;font-size:12px}
+#equipCols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#equipOverlay h4{margin:4px 0 6px 0;font-size:14px;color:#ffd166}
 .list{max-height:260px;overflow:auto;border:1px solid #25273a;border-radius:6px;padding:6px;background:#101223}
 .itemCard{border:1px solid #30303f;padding:8px;background:#141522;border-radius:6px;margin-bottom:8px}
 .itemHeader{display:flex;justify-content:space-between;align-items:center}
@@ -53,9 +55,9 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 /* Arena */
 #arena{position:absolute;left:240px;top:418px;width:480px;height:184px;border:3px solid #fff;display:none;box-shadow:0 0 12px rgba(255,255,255,.35);z-index:2}
 
-/* Admin overlay (collapsible sections) */
+/* Admin overlay */
 #admin{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:10}
-#panel{width:920px;max-width:96%;background:#111218;border:2px solid #fff;border-radius:8px;color:#ffd166;padding:12px}
+#panel{width:960px;max-width:96%;background:#111218;border:2px solid #fff;border-radius:8px;color:#ffd166;padding:12px}
 #panelHead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 #panelHead .title{font-size:18px;font-weight:700}
 #panelHead .hint{font-size:12px;color:#bfc5de}
@@ -65,6 +67,7 @@ html,body{margin:0;height:100%;background:#000;color:#ffd166;display:flex;align-
 .secBody{padding:10px;display:none;background:#101220}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
 .sel,.inp,.rng{background:#0f1020;color:#ffd166;border:1px solid #34344a;padding:6px 8px;border-radius:6px}
+.inp{min-width:120px}
 .btn2{padding:6px 10px;border:1px solid #fff;background:#212238;color:#ffd166;cursor:pointer;border-radius:6px}
 .btn2:hover{filter:brightness(1.12)}
 .badge{border:1px solid #3a3a4a;background:#0f1020;color:#cfd;padding:4px 8px;border-radius:6px;font-size:12px}
@@ -99,9 +102,9 @@ canvas{display:block}
   <div id="uiBar">
     <div class="btn" data-act="FIGHT"><div class="key">Z</div><div class="lab">FIGHT</div></div>
     <div class="btn" data-act="ACT"><div class="key">A</div><div class="lab">ACT</div></div>
-    <!-- ITEM removed -->
     <div class="btn" data-act="MERCY"><div class="key">M</div><div class="lab">MERCY</div></div>
     <div class="btn" data-act="EQUIP"><div class="key">E</div><div class="lab">EQUIP</div></div>
+    <div class="btn" data-act="SHOOT"><div class="key">X</div><div class="lab">SHOOT</div></div>
   </div>
 
   <!-- ACT overlay -->
@@ -109,31 +112,39 @@ canvas{display:block}
     <div id="actHeader">
       <div style="display:flex;gap:8px;align-items:center">
         <h3 style="margin:0;color:#ffd166">ACT</h3>
-        <span class="small">Interact to change the battle</span>
+        <span class="small" id="actHint">Act 0/4 — reach 4 to MERCY</span>
       </div>
       <button id="actClose" class="btn3">Close</button>
     </div>
     <div id="actList"></div>
   </div>
 
-  <!-- Equip overlay (weapons only) -->
+  <!-- Equip overlay -->
   <div id="equipOverlay">
     <div id="equipHeader">
       <div style="display:flex;gap:8px;align-items:center">
         <h3 style="margin:0;color:#ffd166">Equipment</h3>
-        <span class="small">Equip/unequip — no turn cost</span>
+        <span class="small">Equip and use items (no turn cost)</span>
       </div>
       <div id="stats">
         <div class="stat" id="statWeap">ATK +0</div>
         <div class="stat" id="statHP">HP 60/60</div>
       </div>
     </div>
-    <div>
-      <h4>Weapons</h4>
-      <div class="list" id="equipList"></div>
-      <div class="btnGroup">
-        <button id="btnUnequip" class="btn3">Unequip</button>
-        <button id="equipClose" class="btn3">Close</button>
+    <div id="equipCols">
+      <div>
+        <h4>Weapons</h4>
+        <div class="list" id="equipList"></div>
+        <div class="btnGroup">
+          <button id="btnUnequip" class="btn3">Unequip</button>
+        </div>
+      </div>
+      <div>
+        <h4>Healing items</h4>
+        <div class="list" id="consumableList"></div>
+        <div class="btnGroup">
+          <button id="equipClose" class="btn3">Close</button>
+        </div>
       </div>
     </div>
   </div>
@@ -156,7 +167,7 @@ canvas{display:block}
         <button id="quClear" class="btn2">Clear bullets</button>
       </div>
 
-      <!-- Collapsible sections -->
+      <!-- Sections -->
       <div class="section" data-sec="boss">
         <div class="secHead"><div class="secTitle">Boss controls</div></div>
         <div class="secBody">
@@ -182,6 +193,28 @@ canvas{display:block}
         </div>
       </div>
 
+      <div class="section" data-sec="player">
+        <div class="secHead"><div class="secTitle">Player settings</div></div>
+        <div class="secBody">
+          <div class="row">
+            <label>Set HP</label>
+            <input id="setHP" class="inp" type="number" min="1" max="999" value="60"/>
+            <button id="btnSetHP" class="btn2">Apply</button>
+            <label>Set Max HP</label>
+            <input id="setMaxHP" class="inp" type="number" min="1" max="999" value="60"/>
+            <button id="btnSetMaxHP" class="btn2">Apply</button>
+          </div>
+          <div class="row">
+            <label class="badge"><input type="checkbox" id="chkInf"/> Infinite HP</label>
+            <label class="badge"><input type="checkbox" id="chkOHK"/> One-hit kill</label>
+            <label class="badge"><input type="checkbox" id="chkInv"/> Invincibility</label>
+          </div>
+          <div class="row">
+            <button id="adGiveAll" class="btn2">Give all weapons & items</button>
+          </div>
+        </div>
+      </div>
+
       <div class="section" data-sec="tunings">
         <div class="secHead"><div class="secTitle">Tunings</div></div>
         <div class="secBody">
@@ -191,36 +224,24 @@ canvas{display:block}
               <input id="adSpeed" class="rng" type="range" min="0.5" max="2" step="0.05" value="1.00"/>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px">
-              <label class="small">Damage multiplier: <span id="dmVal">1.00x</span></label>
-              <input id="adDmg" class="rng" type="range" min="0.5" max="2.5" step="0.05" value="1.00"/>
+              <label class="small">Damage multiplier: <span id="dmVal">1.50x</span></label>
+              <input id="adDmg" class="rng" type="range" min="0.5" max="3" step="0.05" value="1.50"/>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px">
               <label class="small">Speed multiplier: <span id="smVal">1.00x</span></label>
               <input id="adSpd" class="rng" type="range" min="0.5" max="2" step="0.05" value="1.00"/>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="section" data-sec="cheats">
-        <div class="secHead"><div class="secTitle">Cheats</div></div>
-        <div class="secBody">
-          <div class="row">
-            <label class="badge"><input type="checkbox" id="chkInf"/> Infinite HP</label>
-            <label class="badge"><input type="checkbox" id="chkOHK"/> One-hit kill</label>
-            <label class="badge"><input type="checkbox" id="chkInv"/> Invincibility</label>
-          </div>
-          <div class="row">
-            <button id="adGiveAll" class="btn2">Give all weapons</button>
-          </div>
           <div class="row">
             <div class="badge" id="stTurn">turn: player</div>
             <div class="badge" id="stArena">arena: hidden</div>
-            <div class="badge" id="stBul">bullets: 0</div>
+            <div class="badge" id="stBul">projectiles: 0</div>
             <div class="badge" id="stBoss">boss: —</div>
+            <div class="badge" id="stActs">acts: 0/4</div>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -234,9 +255,9 @@ const bossName=document.getElementById('bossName'), bossFill=document.getElement
 const hpFill=document.getElementById('hpFill'), hpVal=document.getElementById('hpVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiBar=document.getElementById('uiBar'), arenaEl=document.getElementById('arena');
-const equipOverlay=document.getElementById('equipOverlay'), equipList=document.getElementById('equipList');
+const equipOverlay=document.getElementById('equipOverlay'), equipList=document.getElementById('equipList'), consumableList=document.getElementById('consumableList');
 const btnUnequip=document.getElementById('btnUnequip'), equipClose=document.getElementById('equipClose');
-const actOverlay=document.getElementById('actOverlay'), actList=document.getElementById('actList'), actClose=document.getElementById('actClose');
+const actOverlay=document.getElementById('actOverlay'), actList=document.getElementById('actList'), actClose=document.getElementById('actClose'), actHint=document.getElementById('actHint');
 const admin=document.getElementById('admin'), adClose=document.getElementById('adClose');
 const sections=[...document.querySelectorAll('.section')];
 const adBoss=document.getElementById('adBoss'), adLoadBoss=document.getElementById('adLoadBoss'), adEnd=document.getElementById('adEnd'), adWin=document.getElementById('adWin');
@@ -246,7 +267,9 @@ const chkInf=document.getElementById('chkInf'), chkOHK=document.getElementById('
 const adAtk=document.getElementById('adAtk'), adTrigger=document.getElementById('adTrigger');
 const adGiveAll=document.getElementById('adGiveAll');
 const quSkip=document.getElementById('quSkip'), quHeal=document.getElementById('quHeal'), quClear=document.getElementById('quClear');
-const stTurn=document.getElementById('stTurn'), stArena=document.getElementById('stArena'), stBul=document.getElementById('stBul'), stBoss=document.getElementById('stBoss');
+const setHP=document.getElementById('setHP'), btnSetHP=document.getElementById('btnSetHP');
+const setMaxHP=document.getElementById('setMaxHP'), btnSetMaxHP=document.getElementById('btnSetMaxHP');
+const stTurn=document.getElementById('stTurn'), stArena=document.getElementById('stArena'), stBul=document.getElementById('stBul'), stBoss=document.getElementById('stBoss'), stActs=document.getElementById('stActs');
 const bossPrev=document.getElementById('bossPrev'), pctx=bossPrev.getContext('2d'); pctx.imageSmoothingEnabled=false;
 const prevName=document.getElementById('prevName'), prevHP=document.getElementById('prevHP'), prevMercy=document.getElementById('prevMercy');
 const statWeap=document.getElementById('statWeap'), statHP=document.getElementById('statHP');
@@ -255,24 +278,27 @@ const statWeap=document.getElementById('statWeap'), statHP=document.getElementBy
 function say(t){ bubble.style.display='block'; bubbleText.textContent=t; }
 function bossSpeak(line){ bubble.style.display='block'; bubbleText.textContent = (BOSS?BOSS.name:'—') + ": " + line; }
 function hideSay(){ bubble.style.display='none'; }
-function updateStateBadges(){ stTurn.textContent='turn: '+turn; stArena.textContent='arena: '+(showArena?'shown':'hidden'); stBul.textContent='bullets: '+bullets.length; stBoss.textContent='boss: '+(BOSS?BOSS.name:'—'); }
+function updateStateBadges(){ stTurn.textContent='turn: '+turn; stArena.textContent='arena: '+(showArena?'shown':'hidden'); stBul.textContent='projectiles: '+(bullets.length+playerShots.length); stBoss.textContent='boss: '+(BOSS?BOSS.name:'—'); stActs.textContent='acts: '+actsUsed+'/4'; }
 function randomLine(arr){ return arr[Math.floor(Math.random()*arr.length)]||"..."; }
 
 /* Save/data */
-const SAVE_KEY='battle_better_attacks_adminonly_v1';
+const SAVE_KEY='battle_unique_attacks_act4_mercy_items_adminhp_v1';
 function loadSave(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{} }catch{return {} } }
 function saveWrite(d){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(d)); }catch{} }
 let SAVE=loadSave();
 if(!Array.isArray(SAVE.weapons)) SAVE.weapons=['stick'];
 if(!SAVE.currentWeapon) SAVE.currentWeapon='stick';
+if(!Array.isArray(SAVE.items)) SAVE.items=[{id:'petal',name:'Petal',heal:12,count:3},{id:'elixir',name:'Elixir',heal:30,count:1}];
+if(!SAVE.hpMax) SAVE.hpMax=60;
 if(!SAVE.hp) SAVE.hp=60;
 if(typeof SAVE.bossIndex!=='number') SAVE.bossIndex=0;
 saveWrite(SAVE);
 
 /* Tunings/flags */
 let GLOBAL_SPEED=1.0;
-let DIFF = { spd:1.0, dmg:1.3 }; // baseline damage bump
+let DIFF = { spd:1.0, dmg:1.5 };
 let FLAG_INFINITE=false, FLAG_ONEHIT=false, FLAG_INVINC=false;
+let ADMIN_MODE=false;
 
 /* Equipment & weapons */
 const WEAPONS={
@@ -293,10 +319,14 @@ const WEAPONS={
   venom:{id:'venom',name:'Serpent Fang',atk:7,desc:'Tastes like victory.'},
   crystal:{id:'crystal',name:'Prism Saber',atk:8,desc:'Light into steel.'},
   phoenix:{id:'phoenix',name:'Ashwing Talon',atk:9,desc:'Flare‑born.'},
+  moon:{id:'moon',name:'Moonbrand Saber',atk:8,desc:'Night’s edge.'},
+  blight:{id:'blight',name:'Blight Hexblade',atk:9,desc:'Rot bound to steel.'},
   godslayer:{id:'godslayer',name:'Godslayer Blade',atk:999,desc:'Ends it before it begins.'}
 };
 function equippedWeapon(){ return WEAPONS[SAVE.currentWeapon]||WEAPONS.stick; }
 function refreshStats(){ const w=equippedWeapon(); statWeap.textContent='ATK +'+w.atk; statHP.textContent='HP '+Math.floor(HEART.hp)+'/'+Math.floor(HEART.hpMax); }
+
+/* Equip rendering (weapons + healing items) */
 function renderEquip(){
   const owned=[...SAVE.weapons].sort((a,b)=>(WEAPONS[b]?.atk||0)-(WEAPONS[a]?.atk||0));
   equipList.innerHTML='';
@@ -313,6 +343,28 @@ function renderEquip(){
     card.querySelector('button').onclick=()=>{ SAVE.currentWeapon=w.id; saveWrite(SAVE); renderEquip(); refreshStats(); };
     equipList.appendChild(card);
   }
+  renderConsumables();
+}
+function renderConsumables(){
+  consumableList.innerHTML='';
+  const heals=(SAVE.items||[]).filter(it=>it.heal).sort((a,b)=>b.heal-a.heal);
+  for(const it of heals){
+    const card=document.createElement('div'); card.className='itemCard';
+    card.innerHTML=`
+      <div class="itemHeader">
+        <div class="itemName">${it.name}</div>
+        <div>×${it.count}</div>
+      </div>
+      <div class="itemDesc">Heals ${it.heal} HP</div>
+      <div class="btnGroup"><button class="btn3"${it.count<=0?' disabled':''}>Use (no turn)</button></div>`;
+    card.querySelector('button').onclick=()=>{
+      if(it.count<=0) return;
+      it.count--;
+      HEART.hp=Math.min(HEART.hpMax, HEART.hp+it.heal);
+      updatePlayerBar(); saveWrite(SAVE); renderConsumables(); refreshStats();
+    };
+    consumableList.appendChild(card);
+  }
 }
 btnUnequip.onclick=()=>{ SAVE.currentWeapon='stick'; saveWrite(SAVE); renderEquip(); refreshStats(); };
 equipClose.onclick=()=>{ equipOverlay.style.display='none'; };
@@ -321,8 +373,8 @@ equipClose.onclick=()=>{ equipOverlay.style.display='none'; };
 function updateBossBar(){ if(!BOSS) return; const r=Math.max(0,Math.min(1,BOSS.hp/BOSS.hpMax)); bossFill.style.width=(440*r)+'px'; bossVal.textContent=`${Math.floor(Math.max(0,BOSS.hp))}/${Math.floor(BOSS.hpMax)}`; prevHP.textContent='HP: '+Math.floor(BOSS.hp)+'/'+Math.floor(BOSS.hpMax); prevMercy.textContent='Mercy: '+Math.floor(BOSS.mercy)+'/'+BOSS.spareThreshold; }
 function updatePlayerBar(){ const r=Math.max(0,Math.min(1,HEART.hp/HEART.hpMax)); hpFill.style.width=(260*r)+'px'; hpFill.style.background=r<0.25?'#ff5e6b':r<0.5?'#ffd166':'#7affb7'; hpVal.textContent=`${Math.floor(Math.max(0,HEART.hp))}/${Math.floor(HEART.hpMax)}`; }
 
-/* Smaller golden SOUL — smooth heart shape + glow + hit flash */
-const HEART={x:0,y:0,r:4,sp:340,i:0,hp:SAVE.hp,hpMax:SAVE.hp,flash:0};
+/* SOUL */
+const HEART={x:0,y:0,r:4,sp:360,i:0,hp:SAVE.hp,hpMax:SAVE.hpMax,flash:0,shootCd:0};
 function drawSOUL(x,y){
   const grad=ctx.createRadialGradient(x,y,2, x,y,16);
   const pulse=0.15+0.1*Math.sin(time*3);
@@ -352,15 +404,13 @@ function centerHeart(){ HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; }
 let bullets=[];
 function phase(dur, obj){ let t=0; obj._acc=Object.create(null); return { enter(){t=0; obj.enter&&obj.enter();}, update(dt){t+=dt; obj.update(dt,t,obj._acc);}, done(){return t>=dur;} }; }
 function spawn(b){ b.t=0; b.rot=b.rot||0; b.shape=b.shape||'dot'; b.alpha=1; b.tail=b.tail||0; bullets.push(b); return b; }
-function spawnAimed(fx,fy,spd,dmg,col='#fff',r=3,shape='dot'){ const dx=HEART.x-fx, dy=HEART.y-fy, L=Math.hypot(dx,dy)||1; return spawn({x:fx,y:fy,vx:(dx/L)*spd,vy:(dy/L)*spd,r, col, dmg, shape}); }
-
-/* Draw bullets with shapes and subtle trails */
+function spawnAimed(fx,fy,spd,dmg,col='#fff',r=3,shape='dot'){ const dx=HEART.x-fx, dy=HEART.y-fy, L=Math.hypot(dx,dy)||1; return spawn({x:fx,y:fy,vx:(dx/L)*spd,vy:(dy/L)*spd,r, col, dmg, shape, tail:10}); }
 function drawBullet(b){
   ctx.save();
   if(b.tail>0){
     ctx.globalAlpha=0.25;
     ctx.strokeStyle=b.col;
-    ctx.beginPath(); ctx.moveTo(b.x-b.vx*0.05*b.tail, b.y-b.vy*0.05*b.tail); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x-b.vx*0.06*b.tail, b.y-b.vy*0.06*b.tail); ctx.lineTo(b.x, b.y); ctx.stroke();
     ctx.globalAlpha=1;
   }
   ctx.fillStyle=b.col;
@@ -381,89 +431,47 @@ function drawBullet(b){
   ctx.restore();
 }
 
+/* Patterns */
 const PAT = {
-  rain:(col,vy,rate,band,dmg,dur,shape='diamond')=>phase(dur,{
-    update(dt,t,A){
-      A.g=(A.g||0)+dt;
-      while(A.g>=rate){ A.g-=rate;
-        for(let i=0;i<band;i++){
-          const x=ARENA.x+(i+0.5)*(ARENA.w/band);
-          spawn({x, y:ARENA.y-16, vx:((i%2)?60:-60), vy:vy, r:4, col, dmg, shape, tail:8});
-        }
-      }
-    }
-  }),
-  walls:(col,vx,rows,rate,dmg,dur,shape='tri')=>phase(dur,{
-    update(dt,t,A){
-      A.g=(A.g||0)+dt;
-      while(A.g>=rate){ A.g-=rate;
-        const left=((A.flip=A.flip?!A.flip:true));
-        for(let r=0;r<rows;r++){
-          const y=ARENA.y+12+r*((ARENA.h-24)/(rows-1));
-          spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24, y, vx:(left?1:-1)*vx, vy:0, r:4, col, dmg, shape, tail:10});
-        }
-      }
-    }
-  }),
-  ring:(col,spd,rate,n,dmg,dur,shape='spark')=>phase(dur,{
-    update(dt,t,A){
-      A.g=(A.g||0)+dt;
-      while(A.g>=rate){ A.g-=rate;
-        const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};
-        for(let k=0;k<n;k++){
-          const a=k/n*Math.PI*2;
-          spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg,shape,tail:6});
-        }
-      }
-    }
-  }),
-  spiral:(col,spd,rate,dmg,dur,shape='dot')=>phase(dur,{
-    update(dt,t,A){
-      A.g=(A.g||0)+dt;
-      while(A.g>=rate){ A.g-=rate;
-        const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2};
-        const a=t*2.6;
-        spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg,shape,tail:5});
-      }
-    }
-  }),
-  homing:(col,spd,rate,dmg,dur,shape='tri')=>phase(dur,{
-    update(dt,t,A){
-      A.g=(A.g||0)+dt;
-      while(A.g>=rate){ A.g-=rate;
-        const x=ARENA.x+ARENA.w*(0.2+Math.random()*0.6);
-        spawnAimed(x,ARENA.y-12,spd,dmg,col,4,shape).tail=10;
-      }
-    }
-  })
+  rain:(col,vy,rate,band,dmg,dur,shape='diamond')=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; for(let i=0;i<band;i++){ const x=ARENA.x+(i+0.5)*(ARENA.w/band); spawn({x, y:ARENA.y-16, vx:((i%2)?60:-60), vy:vy, r:4, col, dmg, shape, tail:8}); } } } }),
+  walls:(col,vx,rows,rate,dmg,dur,shape='tri')=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const left=((A.flip=A.flip?!A.flip:true)); for(let r=0;r<rows;r++){ const y=ARENA.y+12+r*((ARENA.h-24)/(rows-1)); spawn({x:left?ARENA.x-24:ARENA.x+ARENA.w+24, y, vx:(left?1:-1)*vx, vy:0, r:4, col, dmg, shape, tail:10}); } } } }),
+  ring:(col,spd,rate,n,dmg,dur,shape='spark')=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2}; for(let k=0;k<n;k++){ const a=k/n*Math.PI*2; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg,shape,tail:6}); } } } }),
+  spiral:(col,spd,rate,dmg,dur,shape='dot')=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const C={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2}; const a=t*2.6; spawn({x:C.x,y:C.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg,shape,tail:5}); } } }),
+  homing:(col,spd,rate,dmg,dur,shape='tri')=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const x=ARENA.x+ARENA.w*(0.2+Math.random()*0.6); spawnAimed(x,ARENA.y-12,spd,dmg,col,4,shape); } } }),
+  arcs:(col,spd,rate,n,dmg,dur,shape='dot')=>phase(dur,{ update(dt,t,A){ A.g=(A.g||0)+dt; while(A.g>=rate){ A.g-=rate; const cx=ARENA.x+ARENA.w/2, cy=ARENA.y+ARENA.h/2; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; spawn({x:cx+Math.cos(a)*60,y:cy+Math.sin(a)*40,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3,col,dmg,shape,tail:6}); } } } })
 };
 
-/* Humanoid/monster silhouettes */
+/* Boss silhouettes (humanoid/monster) */
 function humHead(g,cx,cy,r){ g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.fill(); }
 function humBody(g,cx,cy,w,h){ g.fillRect(cx-w/2,cy,w,h); }
 function humArms(g,cx,cy,w,h){ g.fillRect(cx-w/2-14,cy+6,14,h); g.fillRect(cx+w/2,cy+6,14,h); }
+function eyes(g,cx,cy){ g.fillStyle='#000'; g.fillRect(cx-6,cy-4,4,4); g.fillRect(cx+2,cy-4,4,4); }
 
-function drawSolar(t,g=ctx){ const cx=480, cy=240+Math.sin(t*2)*2; g.fillStyle='#ffb347'; humHead(g,cx,cy-24,16); g.fillStyle='#cc6600'; humBody(g,cx,cy-12,26,48); humArms(g,cx,cy-12,26,26); }
-function drawEmber(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#7a341c'; humHead(g,cx,cy-26,15); g.fillStyle='#ffa277'; humBody(g,cx,cy-12,24,46); g.fillStyle='#ffb48f'; humArms(g,cx,cy-12,24,24); }
-function drawAbyss(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#2a2450'; humHead(g,cx,cy-26,15); g.fillStyle='#504a7a'; humBody(g,cx,cy-12,26,48); g.fillStyle='#6c64a5'; humArms(g,cx,cy-12,26,26); }
-function drawMantis(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#c9a400'; humHead(g,cx,cy-26,15); g.fillStyle='#ffe27a'; humBody(g,cx,cy-12,26,48); g.fillStyle='#ffd166'; humArms(g,cx,cy-12,26,26); }
-function drawPixel(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#a8ecff'; humHead(g,cx,cy-26,14); g.fillStyle='#82d8ff'; humBody(g,cx,cy-12,24,46); g.fillStyle='#0d0e18'; g.fillRect(cx-8,cy-32,16,8); }
-function drawFrost(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#cfeeff'; humHead(g,cx,cy-26,15); g.fillStyle='#aee3ff'; humBody(g,cx,cy-12,26,48); g.fillStyle='#ffffff'; g.fillRect(cx-12,cy-24,24,10); }
-function drawDJ(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ff99a9'; humHead(g,cx,cy-26,15); g.fillStyle='#ffb0b0'; humBody(g,cx,cy-12,26,48); g.fillStyle='#ff9aaa'; humArms(g,cx,cy-12,26,26); }
-function drawVoid(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#3a2f66'; humHead(g,cx,cy-26,15); g.strokeStyle='#c9b9ff'; g.beginPath(); g.arc(cx,cy-26,20+Math.sin(t*2)*2,0,Math.PI*2); g.stroke(); g.fillStyle='#2f2858'; humBody(g,cx,cy-12,26,48); }
-function drawSiren(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#66ccff'; humHead(g,cx,cy-26,15); g.fillStyle='#88d9ff'; humBody(g,cx,cy-12,26,48); }
-function drawStorm(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ffd455'; humHead(g,cx,cy-26,15); g.fillStyle='#ffe066'; humBody(g,cx,cy-12,26,48); }
-function drawChrono(t,g=ctx){ const cx=480, cy=240; g.strokeStyle='#64f0c2'; g.lineWidth=3; g.beginPath(); g.arc(cx,cy-26,16,0,Math.PI*2); g.stroke(); g.fillStyle='#1c2f2b'; humBody(g,cx,cy-12,26,48); }
-function drawAurora(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ffc3f3'; humHead(g,cx,cy-26,15); g.fillStyle='#ffb6f2'; humBody(g,cx,cy-12,26,48); }
-function drawColossus(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#5e5a58'; humHead(g,cx,cy-26,15); g.fillStyle='#7c7775'; humBody(g,cx,cy-12,30,52); g.fillStyle='#ff6a00'; g.beginPath(); g.arc(cx,cy,10+Math.sin(t*3)*2,0,Math.PI*2); g.fill(); }
-function drawVenom(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#2a3f2a'; humHead(g,cx,cy-26,15); g.fillStyle='#66ff99'; humBody(g,cx,cy-12,26,48); }
-function drawCrystal(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#a8e6ff'; humHead(g,cx,cy-26,15); g.fillStyle='#bfefff'; humBody(g,cx,cy-12,26,48); }
-function drawPhoenix(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ff8a3a'; humHead(g,cx,cy-26,15); g.fillStyle='#ffa85a'; humBody(g,cx,cy-12,26,48); }
-function drawObliv(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#241c28'; humHead(g,cx,cy-26,15); g.strokeStyle='#ffd166'; g.strokeRect(cx-18,cy-14,36,44); }
-function drawCupcake(t,g=ctx){ const cx=480, cy=240; g.fillStyle='#ff7acb'; humHead(g,cx,cy-26,15); g.fillStyle='#ffc3f3'; humBody(g,cx,cy-12,26,48); }
+function drawSolar(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0)+Math.sin(t*1.8)*2; g.fillStyle='#ff9f40'; humHead(g,cx,cy-28,17); eyes(g,cx,cy-28); g.fillStyle='#cc6600'; humBody(g,cx,cy-12,30,52); g.fillStyle='#ffb347'; humArms(g,cx,cy-12,30,28); }
+function drawEmber(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#8a4022'; humHead(g,cx,cy-28,16); eyes(g,cx,cy-28); g.fillStyle='#ffa277'; humBody(g,cx,cy-12,28,50); g.fillStyle='#ffbe8e'; humArms(g,cx,cy-12,28,26); }
+function drawAbyss(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#2a2450'; humHead(g,cx,cy-28,16); g.fillStyle='#504a7a'; humBody(g,cx,cy-12,30,52); g.fillStyle='#6c64a5'; humArms(g,cx,cy-12,30,28); }
+function drawMantis(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#c9a400'; humHead(g,cx,cy-28,16); g.fillStyle='#ffe27a'; humBody(g,cx,cy-12,30,52); g.fillStyle='#ffd166'; humArms(g,cx,cy-12,30,28); }
+function drawPixel(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#a8ecff'; humHead(g,cx,cy-26,14); g.fillStyle='#82d8ff'; humBody(g,cx,cy-12,26,46); g.fillStyle='#0d0e18'; g.fillRect(cx-8,cy-32,16,8); }
+function drawFrost(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#cfeeff'; humHead(g,cx,cy-26,15); g.fillStyle='#aee3ff'; humBody(g,cx,cy-12,28,50); g.fillStyle='#ffffff'; g.fillRect(cx-12,cy-24,24,10); }
+function drawDJ(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#ff99a9'; humHead(g,cx,cy-26,15); g.fillStyle='#ffb0b0'; humBody(g,cx,cy-12,30,52); g.fillStyle='#ff9aaa'; humArms(g,cx,cy-12,30,28); }
+function drawVoid(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#3a2f66'; humHead(g,cx,cy-26,15); g.strokeStyle='#c9b9ff'; g.beginPath(); g.arc(cx,cy-26,20+Math.sin(t*2)*2,0,Math.PI*2); g.stroke(); g.fillStyle='#2f2858'; humBody(g,cx,cy-12,30,52); }
+function drawSiren(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#66ccff'; humHead(g,cx,cy-26,15); g.fillStyle='#88d9ff'; humBody(g,cx,cy-12,30,52); }
+function drawStorm(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#ffd455'; humHead(g,cx,cy-26,15); g.fillStyle='#ffe066'; humBody(g,cx,cy-12,30,52); }
+function drawChrono(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.strokeStyle='#64f0c2'; g.lineWidth=3; g.beginPath(); g.arc(cx,cy-26,16,0,Math.PI*2); g.stroke(); g.fillStyle='#1c2f2b'; humBody(g,cx,cy-12,30,52); }
+function drawAurora(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#ffc3f3'; humHead(g,cx,cy-26,15); g.fillStyle='#ffb6f2'; humBody(g,cx,cy-12,30,52); }
+function drawColossus(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#5e5a58'; humHead(g,cx,cy-26,15); g.fillStyle='#7c7775'; humBody(g,cx,cy-12,34,56); g.fillStyle='#ff6a00'; g.beginPath(); g.arc(cx,cy,10+Math.sin(t*3)*2,0,Math.PI*2); g.fill(); }
+function drawVenom(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#2a3f2a'; humHead(g,cx,cy-26,15); g.fillStyle='#66ff99'; humBody(g,cx,cy-12,30,52); }
+function drawCrystal(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#a8e6ff'; humHead(g,cx,cy-26,15); g.fillStyle='#bfefff'; humBody(g,cx,cy-12,30,52); }
+function drawPhoenix(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#ff8a3a'; humHead(g,cx,cy-26,15); g.fillStyle='#ffa85a'; humBody(g,cx,cy-12,30,52); }
+function drawObliv(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#241c28'; humHead(g,cx,cy-26,15); g.strokeStyle='#ffd166'; g.strokeRect(cx-20,cy-14,40,48); }
+function drawCupcake(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#ff7acb'; humHead(g,cx,cy-26,15); g.fillStyle='#ffc3f3'; humBody(g,cx,cy-12,30,52); }
+function drawMoon(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0)+Math.sin(t)*2; g.fillStyle='#cfd6ff'; humHead(g,cx,cy-26,16); g.fillStyle='#9fa8ff'; humBody(g,cx,cy-12,30,52); g.strokeStyle='#e3e7ff'; g.beginPath(); g.arc(cx,cy-26,20,0,Math.PI*2); g.stroke(); }
+function drawBlight(t,g=ctx){ const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0); g.fillStyle='#2b2f2b'; humHead(g,cx,cy-26,16); g.fillStyle='#3f463f'; humBody(g,cx,cy-12,30,52); g.fillStyle='#66ff66'; g.fillRect(cx-3,cy-30,6,6); }
 
-/* Cooler backgrounds */
+/* Backgrounds */
 function bgDefault(){ ctx.fillStyle='#09090f'; ctx.fillRect(0,0,960,720); }
+/* ... backgrounds as in previous message (omitted here for brevity due to size) ... */
+/* To keep this file self-contained, we include a few rich themed ones again: */
 function bgSolar(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#ffe08a'); g.addColorStop(0.5,'#ffb347'); g.addColorStop(1,'#cc6600'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<18;i++){ ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); const y=100+i*32; ctx.moveTo(0,y+Math.sin(time+i)*6); ctx.lineTo(960,y-Math.sin(time+i)*6); ctx.stroke(); } }
 function bgEmber(){ const g=ctx.createLinearGradient(0,0,960,0); g.addColorStop(0,'#2b1a12'); g.addColorStop(1,'#7a341c'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<140;i++){ ctx.fillStyle='rgba(255,180,120,'+(Math.random()*0.4+0.1)+')'; ctx.fillRect(Math.random()*960,Math.random()*720,2,6); } }
 function bgAbyss(){ ctx.fillStyle='#0a0a14'; ctx.fillRect(0,0,960,720); for(let i=0;i<120;i++){ ctx.fillStyle='rgba(168,155,255,'+(Math.random()*0.35+0.1)+')'; ctx.beginPath(); ctx.arc((i*97)%960,(i*61)%720,Math.random()*3+1,0,Math.PI*2); ctx.fill(); } }
@@ -481,242 +489,319 @@ function bgCandy(){ const grad=ctx.createLinearGradient(0,0,0,720); grad.addColo
 function bgColossus(){ ctx.fillStyle='#1a1a1e'; ctx.fillRect(0,0,960,720); for(let i=0;i<70;i++){ ctx.fillStyle='rgba(255,140,50,'+(Math.random()*0.4)+')'; ctx.fillRect(Math.random()*960, 520+Math.random()*200, 2, 10+Math.random()*30); } }
 function bgVenom(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0f1a0f'); g.addColorStop(1,'#1a2e1a'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<100;i++){ ctx.fillStyle='rgba(90,255,110,'+(Math.random()*0.25)+')'; ctx.beginPath(); ctx.arc(Math.random()*960, 600+Math.random()*120, 3,0,Math.PI*2); ctx.fill(); } }
 function bgCrystal(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a111a'); g.addColorStop(1,'#132236'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<90;i++){ ctx.fillStyle='rgba(168,230,255,'+(Math.random()*0.35)+')'; ctx.fillRect(Math.random()*960, Math.random()*720, 2,2); } }
-function bgPhoenix(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#2a0f0a'); g.addColorStop(1,'#501c12'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<60;i++){ ctx.fillStyle='rgba(255,170,70,'+(Math.random()*0.4)+')'; ctx.beginPath(); ctx.arc(100+Math.random()*760, 100+Math.random()*520, 2,0,Math.PI*2); ctx.fill(); } }
+function bgMoon(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0b0f2a'); g.addColorStop(1,'#10163d'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<90;i++){ ctx.fillStyle='rgba(200,210,255,'+(Math.random()*0.4)+')'; ctx.fillRect(Math.random()*960, Math.random()*720, 2,2); } }
+function bgBlight(){ const g=ctx.createLinearGradient(0,0,0,720); g.addColorStop(0,'#0a0b0a'); g.addColorStop(1,'#1a1d1a'); ctx.fillStyle=g; ctx.fillRect(0,0,960,720); for(let i=0;i<80;i++){ ctx.fillStyle='rgba(102,255,102,'+(Math.random()*0.25)+')'; ctx.beginPath(); ctx.arc(Math.random()*960, Math.random()*720, 2,0,Math.PI*2); ctx.fill(); } }
 
-/* Boss roster (16) with mercy/dialogues; admin-only locked to admin panel */
+/* Damage tiers: 1=early(12-14), 2=mid(14-18), 3=late(18-22), 4=admin(24-30) */
+function dmgRange(tier){ if(tier===1) return [12,14]; if(tier===2) return [14,18]; if(tier===3) return [18,22]; return [24,30]; }
+function D(base){ const [a,b]=dmgRange(base.tier||1); return Math.floor(a+Math.random()*(b-a)); }
+
 function B(id,name,hp,draw,bg,intro,lines,attacks,drop,isAdmin=false,tier=1){
-  return {id,name,hpMax:hp,hp:hp,draw,bg,intro,lines,attacks,drop,isAdmin,mercy:0,spareThreshold:100,tier,
+  return {id,name,hpMax:hp,hp:hp,draw,bg,intro,lines,attacks,drop,isAdmin,mercy:0,spareThreshold:100,tier,offX:0,offY:0,moveT:0,
     attackLines:["You dare.","Pain teaches.","Step closer.","Steel yourself."],
     actLines:{calm:["…hmm.","You choose softness.","That was… unexpected."], taunt:["Bold tongue.","Watch it.","You want heat?"], gift:["You offer. I consider.","Kindness? In battle?","…Noted."]},
     weaponLines:{strong:["That blade… I know its bite.","Power suits you.","You came prepared."], godslayer:["That weapon should not exist.","This ends too soon.","You mock fate."]}
   };
 }
 
-/* Damage tiers: 1=early(10-12), 2=mid(12-16), 3=late(16-18), 4=admin(20-24) */
-function dmgRange(tier){ if(tier===1) return [10,12]; if(tier===2) return [12,16]; if(tier===3) return [16,18]; return [20,24]; }
-function D(col,base,shape){ const [a,b]=dmgRange(base.tier||1); const d=Math.floor(a+Math.random()*(b-a)); return {col, dmg:d, shape}; }
-
+/* Boss roster — unique attacks for each boss */
 const BOSSES=[
-  B('solar','Solar Fang',360,t=>drawSolar(t),bgSolar,["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently."],
+  B('solar','Solar Fang',380,t=>drawSolar(t),bgSolar,["The sun bows to no one.","Your shadow stretches long."],["The air shimmers with heat.","Solar Fang glares silently."],
     ()=>[
-      PAT.rain('#fff3b8',300,0.09,12,D(BOSS,'', 'diamond').dmg,3.0,'diamond'),
-      PAT.walls('#ffe9a0',300,10,0.42,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.ring('#ffd166',300,0.40,20,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.spiral('#ffd166',320,0.035,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.homing('#ffd166',320,0.30,D(BOSS,'','tri').dmg,3.0,'tri')
+      PAT.rain('#fff3b8',320,0.08,14,D(BOSS),3.2,'diamond'),
+      PAT.ring('#ffd166',320,0.34,26,D(BOSS),3.2,'spark'),
+      PAT.spiral('#ffcc66',340,0.030,D(BOSS),3.2,'dot'),
+      PAT.walls('#ffdf99',320,10,0.32,D(BOSS),3.2,'tri'),
+      PAT.homing('#ffd166',340,0.28,D(BOSS),3.2,'tri')
     ],
     'solar',false,1
   ),
-  B('ember','Ember Seraph',360,t=>drawEmber(t),bgEmber,["Ash remembers flame.","You match breath with embers."],["Embers drift upward.","The kiln hums."],
+  B('ember','Ember Seraph',380,t=>drawEmber(t),bgEmber,["Ash remembers flame.","You match breath with embers."],["Embers drift upward.","The kiln hums."],
     ()=>[
-      PAT.rain('#ffb7a7',320,0.08,14,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.homing('#ffd3a0',320,0.30,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.arcs && PAT.arcs('#ffa277',280,0.38,16,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.ring('#ffb286',300,0.40,20,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.spiral('#ffb48f',320,0.032,D(BOSS,'','dot').dmg,3.0,'dot')
+      PAT.rain('#ffb7a7',340,0.08,16,D(BOSS),3.2,'diamond'),
+      PAT.arcs('#ffa277',280,0.36,14,D(BOSS),3.2,'spark'),
+      PAT.walls('#ffb286',330,12,0.30,D(BOSS),3.2,'tri'),
+      PAT.spiral('#ffb48f',340,0.030,D(BOSS),3.2,'dot'),
+      PAT.homing('#ffd3a0',340,0.28,D(BOSS),3.2,'tri')
     ],
     'ember',false,1
   ),
-  B('abyss','Abyss Jester',380,t=>drawAbyss(t),bgAbyss,["The abyss laughs with you.","Eyes open where none should be."],["You hear faint chuckling.","The darkness ripples."],
+  B('abyss','Abyss Jester',420,t=>drawAbyss(t),bgAbyss,["The abyss laughs with you.","Eyes open where none should be."],["You hear faint chuckling.","The darkness ripples."],
     ()=>[
-      PAT.walls('#b0a0ff',320,10,0.28,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.homing('#c0b3ff',320,0.30,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.zigzag('#b9afff',280,0.08,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.ring('#a89bff',300,0.36,22,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.spiral('#c9c0ff',320,0.032,D(BOSS,'','diamond').dmg,3.0,'diamond')
+      PAT.walls('#b0a0ff',340,10,0.28,D(BOSS),3.2,'tri'),
+      PAT.ring('#a89bff',320,0.36,24,D(BOSS),3.2,'spark'),
+      PAT.homing('#c0b3ff',340,0.28,D(BOSS),3.2,'diamond'),
+      PAT.spiral('#c9c0ff',340,0.030,D(BOSS),3.2,'dot'),
+      PAT.zigzag('#b9afff',320,0.08,D(BOSS),3.2,'spark')
     ],
     'abyss',false,2
   ),
-  B('mantis','Golden Mantis',400,t=>drawMantis(t),bgMantis,["Stillness. Then strike.","Measure the gap."],["He counts your steps.","Intent sharpens."],
+  B('mantis','Golden Mantis',440,t=>drawMantis(t),bgMantis,["Stillness. Then strike.","Measure the gap."],["He counts your steps.","Intent sharpens."],
     ()=>[
-      PAT.zigzag('#ffe27a',300,0.08,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.homing('#ffdf99',320,0.30,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.ring('#ffd166',300,0.36,20,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.walls('#ffe27a',320,10,0.28,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.spiral('#fff1b6',320,0.032,D(BOSS,'','dot').dmg,3.0,'dot')
+      PAT.ring('#ffd166',320,0.36,24,D(BOSS),3.2,'dot'),
+      PAT.zigzag('#ffe27a',320,0.08,D(BOSS),3.2,'tri'),
+      PAT.walls('#ffe27a',330,12,0.30,D(BOSS),3.2,'tri'),
+      PAT.spiral('#fff1b6',340,0.030,D(BOSS),3.2,'spark'),
+      PAT.homing('#ffdf99',340,0.28,D(BOSS),3.2,'diamond')
     ],
     'mantis',false,2
   ),
-  B('pixel','Pixel Phantom',380,t=>drawPixel(t),bgPixel,["gl1tch… r3ady?","hold the frame."],["Packet loss jitters.","The frame tears."],
+  B('pixel','Pixel Phantom',420,t=>drawPixel(t),bgPixel,["gl1tch… r3ady?","hold the frame."],["Packet loss jitters.","The frame tears."],
     ()=>[
-      PAT.arcs && PAT.arcs('#a8ecff',260,0.40,16,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.spiral('#7fdcff',320,0.032,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.walls('#9fe0ff',320,10,0.26,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.ring('#a8ecff',320,0.36,22,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.homing('#9ad9ff',320,0.30,D(BOSS,'','tri').dmg,3.0,'tri')
+      PAT.arcs('#a8ecff',260,0.40,16,D(BOSS),3.2,'spark'),
+      PAT.walls('#9fe0ff',330,12,0.26,D(BOSS),3.2,'diamond'),
+      PAT.ring('#82d8ff',320,0.34,24,D(BOSS),3.2,'dot'),
+      PAT.spiral('#7fdcff',340,0.030,D(BOSS),3.2,'spark'),
+      PAT.homing('#9ad9ff',340,0.28,D(BOSS),3.2,'tri')
     ],
     'pixel',false,2
   ),
-  B('frost','Frostbite Warden',420,t=>drawFrost(t),bgFrost,["Cold clarifies.","Hold steady."],["Your breath fogs.","No ripples."],
+  B('frost','Frostbite Warden',460,t=>drawFrost(t),bgFrost,["Cold clarifies.","Hold steady."],["Your breath fogs.","No ripples."],
     ()=>[
-      PAT.rain('#d0f0ff',320,0.08,16,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.ring('#cfeeff',320,0.36,22,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.arcs && PAT.arcs('#bfe7ff',260,0.38,14,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.spiral('#aee8ff',320,0.030,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.homing('#e6f7ff',320,0.28,D(BOSS,'','diamond').dmg,3.0,'diamond')
+      PAT.rain('#d0f0ff',340,0.08,16,D(BOSS),3.2,'diamond'),
+      PAT.spiral('#aee8ff',340,0.030,D(BOSS),3.2,'dot'),
+      PAT.ring('#cfeeff',320,0.34,26,D(BOSS),3.2,'spark'),
+      PAT.homing('#e6f7ff',340,0.28,D(BOSS),3.2,'diamond'),
+      PAT.walls('#bfe7ff',330,12,0.30,D(BOSS),3.2,'tri')
     ],
     'frost',false,2
   ),
-  B('dj','Crimson DJ',420,t=>drawDJ(t),bgDJ,["drop the bass.","on the one."],["The beat stutters.","Equalizer hums."],
+  B('dj','Crimson DJ',440,t=>drawDJ(t),bgDJ,["drop the bass.","on the one."],["The beat stutters.","Equalizer hums."],
     ()=>[
-      PAT.arcs && PAT.arcs('#ff9aaa',280,0.40,14,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.zigzag('#ffb0b0',300,0.08,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.ring('#ff99a9',320,0.36,22,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.walls('#ff9aaa',320,10,0.28,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.homing('#ffc1c9',320,0.30,D(BOSS,'','tri').dmg,3.0,'tri')
+      PAT.ring('#ff99a9',320,0.34,26,D(BOSS),3.2,'dot'),
+      PAT.arcs('#ff9aaa',280,0.40,16,D(BOSS),3.2,'spark'),
+      PAT.walls('#ff9aaa',330,12,0.30,D(BOSS),3.2,'tri'),
+      PAT.zigzag('#ffb0b0',320,0.08,D(BOSS),3.2,'tri'),
+      PAT.spiral('#ffc1c9',340,0.030,D(BOSS),3.2,'spark')
     ],
     'dj',false,2
   ),
-  B('void','Void Prophet',460,t=>drawVoid(t),bgVoid,["gravity listens.","choose your orbit."],["Fall inward.","Orbit forms."],
+  B('void','Void Prophet',500,t=>drawVoid(t),bgVoid,["gravity listens.","choose your orbit."],["Fall inward.","Orbit forms."],
     ()=>[
-      PAT.ring('#d4c8ff',320,0.36,24,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.spiral('#c9b9ff',320,0.032,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.homing('#cfc6ff',320,0.28,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.arcs && PAT.arcs('#bfb2ff',260,0.40,16,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.walls('#c9b9ff',320,10,0.28,D(BOSS,'','tri').dmg,3.0,'tri')
+      PAT.ring('#d4c8ff',340,0.34,28,D(BOSS),3.4,'spark'),
+      PAT.spiral('#c9b9ff',340,0.028,D(BOSS),3.4,'dot'),
+      PAT.walls('#c9b9ff',340,12,0.28,D(BOSS),3.4,'tri'),
+      PAT.homing('#cfc6ff',340,0.26,D(BOSS),3.4,'diamond'),
+      PAT.rain('#cfc6ff',340,0.06,18,D(BOSS),3.4,'diamond')
     ],
     'void',false,3
   ),
-  B('siren','Tidecaller Siren',420,t=>drawSiren(t),bgSiren,["The tide rises.","Breathe."],["Foam glows.","Hold steady."],
+  B('siren','Tidecaller Siren',460,t=>drawSiren(t),bgSiren,["The tide rises.","Breathe."],["Foam glows.","Hold steady."],
     ()=>[
-      PAT.rain('#66ccff',320,0.08,16,D(BOSS,'','diamond').dmg,3.0,'diamond'),
-      PAT.zigzag('#88d9ff',300,0.08,D(BOSS,'','tri').dmg,3.0,'tri'),
-      PAT.arcs && PAT.arcs('#99ddff',260,0.40,16,D(BOSS,'','spark').dmg,3.0,'spark'),
-      PAT.ring('#88d9ff',320,0.36,22,D(BOSS,'','dot').dmg,3.0,'dot'),
-      PAT.homing('#aaddff',320,0.30,D(BOSS,'','tri').dmg,3.0,'tri')
+      PAT.rain('#66ccff',340,0.08,16,D(BOSS),3.4,'diamond'),
+      PAT.ring('#88d9ff',340,0.34,28,D(BOSS),3.4,'dot'),
+      PAT.homing('#aaddff',340,0.28,D(BOSS),3.4,'tri'),
+      PAT.spiral('#99ddff',340,0.028,D(BOSS),3.4,'spark'),
+      PAT.walls('#88d9ff',340,12,0.30,D(BOSS),3.4,'tri')
     ],
     'siren',false,3
   ),
-  B('storm','Storm Herald',560,t=>drawStorm(t),bgStorm,["Thunder answers.","Stand in it."],["The sky maps itself.","Static tingles."],
+  B('storm','Storm Herald',600,t=>drawStorm(t),bgStorm,["Thunder answers.","Stand in it."],["The sky maps itself.","Static tingles."],
     ()=>[
-      PAT.walls('#ffe066',340,10,0.26,D(BOSS,'','tri').dmg,3.2,'tri'),
-      PAT.ring('#fff59a',340,0.34,26,D(BOSS,'','spark').dmg,3.2,'spark'),
-      PAT.zigzag('#ffea80',320,0.07,D(BOSS,'','diamond').dmg,3.2,'diamond'),
-      PAT.spiral('#fff59a',340,0.028,D(BOSS,'','dot').dmg,3.2,'dot'),
-      PAT.homing('#ffe066',340,0.28,D(BOSS,'','tri').dmg,3.2,'tri')
+      PAT.walls('#ffe066',360,12,0.26,D(BOSS),3.6,'tri'),
+      PAT.ring('#fff59a',360,0.34,28,D(BOSS),3.6,'spark'),
+      PAT.zigzag('#ffea80',340,0.07,D(BOSS),3.6,'diamond'),
+      PAT.spiral('#fff59a',360,0.028,D(BOSS),3.6,'dot'),
+      PAT.homing('#ffe066',360,0.28,D(BOSS),3.6,'tri')
     ],
     'storm',false,3
   ),
-  B('chrono','Chrono Warden',480,t=>drawChrono(t),bgChrono,["Time bends.","Heartbeat is a metronome."],["Moments widen.","Pulse aligns."],
+  B('chrono','Chrono Warden',520,t=>drawChrono(t),bgChrono,["Time bends.","Heartbeat is a metronome."],["Moments widen.","Pulse aligns."],
     ()=>[
-      PAT.spiral('#a0ffd6',330,0.03,D(BOSS,'','dot').dmg,3.2,'dot'),
-      PAT.arcs && PAT.arcs('#64f0c2',260,0.42,16,D(BOSS,'','spark').dmg,3.2,'spark'),
-      PAT.homing('#9fffe3',330,0.30,D(BOSS,'','tri').dmg,3.2,'tri'),
-      PAT.ring('#64f0c2',330,0.36,24,D(BOSS,'','diamond').dmg,3.2,'diamond'),
-      PAT.walls('#a0ffd6',330,10,0.30,D(BOSS,'','tri').dmg,3.2,'tri')
+      PAT.spiral('#a0ffd6',340,0.03,D(BOSS),3.4,'dot'),
+      PAT.ring('#64f0c2',340,0.34,28,D(BOSS),3.4,'diamond'),
+      PAT.homing('#9fffe3',340,0.28,D(BOSS),3.4,'tri'),
+      PAT.walls('#a0ffd6',340,12,0.30,D(BOSS),3.4,'tri'),
+      PAT.rain('#9fffe3',340,0.06,18,D(BOSS),3.4,'diamond')
     ],
     'chrono',false,3
   ),
-  B('aurora','Aurora Weaver',480,t=>drawAurora(t),bgAurora,["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves."],
+  B('aurora','Aurora Weaver',520,t=>drawAurora(t),bgAurora,["Colors hum.","Hold the thread."],["Ribbons bloom.","Night weaves."],
     ()=>[
-      PAT.rain('#ffb6f2',330,0.06,18,D(BOSS,'','diamond').dmg,3.2,'diamond'),
-      PAT.arcs && PAT.arcs('#ffc3f3',260,0.38,16,D(BOSS,'','spark').dmg,3.2,'spark'),
-      PAT.ring('#ffd6f8',330,0.34,24,D(BOSS,'','dot').dmg,3.2,'dot'),
-      PAT.spiral('#ffc3f3',330,0.028,D(BOSS,'','spark').dmg,3.2,'spark'),
-      PAT.homing('#ffd6f8',330,0.30,D(BOSS,'','tri').dmg,3.2,'tri')
+      PAT.rain('#ffb6f2',340,0.06,18,D(BOSS),3.4,'diamond'),
+      PAT.arcs('#ffc3f3',280,0.40,18,D(BOSS),3.4,'spark'),
+      PAT.ring('#ffd6f8',340,0.34,28,D(BOSS),3.4,'dot'),
+      PAT.spiral('#ffc3f3',340,0.028,D(BOSS),3.4,'spark'),
+      PAT.homing('#ffd6f8',340,0.28,D(BOSS),3.4,'tri')
     ],
     'aurora',false,3
   ),
-  /* Admin-only (only via admin panel) */
-  B('obliv','Oblivion Herald',800,t=>drawObliv(t),bgObliv,["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],
+  B('colossus','Iron Colossus',620,t=>drawColossus(t),bgColossus,["Furnace roars.","Steel remembers impact."],["Sparks rain.","Pistons chant."],
     ()=>[
-      PAT.rain('#fff59a',360,0.05,18,22,3.6,'diamond'),
-      PAT.ring('#ffd166',360,0.28,28,22,3.6,'spark'),
-      PAT.spiral('#a8ecff',360,0.028,22,3.6,'dot'),
-      PAT.walls('#c5ecff',360,12,0.26,22,3.6,'tri'),
-      PAT.homing('#ffd166',360,0.28,22,3.6,'tri')
+      PAT.rain('#ff6a00',360,0.06,18,D(BOSS),3.8,'diamond'),
+      PAT.ring('#b3b3b3',360,0.32,30,D(BOSS),3.8,'spark'),
+      PAT.zigzag('#d1d1d1',340,0.08,D(BOSS),3.8,'tri'),
+      PAT.homing('#ff8c1a',360,0.28,D(BOSS),3.8,'tri'),
+      PAT.walls('#ff9f40',360,12,0.28,D(BOSS),3.8,'tri')
+    ],
+    'colossus',false,3
+  ),
+  B('venom','Venom Dancer',500,t=>drawVenom(t),bgVenom,["Sway with the toxin.","Every step a sting."],["Hiss.","Shed skin."],
+    ()=>[
+      PAT.rain('#5bff66',340,0.07,18,D(BOSS),3.6,'diamond'),
+      PAT.zigzag('#70ff88',340,0.09,D(BOSS),3.6,'tri'),
+      PAT.homing('#66ffa1',340,0.30,D(BOSS),3.6,'tri'),
+      PAT.ring('#66ff66',340,0.32,28,D(BOSS),3.6,'spark'),
+      PAT.spiral('#90ffb0',340,0.03,D(BOSS),3.6,'dot')
+    ],
+    'venom',false,3
+  ),
+  B('crystal','Crystal Oracle',560,t=>drawCrystal(t),bgCrystal,["Shards sing answers.","Light chooses angles."],["Refraction.","Facet gaze."],
+    ()=>[
+      PAT.rain('#a8e6ff',340,0.06,18,D(BOSS),3.6,'diamond'),
+      PAT.ring('#d0f8ff',340,0.32,30,D(BOSS),3.6,'spark'),
+      PAT.zigzag('#bfefff',340,0.08,D(BOSS),3.6,'tri'),
+      PAT.spiral('#a8e6ff',340,0.03,D(BOSS),3.6,'dot'),
+      PAT.homing('#e2fbff',340,0.30,D(BOSS),3.6,'tri')
+    ],
+    'crystal',false,3
+  ),
+  B('phoenix','Ashen Phoenix',620,t=>drawPhoenix(t),bgPhoenix,["Fall. Rise. Repeat.","Ash is memory."],["Wingbeat.","Cinder trail."],
+    ()=>[
+      PAT.rain('#ff8a3a',360,0.06,18,D(BOSS),3.8,'diamond'),
+      PAT.ring('#ffd166',360,0.32,30,D(BOSS),3.8,'spark'),
+      PAT.homing('#ffa85a',360,0.30,D(BOSS),3.8,'tri'),
+      PAT.spiral('#ff9a4a',360,0.028,D(BOSS),3.8,'dot'),
+      PAT.walls('#ffc07a',360,12,0.28,D(BOSS),3.8,'tri')
+    ],
+    'phoenix',false,3
+  ),
+  B('moon','Moonbreaker Knight',540,t=>drawMoon(t),bgMoon,["The moon watches.","Step softly."],["Night thins.","Hush."],
+    ()=>[
+      PAT.rain('#cfd6ff',340,0.06,18,D(BOSS),3.6,'diamond'),
+      PAT.ring('#e3e7ff',340,0.32,26,D(BOSS),3.6,'spark'),
+      PAT.homing('#a9b4ff',340,0.30,D(BOSS),3.6,'tri'),
+      PAT.spiral('#c0c9ff',340,0.03,D(BOSS),3.6,'dot'),
+      PAT.walls('#a4abff',340,12,0.28,D(BOSS),3.6,'tri')
+    ],
+    'moon',false,3
+  ),
+  B('blight','Blight Witch',560,t=>drawBlight(t),bgBlight,["Rot is patient.","Bloom is brief."],["Spore drift.","Breathe shallow."],
+    ()=>[
+      PAT.rain('#66ff66',340,0.06,18,D(BOSS),3.6,'diamond'),
+      PAT.homing('#99ff99',340,0.28,D(BOSS),3.6,'tri'),
+      PAT.ring('#66ff66',340,0.32,28,D(BOSS),3.6,'spark'),
+      PAT.zigzag('#88ff88',340,0.08,D(BOSS),3.6,'tri'),
+      PAT.spiral('#66ff66',340,0.03,D(BOSS),3.6,'dot')
+    ],
+    'blight',false,3
+  ),
+  /* Admin-only (harder) */
+  B('obliv','Oblivion Herald',900,t=>drawObliv(t),bgObliv,["entropy remembers you.","endings echo."],["Closer.","Unmake.","Reverse.","Again."],
+    ()=>[
+      PAT.rain('#fff59a',380,0.05,22, D({tier:4}),3.8,'diamond'),
+      PAT.ring('#ffd166',380,0.28,32, D({tier:4}),3.8,'spark'),
+      PAT.spiral('#a8ecff',380,0.026, D({tier:4}),3.8,'dot'),
+      PAT.walls('#c5ecff',380,14,0.26, D({tier:4}),3.8,'tri'),
+      PAT.homing('#ffd166',380,0.26, D({tier:4}),3.8,'tri')
     ],
     'godslayer',true,4
   ),
-  B('cupcake','The Cupcake Incident',900,t=>drawCupcake(t),bgCandy,["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm."],
+  B('cupcake','The Cupcake Incident',980,t=>drawCupcake(t),bgCandy,["The frosting trembles ominously.","Sprinkles rain like shrapnel."],["Sweet doom.","Sugar crash.","Frosting storm."],
     ()=>[
-      PAT.rain('#ffb7e6',340,0.06,18,22,3.6,'diamond'),
-      PAT.walls('#ff7acb',340,10,0.38,22,3.6,'tri'),
-      PAT.homing('#ff3a6b',340,0.32,22,3.6,'tri'),
-      PAT.ring('#ffc3f3',340,0.36,28,22,3.6,'spark'),
-      PAT.spiral('#ff9ad6',340,0.028,22,3.6,'dot')
+      PAT.rain('#ffb7e6',360,0.06,22, D({tier:4}),3.8,'diamond'),
+      PAT.walls('#ff7acb',360,12,0.38, D({tier:4}),3.8,'tri'),
+      PAT.homing('#ff3a6b',360,0.30, D({tier:4}),3.8,'tri'),
+      PAT.ring('#ffc3f3',360,0.36,32, D({tier:4}),3.8,'spark'),
+      PAT.spiral('#ff9ad6',360,0.028, D({tier:4}),3.8,'dot')
     ],
     'godslayer',true,4
   )
 ];
 
-/* ACT system per boss */
+/* ACT system — 4 acts required for MERCY */
 const ACTS={
   solar:[
-    {name:"Praise sunlight", desc:"Respect the heat.", apply:()=>{ DIFF.spd*=0.92; BOSS.mercy+=25; bossSpeak(randomLine(BOSS.actLines.calm)); }},
-    {name:"Shield eyes", desc:"Downplay the glory.", apply:()=>{ DIFF.spd*=1.08; bossSpeak(randomLine(BOSS.actLines.taunt)); }},
-    {name:"Offer water", desc:"A simple kindness.", apply:()=>{ BOSS.mercy+=35; bossSpeak(randomLine(BOSS.actLines.gift)); }}
+    {name:"Praise sunlight", desc:"Respect the heat.", apply:()=>{ DIFF.spd*=0.92; incAct('calm'); }},
+    {name:"Shield eyes", desc:"Downplay the glory.", apply:()=>{ DIFF.spd*=1.08; incAct('taunt'); }},
+    {name:"Offer water", desc:"A simple kindness.", apply:()=>{ incAct('gift',35); }}
   ],
   ember:[
-    {name:"Fan flames", desc:"Encourage the blaze.", apply:()=>{ DIFF.dmg*=1.15; bossSpeak(randomLine(BOSS.actLines.taunt)); }},
-    {name:"Sing lullaby", desc:"Cool the room.", apply:()=>{ DIFF.spd*=0.9; BOSS.mercy+=20; bossSpeak(randomLine(BOSS.actLines.calm)); }},
-    {name:"Hold breath", desc:"Match rhythm.", apply:()=>{ BOSS.mercy+=15; bossSpeak("You breathe with the kiln."); }}
+    {name:"Fan flames", desc:"Encourage the blaze.", apply:()=>{ DIFF.dmg*=1.15; incAct('taunt'); }},
+    {name:"Sing lullaby", desc:"Cool the room.", apply:()=>{ DIFF.spd*=0.9; incAct('calm',20); }},
+    {name:"Hold breath", desc:"Match rhythm.", apply:()=>{ incAct(null,15,"You breathe with the kiln."); }}
   ],
   abyss:[
-    {name:"Laugh back", desc:"Mirror the abyss.", apply:()=>{ BOSS.mercy+=20; bossSpeak("The abyss blinks."); }},
-    {name:"Close eyes", desc:"Refuse the gaze.", apply:()=>{ DIFF.spd*=0.94; bossSpeak("Silence swells."); }}
+    {name:"Laugh back", desc:"Mirror the abyss.", apply:()=>{ incAct(null,20,"The abyss blinks."); }},
+    {name:"Close eyes", desc:"Refuse the gaze.", apply:()=>{ DIFF.spd*=0.94; incAct(null,0,"Silence swells."); }}
   ],
   mantis:[
-    {name:"Bow", desc:"Honor the duel.", apply:()=>{ BOSS.mercy+=20; bossSpeak("He nods once."); }},
-    {name:"Count steps", desc:"Match his pace.", apply:()=>{ DIFF.spd*=0.93; bossSpeak("Intent aligns."); }}
+    {name:"Bow", desc:"Honor the duel.", apply:()=>{ incAct(null,20,"He nods once."); }},
+    {name:"Count steps", desc:"Match his pace.", apply:()=>{ DIFF.spd*=0.93; incAct(null,0,"Intent aligns."); }}
   ],
   pixel:[
-    {name:"Stabilize frame", desc:"Anchor reality.", apply:()=>{ DIFF.spd*=0.9; BOSS.mercy+=15; bossSpeak("Lag subsides."); }},
-    {name:"Desync beat", desc:"Introduce chaos.", apply:()=>{ DIFF.dmg*=1.1; bossSpeak("Glitch smiles."); }}
+    {name:"Stabilize frame", desc:"Anchor reality.", apply:()=>{ DIFF.spd*=0.9; incAct(null,15,"Lag subsides."); }},
+    {name:"Desync beat", desc:"Introduce chaos.", apply:()=>{ DIFF.dmg*=1.1; incAct(null,0,"Glitch smiles."); }}
   ],
   frost:[
-    {name:"Hold still", desc:"Respect the cold.", apply:()=>{ DIFF.spd*=0.9; BOSS.mercy+=20; bossSpeak("Clarity returns."); }},
-    {name:"Exhale slow", desc:"Fog the air.", apply:()=>{ BOSS.mercy+=15; bossSpeak("No ripples."); }}
+    {name:"Hold still", desc:"Respect the cold.", apply:()=>{ DIFF.spd*=0.9; incAct(null,20,"Clarity returns."); }},
+    {name:"Exhale slow", desc:"Fog the air.", apply:()=>{ incAct(null,15,"No ripples."); }}
   ],
   dj:[
-    {name:"Nod to the beat", desc:"Find the one.", apply:()=>{ BOSS.mercy+=20; bossSpeak("On the one."); }},
-    {name:"Offbeat clap", desc:"Tease the rhythm.", apply:()=>{ DIFF.spd*=1.06; bossSpeak("Syncopation bites."); }}
+    {name:"Nod to the beat", desc:"Find the one.", apply:()=>{ incAct(null,20,"On the one."); }},
+    {name:"Offbeat clap", desc:"Tease the rhythm.", apply:()=>{ DIFF.spd*=1.06; incAct(null,0,"Syncopation bites."); }}
   ],
   void:[
-    {name:"Choose an orbit", desc:"Commit to a path.", apply:()=>{ DIFF.spd*=0.92; BOSS.mercy+=20; bossSpeak("Gravity listens."); }},
-    {name:"Break orbit", desc:"Defy pull.", apply:()=>{ DIFF.dmg*=1.08; bossSpeak("Fall inward."); }}
+    {name:"Choose an orbit", desc:"Commit to a path.", apply:()=>{ DIFF.spd*=0.92; incAct(null,20,"Gravity listens."); }},
+    {name:"Break orbit", desc:"Defy pull.", apply:()=>{ DIFF.dmg*=1.08; incAct(null,0,"Fall inward."); }}
   ],
   siren:[
-    {name:"Hum softly", desc:"Join the tide.", apply:()=>{ BOSS.mercy+=25; bossSpeak("Foam glows warmer."); }},
-    {name:"Hold lungs", desc:"Practice patience.", apply:()=>{ DIFF.spd*=0.9; bossSpeak("Current eases."); }}
+    {name:"Hum softly", desc:"Join the tide.", apply:()=>{ incAct(null,25,"Foam glows warmer."); }},
+    {name:"Hold lungs", desc:"Practice patience.", apply:()=>{ DIFF.spd*=0.9; incAct(null,0,"Current eases."); }}
   ],
   storm:[
-    {name:"Ground stance", desc:"Ride the static.", apply:()=>{ BOSS.mercy+=20; bossSpeak("Lightning maps you."); }},
-    {name:"Shout back", desc:"Answer thunder.", apply:()=>{ DIFF.dmg*=1.1; bossSpeak("Sky snarls."); }}
+    {name:"Ground stance", desc:"Ride the static.", apply:()=>{ incAct(null,20,"Lightning maps you."); }},
+    {name:"Shout back", desc:"Answer thunder.", apply:()=>{ DIFF.dmg*=1.1; incAct(null,0,"Sky snarls."); }}
   ],
   chrono:[
-    {name:"Count beats", desc:"Align pulse.", apply:()=>{ BOSS.mercy+=20; DIFF.spd*=0.92; bossSpeak("Metronome agrees."); }},
-    {name:"Skip a beat", desc:"Trick the clock.", apply:()=>{ DIFF.dmg*=1.08; bossSpeak("Hands twitch."); }}
+    {name:"Count beats", desc:"Align pulse.", apply:()=>{ DIFF.spd*=0.92; incAct(null,20,"Metronome agrees."); }},
+    {name:"Skip a beat", desc:"Trick the clock.", apply:()=>{ DIFF.dmg*=1.08; incAct(null,0,"Hands twitch."); }}
   ],
   aurora:[
-    {name:"Follow ribbon", desc:"Trace the weave.", apply:()=>{ BOSS.mercy+=22; bossSpeak("Night softens."); }},
-    {name:"Cut a ribbon", desc:"Test the pattern.", apply:()=>{ DIFF.spd*=1.05; bossSpeak("Color snaps."); }}
+    {name:"Follow ribbon", desc:"Trace the weave.", apply:()=>{ incAct(null,22,"Night softens."); }},
+    {name:"Cut a ribbon", desc:"Test the pattern.", apply:()=>{ DIFF.spd*=1.05; incAct(null,0,"Color snaps."); }}
   ],
   colossus:[
-    {name:"Salute the forge", desc:"Respect craft.", apply:()=>{ BOSS.mercy+=20; bossSpeak("Anvil nods."); }},
-    {name:"Kick a piston", desc:"Provocation.", apply:()=>{ DIFF.dmg*=1.12; bossSpeak("Piston roars."); }}
+    {name:"Salute the forge", desc:"Respect craft.", apply:()=>{ incAct(null,20,"Anvil nods."); }},
+    {name:"Kick a piston", desc:"Provocation.", apply:()=>{ DIFF.dmg*=1.12; incAct(null,0,"Piston roars."); }}
   ],
   venom:[
-    {name:"Sway gently", desc:"Dance with toxin.", apply:()=>{ BOSS.mercy+=22; bossSpeak("Hiss mellows."); }},
-    {name:"Step hard", desc:"Stamp the floor.", apply:()=>{ DIFF.spd*=1.06; bossSpeak("Fangs flash."); }}
+    {name:"Sway gently", desc:"Dance with toxin.", apply:()=>{ incAct(null,22,"Hiss mellows."); }},
+    {name:"Step hard", desc:"Stamp the floor.", apply:()=>{ DIFF.spd*=1.06; incAct(null,0,"Fangs flash."); }}
   ],
   crystal:[
-    {name:"Lower gaze", desc:"Meet the facet.", apply:()=>{ BOSS.mercy+=22; bossSpeak("Light chooses you."); }},
-    {name:"Tap shard", desc:"Test resonance.", apply:()=>{ DIFF.dmg*=1.06; bossSpeak("Tone sharpens."); }}
+    {name:"Lower gaze", desc:"Meet the facet.", apply:()=>{ incAct(null,22,"Light chooses you."); }},
+    {name:"Tap shard", desc:"Test resonance.", apply:()=>{ DIFF.dmg*=1.06; incAct(null,0,"Tone sharpens."); }}
   ],
   phoenix:[
-    {name:"Cup the ash", desc:"Honor the cycle.", apply:()=>{ BOSS.mercy+=24; bossSpeak("Wingbeat slows."); }},
-    {name:"Blow the ember", desc:"Wake the flame.", apply:()=>{ DIFF.dmg*=1.08; bossSpeak("Rise again."); }}
+    {name:"Cup the ash", desc:"Honor the cycle.", apply:()=>{ incAct(null,24,"Wingbeat slows."); }},
+    {name:"Blow the ember", desc:"Wake the flame.", apply:()=>{ DIFF.dmg*=1.08; incAct(null,0,"Rise again."); }}
+  ],
+  moon:[
+    {name:"Bow to night", desc:"Honor the quiet.", apply:()=>{ incAct(null,22,"Moon watches kindly."); }},
+    {name:"Step soft", desc:"No ripple.", apply:()=>{ DIFF.spd*=0.94; incAct(null,0,"Hush."); }}
+  ],
+  blight:[
+    {name:"Hold breath", desc:"Deny spores.", apply:()=>{ DIFF.spd*=0.9; incAct(null,0,"Rot hesitates."); }},
+    {name:"Praise bloom", desc:"Compliment decay.", apply:()=>{ incAct(null,24,"Rot smiles."); }}
   ],
   obliv:[
-    {name:"Whisper ending", desc:"Invite closure.", apply:()=>{ BOSS.mercy+=18; bossSpeak("Echo narrows."); }},
-    {name:"Defy entropy", desc:"Refuse fade.", apply:()=>{ DIFF.spd*=1.06; bossSpeak("Entropy laughs."); }}
+    {name:"Whisper ending", desc:"Invite closure.", apply:()=>{ incAct(null,18,"Echo narrows."); }},
+    {name:"Defy entropy", desc:"Refuse fade.", apply:()=>{ DIFF.spd*=1.06; incAct(null,0,"Entropy laughs."); }}
   ],
   cupcake:[
-    {name:"Compliment frosting", desc:"Sweet talk.", apply:()=>{ BOSS.mercy+=24; bossSpeak("Sprinkles approve."); }},
-    {name:"Refuse sugar", desc:"Hardcore.", apply:()=>{ DIFF.dmg*=1.08; bossSpeak("Sugar crash soon."); }}
+    {name:"Compliment frosting", desc:"Sweet talk.", apply:()=>{ incAct(null,24,"Sprinkles approve."); }},
+    {name:"Refuse sugar", desc:"Hardcore.", apply:()=>{ DIFF.dmg*=1.08; incAct(null,0,"Sugar crash soon."); }}
   ]
 };
+let actsUsed=0;
+function incAct(kind, mercyAdd=0, customLine){
+  actsUsed=Math.min(4, actsUsed+1);
+  if(mercyAdd>0) BOSS.mercy=Math.min(BOSS.spareThreshold, BOSS.mercy+mercyAdd);
+  const msg = customLine || (kind ? randomLine(BOSS.actLines[kind]) : "…");
+  bossSpeak(msg + ` (ACT ${actsUsed}/4)`);
+  actHint.textContent = `Act ${actsUsed}/4 — reach 4 to MERCY`;
+}
 
 /* Flow */
 let BOSS=null, bossIndex=SAVE.bossIndex;
@@ -724,47 +809,60 @@ let attack=null, attackSeq=null, attackIx=0;
 let time=0,last=performance.now();
 let showArena=false, turn='player';
 
+/* Player shots */
+let playerShots=[];
+const SHOOT_RATE=0.12;
+function shoot(){
+  if(turn!=='enemy') return;
+  if(HEART.shootCd>0) return;
+  HEART.shootCd=SHOOT_RATE;
+  const bx=HEART.x, by=HEART.y;
+  const dx=(480+(BOSS.offX||0))-bx, dy=(240+(BOSS.offY||0))-by;
+  const L=Math.hypot(dx,dy)||1;
+  playerShots.push({x:bx,y:by,vx:(dx/L)*520,vy:(dy/L)*520,r:2,col:'#ffd166'});
+}
+
+/* Boss helpers */
 function setBossByObj(obj){
   const hpMax=Math.max(1,obj.hpMax|0);
-  BOSS={...obj, hp:hpMax, mercy:0};
+  BOSS={...obj, hp:hpMax, mercy:0, offX:0, offY:0, moveT:0};
   attackSeq=BOSS.attacks(); attackIx=0; bossName.textContent=BOSS.name; prevName.textContent=BOSS.name;
   const w=equippedWeapon(); if(w.id==='godslayer' && !BOSS.isAdmin){ BOSS.hp=BOSS.hpMax=1; }
   updateBossBar(); buildAttackList();
 }
 function nextPlayableIndex(i){
-  // skip admin bosses in normal progression
   let idx=i;
   while(idx<BOSSES.length && BOSSES[idx].isAdmin) idx++;
   if(idx>=BOSSES.length) idx=0;
-  // if wrapped, skip any initial admin tranche
   while(BOSSES[idx].isAdmin) idx++;
   return idx;
 }
 function initBoss(index){
   bossIndex=Math.max(0,Math.min(BOSSES.length-1,index));
-  // if index points to admin but not coming from admin panel, skip to next
   if(BOSSES[bossIndex].isAdmin && !ADMIN_MODE){ bossIndex=nextPlayableIndex(bossIndex+1); }
   setBossByObj(BOSSES[bossIndex]);
-  HEART.hp=HEART.hpMax=SAVE.hp; updatePlayerBar(); HEART.i=0; HEART.flash=0; centerHeart(); refreshStats();
+  HEART.hp=SAVE.hp; HEART.hpMax=SAVE.hpMax; updatePlayerBar();
+  HEART.i=0; HEART.flash=0; HEART.shootCd=0; centerHeart(); refreshStats();
+  actsUsed=0; actHint.textContent = `Act 0/4 — reach 4 to MERCY`;
   turn='player'; showArena=false; arenaEl.style.display='none';
   bossSpeak(BOSS.intro.join('\n'));
   saveWrite({...SAVE,bossIndex});
 }
 function startAttack(){
-  bullets.length=0; showArena=true; arenaEl.style.display='block'; hideSay(); uiBar.style.opacity='0.65';
+  bullets.length=0; playerShots.length=0; showArena=true; arenaEl.style.display='block'; hideSay(); uiBar.style.opacity='0.65';
   attack=attackSeq[attackIx]; attackIx=(attackIx+1)%attackSeq.length; attack.enter&&attack.enter();
   turn='enemy'; updateStateBadges();
 }
 function endAttack(){
   showArena=false; arenaEl.style.display='none'; uiBar.style.opacity='1';
-  turn='player'; bossSpeak((BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...')); attack=null;
+  turn='player'; bossSpeak((BOSS.lines[Math.floor(Math.random()*BOSS.lines.length)]||'...')); attack=null; playerShots.length=0;
   updateStateBadges();
 }
 
 /* Mercy */
 function trySpare(){
-  if(BOSS.mercy>=BOSS.spareThreshold){ bossSpeak(`Perhaps… I will let you go.`); setTimeout(()=>win(true),600); }
-  else { bossSpeak(`${BOSS.name} isn't ready to be spared.`); }
+  if(actsUsed>=4){ bossSpeak(`Perhaps… I will let you go.`); setTimeout(()=>win(true),600); }
+  else { bossSpeak(`Not yet. (${actsUsed}/4)`) }
 }
 
 /* ACT overlay */
@@ -785,19 +883,25 @@ function openAct(){
 }
 actClose.onclick=()=>{ actOverlay.style.display='none'; };
 
-/* Drops: admin bosses drop god-tier only via admin, plus permanent HP buff */
+/* Drops — bosses can drop both weapons and healing items */
 function addDrop(key,isAdmin){
   if(isAdmin){
     if(!SAVE.weapons.includes('godslayer')) SAVE.weapons.push('godslayer');
-    SAVE.hp += 40; // permanent buff
-    saveWrite(SAVE);
-    renderEquip(); refreshStats();
-    bossSpeak("Power floods you. Max HP increased. A forbidden blade answers your call.");
+    const amb = SAVE.items.find(i=>i.id==='ambrosia');
+    if(amb) amb.count++; else SAVE.items.push({id:'ambrosia',name:'Ambrosia',heal:50,count:1});
+    SAVE.hpMax += 20; SAVE.hp = SAVE.hpMax;
+    saveWrite(SAVE); renderEquip(); refreshStats();
+    bossSpeak("Forbidden power bestowed. Max HP increased. Godslayer acquired.");
     return;
   }
-  const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora',colossus:'colossus',venom:'venom',crystal:'crystal',phoenix:'phoenix'};
+  const weaponMap={solar:'solar',ember:'ember',abyss:'abyss',mantis:'mantis',pixel:'pixel',frost:'frost',dj:'dj',void:'void',siren:'siren',storm:'storm',chrono:'chrono',aurora:'aurora',colossus:'colossus',venom:'venom',crystal:'crystal',phoenix:'phoenix',moon:'moon',blight:'blight'};
+  const healMap={solar:'emberleaf',ember:'embershade',abyss:'nightmint',mantis:'goldtea',pixel:'glitchgel',frost:'snowdew',dj:'beatjuice',void:'voidsalts',siren:'tidebrew',storm:'shocktonic',chrono:'timecordial',aurora:'auroratea',colossus:'forgebrew',venom:'venomvial',crystal:'prismtonic',phoenix:'ashbrew',moon:'moonwater',blight:'rotbrew'};
+  const healNames={emberleaf:'Emberleaf',embershade:'Embershade',nightmint:'Nightmint',goldtea:'Gold Tea',glitchgel:'Glitch Gel',snowdew:'Snowdew',beatjuice:'Beat Juice',voidsalts:'Void Salts',tidebrew:'Tidebrew',shocktonic:'Shock Tonic',timecordial:'Time Cordial',auroratea:'Aurora Tea',forgebrew:'Forge Brew',venomvial:'Venom Vial',prismtonic:'Prism Tonic',ashbrew:'Ash Brew',moonwater:'Moonwater',rotbrew:'Rot Brew'};
   const wid=weaponMap[key];
-  if(wid && !SAVE.weapons.includes(wid)){ SAVE.weapons.push(wid); saveWrite(SAVE); renderEquip(); bossSpeak(`You obtained ${WEAPONS[wid].name}.`); }
+  if(wid && !SAVE.weapons.includes(wid)){ SAVE.weapons.push(wid); bossSpeak(`You obtained ${WEAPONS[wid].name}.`); }
+  const hid=healMap[key];
+  if(hid){ const ex=SAVE.items.find(i=>i.id===hid); if(ex) ex.count++; else SAVE.items.push({id:hid,name:healNames[hid]||hid,heal:18,count:1}); }
+  saveWrite(SAVE); renderEquip(); refreshStats();
 }
 function win(spared){
   bossSpeak(spared?`Perhaps… peace, for now.`:`You defeated ${BOSS.name}.`);
@@ -809,7 +913,6 @@ function win(spared){
 /* Input & admin trigger 67×3 */
 const held=new Set();
 let adminSeq='', adminCount=0;
-let ADMIN_MODE=false;
 
 uiBar.addEventListener('click',e=>{ const b=e.target.closest('.btn'); if(!b) return; onAction(b.dataset.act); });
 document.addEventListener('keydown',e=>{
@@ -824,6 +927,7 @@ document.addEventListener('keydown',e=>{
     if(['ArrowRight','d','D'].includes(e.key)) held.add('right');
     if(['ArrowUp','w','W'].includes(e.key)) held.add('up');
     if(['ArrowDown','s','S'].includes(e.key)) held.add('down');
+    if(e.key==='x' || e.key==='X') shoot();
   }
 },{passive:true});
 document.addEventListener('keyup',e=>{
@@ -838,6 +942,7 @@ function onAction(act){
   if(act==='EQUIP'){ equipOverlay.style.display='block'; renderEquip(); refreshStats(); return; }
   if(act==='ACT'){ if(turn!=='player') return; openAct(); return; }
   if(act==='MERCY'){ if(turn!=='player') return; trySpare(); return; }
+  if(act==='SHOOT'){ if(turn==='enemy') shoot(); return; }
   if(act==='FIGHT'){
     if(turn!=='player') return;
     const w=equippedWeapon();
@@ -845,7 +950,7 @@ function onAction(act){
     else if(w.atk>=9){ bossSpeak(randomLine(BOSS.weaponLines.strong)); }
     if(FLAG_ONEHIT && !BOSS.isAdmin){ BOSS.hp=0; }
     else if(w.id==='godslayer'){ if(BOSS.isAdmin){ BOSS.hp=67; } else { BOSS.hp=0; } }
-    else { const dealt=Math.max(1,Math.floor(26 + w.atk)); BOSS.hp=Math.max(0,BOSS.hp-dealt); }
+    else { const dealt=Math.max(1,Math.floor(28 + w.atk)); BOSS.hp=Math.max(0,BOSS.hp-dealt); }
     updateBossBar();
     if(BOSS.hp>0){ bossSpeak(randomLine(BOSS.attackLines)); setTimeout(()=>startAttack(),140); }
     else { win(false); }
@@ -866,13 +971,40 @@ function updateBullets(dt){
   for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt*s; b.y+=b.vy*dt*s; b.rot+=dt*6; }
   const m=220; bullets=bullets.filter(b=> b.x>ARENA.x-m && b.x<ARENA.x+ARENA.w+m && b.y>ARENA.y-m && b.y<ARENA.y+ARENA.h+m);
 }
+function updatePlayerShots(dt){
+  for(const s of playerShots){ s.x+=s.vx*dt; s.y+=s.vy*dt; }
+  const cx=480+(BOSS.offX||0), cy=240+(BOSS.offY||0), R=32;
+  playerShots = playerShots.filter(s=>{
+    const dx=s.x-cx, dy=s.y-cy;
+    if(dx*dx+dy*dy<=R*R){
+      BOSS.hp=Math.max(0,BOSS.hp-1);
+      updateBossBar();
+      BOSS.offX += (Math.random()<0.5?-1:1)*3;
+      BOSS.offY += (Math.random()<0.5?-1:1)*2;
+      BOSS.moveT=0.25;
+      return false;
+    }
+    return s.x>=0 && s.x<=960 && s.y>=0 && s.y<=720;
+  });
+}
+function bossMove(dt){
+  if(BOSS.moveT>0){
+    BOSS.moveT=Math.max(0,BOSS.moveT-dt);
+  } else {
+    BOSS.offX*=0.94; BOSS.offY*=0.94;
+    if(Math.abs(BOSS.offX)<0.2) BOSS.offX=0;
+    if(Math.abs(BOSS.offY)<0.2) BOSS.offY=0;
+  }
+}
+
+/* Collisions */
 function collide(){
   if(FLAG_INVINC || HEART.i>0 || turn!=='enemy') return;
   if(FLAG_INFINITE) return;
   for(const b of bullets){
     const dx=b.x-HEART.x, dy=b.y-HEART.y, rr=(b.r||3.5)+HEART.r;
     if(dx*dx+dy*dy<=rr*rr){
-      const dmg=Math.max(1,Math.floor((b.dmg||12)*(DIFF.dmg||1)));
+      const dmg=Math.max(1,Math.floor((b.dmg||14)*(DIFF.dmg||1)));
       HEART.hp=Math.max(0, HEART.hp-dmg); updatePlayerBar(); refreshStats();
       HEART.i=0.75; HEART.flash=0.25;
       if(HEART.hp<=0){ lose(); }
@@ -904,7 +1036,7 @@ function drawPreview(){
   const b=BOSSES[bossIndex]; b && b.draw(time, pctx);
   pctx.restore();
 }
-function toggleAdmin(open){ admin.style.display=open?'flex':'none'; if(open){ buildAdminLists(); buildAttackList(); drawPreview(); sections.forEach(s=>s.querySelector('.secBody').style.display='block'); } }
+function toggleAdmin(open){ admin.style.display=open?'flex':'none'; if(open){ buildAdminLists(); buildAttackList(); drawPreview(); sections.forEach(s=>s.querySelector('.secBody').style.display='block'); setHP.value=String(HEART.hp); setMaxHP.value=String(HEART.hpMax); } }
 adClose.onclick=()=>{ ADMIN_MODE=false; toggleAdmin(false); };
 adBoss.onchange=()=>{ const ix=parseInt(adBoss.value,10)||0; bossIndex=ix; setBossByObj(BOSSES[ix]); drawPreview(); };
 adLoadBoss.onclick=()=>{ const ix=parseInt(adBoss.value,10)||0; bossIndex=ix; setBossByObj(BOSSES[ix]); bossSpeak(BOSS.intro.join('\n')); drawPreview(); };
@@ -916,18 +1048,34 @@ adSpd.oninput=()=>{ DIFF.spd=parseFloat(adSpd.value)||1; smVal.textContent=DIFF.
 chkInf.onchange=()=>{ FLAG_INFINITE=chkInf.checked; };
 chkOHK.onchange=()=>{ FLAG_ONEHIT=chkOHK.checked; };
 chkInv.onchange=()=>{ FLAG_INVINC=chkInv.checked; };
-adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))]; saveWrite(SAVE); renderEquip(); bossSpeak('All weapons granted'); };
+adGiveAll.onclick=()=>{ SAVE.weapons=[...new Set(Object.keys(WEAPONS))];
+  const extra=[{id:'ambrosia',name:'Ambrosia',heal:50,count:2},{id:'auroratea',name:'Aurora Tea',heal:18,count:3},{id:'shocktonic',name:'Shock Tonic',heal:18,count:3},{id:'forgebrew',name:'Forge Brew',heal:18,count:2},{id:'prismtonic',name:'Prism Tonic',heal:18,count:2},{id:'venomvial',name:'Venom Vial',heal:18,count:2},{id:'ashbrew',name:'Ash Brew',heal:18,count:2},{id:'moonwater',name:'Moonwater',heal:18,count:2},{id:'rotbrew',name:'Rot Brew',heal:18,count:2}];
+  extra.forEach(it=>{ const ex=SAVE.items.find(i=>i.id===it.id); if(ex) ex.count+=it.count; else SAVE.items.push(it); });
+  saveWrite(SAVE); renderEquip(); bossSpeak('All weapons & items granted');
+};
 adTrigger.onclick=()=>{ const ix=parseInt(adAtk.value,10)||0; triggerAttack(ix); };
 function triggerAttack(ix){
   if(!attackSeq || !attackSeq[ix]) return;
-  bullets.length=0; showArena=true; arenaEl.style.display='block'; hideSay(); uiBar.style.opacity='0.65';
+  bullets.length=0; playerShots.length=0; showArena=true; arenaEl.style.display='block'; hideSay(); uiBar.style.opacity='0.65';
   attack=attackSeq[ix]; attack.enter&&attack.enter();
   turn='enemy'; updateStateBadges();
 }
+/* Player HP set */
+btnSetHP.onclick=()=>{
+  const v = Math.max(1, Math.min(999, parseInt(setHP.value,10)||HEART.hp));
+  HEART.hp=Math.min(HEART.hpMax, v);
+  SAVE.hp=HEART.hp; saveWrite(SAVE); updatePlayerBar(); refreshStats(); bossSpeak('HP set to '+HEART.hp);
+};
+btnSetMaxHP.onclick=()=>{
+  const v = Math.max(1, Math.min(999, parseInt(setMaxHP.value,10)||HEART.hpMax));
+  HEART.hpMax=v; HEART.hp=Math.min(HEART.hp, HEART.hpMax);
+  SAVE.hpMax=HEART.hpMax; SAVE.hp=HEART.hp; saveWrite(SAVE);
+  updatePlayerBar(); refreshStats(); bossSpeak('Max HP set to '+HEART.hpMax);
+};
 /* Quick buttons */
 quSkip.onclick=()=>{ if(turn==='enemy' && attack){ while(!attack.done()) attack.update(0.3); endAttack(); } };
-quHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerBar(); refreshStats(); };
-quClear.onclick=()=>{ bullets.length=0; };
+quHeal.onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerBar(); refreshStats(); bossSpeak('Fully healed'); };
+quClear.onclick=()=>{ bullets.length=0; playerShots.length=0; };
 
 /* Render/loop */
 function render(){
@@ -935,6 +1083,7 @@ function render(){
   if(showArena){
     ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
     for(const b of bullets){ drawBullet(b); }
+    for(const s of playerShots){ ctx.fillStyle=s.col; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); }
     drawSOUL(HEART.x,HEART.y);
   }
 }
@@ -942,11 +1091,15 @@ function loop(now){
   const dt=Math.min(0.033, Math.max(0,(now-last)/1000)); last=now; time+=dt;
   if(HEART.i>0){ HEART.i=Math.max(0, HEART.i-dt); }
   if(HEART.flash>0){ HEART.flash=Math.max(0, HEART.flash-dt); }
+  if(HEART.shootCd>0){ HEART.shootCd=Math.max(0, HEART.shootCd-dt); }
+  bossMove(dt);
   if(turn==='enemy'){
     moveHeart(dt);
     attack && attack.update && attack.update(dt);
     updateBullets(dt);
+    updatePlayerShots(dt);
     collide();
+    if(BOSS.hp<=0){ win(false); }
     if(attack && attack.done && attack.done()) endAttack();
   }
   render();
