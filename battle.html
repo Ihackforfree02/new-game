@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Undertale Gold — full build with gated admin (14 bosses + 4 admin, equip, drops, multipliers)</title>
+<title>Undertale Gold — full build with loot, gated admin, equip & buffs</title>
 <style>
 :root{
   --fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff;
@@ -42,17 +42,24 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 #uiCenter{font-size:14px}
 
 /* Equip overlay */
-#equip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;max-width:92vw;background:#0f1020;color:#ffd166;border:2px solid #ffd166;border-radius:8px;padding:12px;display:none;z-index:20}
+#equip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:760px;max-width:92vw;background:#0f1020;color:#ffd166;border:2px solid #ffd166;border-radius:8px;padding:12px;display:none;z-index:20}
 .eqTitle{font-size:16px;margin-bottom:8px}
 .eqRow{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
-.eqCard{flex:1;min-width:280px;border:1px solid #34344a;border-radius:6px;padding:8px;background:#121428}
+.eqCard{flex:1;min-width:300px;border:1px solid #34344a;border-radius:6px;padding:8px;background:#121428}
 .eqBtn{margin:4px;padding:6px 10px;background:#0f1020;color:#ffd166;border:1px solid #34344a;border-radius:6px;cursor:pointer}
 
-/* Admin overlay (gated via 67 three times) */
+/* Admin overlay (gated) */
 .admin-btn{margin:4px;padding:6px 10px;background:#0f1020;color:#ffd166;border:1px solid #34344a;border-radius:6px;cursor:pointer}
 .admin-sec{margin-top:14px}
 .admin-label{display:inline-block;min-width:120px}
 #admin{position:absolute;inset:0;background:rgba(0,0,0,0.85);color:#ffd166;display:none;z-index:30;padding:20px;overflow-y:auto}
+
+/* Admin side button (appears after unlock) */
+#adminSideBtn{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:40;padding:8px 12px;background:#0f1020;color:#ffd166;border:2px solid #ffd166;border-radius:6px;display:none}
+
+/* Chest overlay */
+#chest{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;max-width:92vw;background:#0f1020;color:#ffd166;border:2px solid #ffd166;border-radius:8px;padding:16px;display:none;z-index:25}
+#chestCanvas{width:500px;height:200px;background:#0b0b12;border:1px solid #34344a;display:block;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -89,15 +96,15 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 
   <!-- Equip -->
   <div id="equip">
-    <div class="eqTitle">Equip — Swords & Items (free action)</div>
+    <div class="eqTitle">Equip — Swords & Buffs (free action)</div>
     <div class="eqRow">
       <div class="eqCard">
         <div><b>Swords</b></div>
         <div id="eqWeapons"></div>
       </div>
       <div class="eqCard">
-        <div><b>Items</b></div>
-        <div id="eqItems"></div>
+        <div><b>Buffs</b> (heal or damage)</div>
+        <div id="eqBuffs"></div>
       </div>
     </div>
     <div class="eqRow" style="justify-content:flex-end">
@@ -106,9 +113,10 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
   </div>
 
   <!-- Admin (gated) -->
+  <button id="adminSideBtn">ADMIN</button>
   <div id="admin">
     <h2>⚙️ Admin Panel</h2>
-    <p>Unlocked. Boss control, tunings, equip, and goodies.</p>
+    <p>Press X to exit</p>
     <div id="adminBossList" class="admin-sec"></div>
     <div class="admin-sec">
       <span class="admin-label">Global speed</span>
@@ -137,12 +145,19 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div class="admin-sec">
       <div><b>Equip & unlocks</b></div>
       <div id="adminQuickEquip"></div>
-      <button class="admin-btn" id="adGiveAdmin">Give Admin Sword (1-tap)</button>
+      <button class="admin-btn" id="adGiveAdmin">Give Admin Sword (1‑tap)</button>
       <button class="admin-btn" id="adUnlockAll">Unlock all swords</button>
-      <button class="admin-btn" id="adGiveItems">+3 of every item</button>
+      <button class="admin-btn" id="adGiveBuffs">+2 of every buff</button>
     </div>
-    <div class="admin-sec">
-      <button class="admin-btn" id="adClose">Close (Tab)</button>
+  </div>
+
+  <!-- Chest overlay -->
+  <div id="chest">
+    <canvas id="chestCanvas" width="500" height="200"></canvas>
+    <div id="chestText">A chest appears…</div>
+    <div style="margin-top:8px">
+      <button class="eqBtn" id="openChestBtn">Open chest</button>
+      <button class="eqBtn" id="closeChestBtn">Leave</button>
     </div>
   </div>
 </div></div>
@@ -164,8 +179,15 @@ const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiCenter=document.getElementById('uiCenter');
 const uiMenu=document.getElementById('uiMenu');
-const equipBox=document.getElementById('equip'), eqWeapons=document.getElementById('eqWeapons'), eqItems=document.getElementById('eqItems'), eqClose=document.getElementById('eqClose');
+
+const equipBox=document.getElementById('equip'), eqWeapons=document.getElementById('eqWeapons'), eqBuffs=document.getElementById('eqBuffs'), eqClose=document.getElementById('eqClose');
+
 const admin=document.getElementById('admin'), adminBossList=document.getElementById('adminBossList'), adminQuickEquip=document.getElementById('adminQuickEquip');
+const adminSideBtn=document.getElementById('adminSideBtn');
+
+const chestBox=document.getElementById('chest'), chestCanvas=document.getElementById('chestCanvas'), chestText=document.getElementById('chestText');
+const openChestBtn=document.getElementById('openChestBtn'), closeChestBtn=document.getElementById('closeChestBtn');
+const cctx=chestCanvas.getContext('2d');
 
 /* State */
 const ARENA={x:240,y:420,w:480,h:180};
@@ -173,32 +195,35 @@ const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:20,hpMax:
 let time=0, turn='player', showArena=false;
 let attack=null;
 let bullets=[], damagePopup=null;
-let acts=0;
+let acts=0; // spare after 5 acts
 
 /* Admin flags & tunings */
 let ADMIN_ENABLED=false;
-let ADMIN_INFINITE_HP=false, ADMIN_INVINC=false;
+let ADMIN_INFINITE_HP=false, ADMIN_INVINCIBLE=false;
 let GLOBAL_SPEED=1.0, PLAYER_DMG_X=1.0, BOSS_DMG_X=1.0;
 
-/* Gated admin unlock: press "6" then "7" three times */
-const SAVE_KEY='ugold_full_v1';
+/* Admin unlock via 67 three times */
+const SAVE_KEY='ugold_full_loot_v1';
 function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{}}catch{return {}}}
 function writeSave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SAVE))}catch{}}
 let SAVE=loadSave();
 if(typeof SAVE.admin!=='boolean') SAVE.admin=false;
 ADMIN_ENABLED=SAVE.admin;
 let admSeq='',admCount=0;
+function unlockAdmin(){
+  if(!ADMIN_ENABLED){
+    ADMIN_ENABLED=true; SAVE.admin=true; writeSave();
+    adminSideBtn.style.display='block';
+    showBubble('…you figured it out.\nadmin unlocked.');
+    setTimeout(()=>bubble.style.display='none',900);
+  }
+}
 function gateAdminKey(k){
   admSeq+=k;
   if(admSeq.length>8) admSeq=admSeq.slice(-8);
   if(admSeq.endsWith('67')){
-    admSeq='';
-    admCount++;
-    if(admCount>=3){
-      ADMIN_ENABLED=true; SAVE.admin=true; writeSave();
-      showBubble('…you figured it out. admin unlocked.');
-      setTimeout(()=>bubble.style.display='none',900);
-    }
+    admSeq=''; admCount++;
+    if(admCount>=3) unlockAdmin();
   }
 }
 
@@ -210,18 +235,14 @@ function softNoise(){
   ctx.fillStyle='#141216'; for(let i=0;i<64;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 }
 
-/* Sans-like sprite (white skull, hoodie hint) */
+/* Sans-like sprite */
 function drawSansLike(x,y,blink){
   ctx.save();
-  // skull
   ctx.fillStyle='#f5f5f5'; ctx.strokeStyle='#111'; ctx.lineWidth=3;
   ctx.beginPath(); ctx.arc(x,y-34,18,0,Math.PI*2); ctx.fill(); ctx.stroke();
-  // eyes
   ctx.fillStyle=blink? '#111' : '#06b6ff';
   ctx.beginPath(); ctx.arc(x-7,y-36,4,0,Math.PI*2); ctx.arc(x+7,y-36,4,0,Math.PI*2); ctx.fill();
-  // grin
   ctx.strokeStyle='#111'; ctx.beginPath(); ctx.arc(x,y-24,10,0,Math.PI); ctx.stroke();
-  // hoodie
   ctx.fillStyle='#d8d8e0'; ctx.fillRect(x-12,y-14,24,36);
   ctx.fillStyle='#aeb1c8'; ctx.fillRect(x-26,y-10,12,30); ctx.fillRect(x+14,y-10,12,30);
   ctx.restore();
@@ -243,10 +264,9 @@ function D_chrono_warden(t){drawSansLike(480,270+Math.sin(t*1.7)*2,false);}
 function D_pixel_phantom(t){drawSansLike(480,270+Math.sin(t*1.4)*2,false);}
 function D_blight_witch(t){drawSansLike(480,270+Math.sin(t*1.5)*2,true);}
 
-/* Admin-only memes */
+/* Admin-only memes (gentle visuals) */
 function D_meme_sans(t){
   drawSansLike(480,280+Math.sin(t)*4,false);
-  // big sunglasses
   ctx.save(); ctx.fillStyle='#111'; ctx.fillRect(460,240,40,10); ctx.restore();
 }
 function D_magnet_sans(t){
@@ -312,7 +332,7 @@ function aimed(spd,col){const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2,dx=HEART
 function walls(rows,vx,col){const left=Math.random()<0.5;for(let r=0;r<rows;r++){const y=ARENA.y+12+r*((ARENA.h-24)/(rows-1));const x= left? ARENA.x-20 : ARENA.x+ARENA.w+20;spawn({x,y,vx:left?vx:-vx,vy:0,r:4,col});}}
 function spiral(spd,col,ang){spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:3,col});}
 
-/* Attack wrappers (gentle pacing, scaled by speed) */
+/* Attack wrappers (scaled by speed) */
 function AT_ring(n,spd,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>0.42){g=0;ring(n,spd,col)}},done(){return t>=dur}}}
 function AT_rain(rows,vy,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>0.16){g=0;rain(rows,vy,col)}},done(){return t>=dur}}}
 function AT_aimed(spd,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>0.34){g=0;aimed(spd,col)}},done(){return t>=dur}}}
@@ -320,38 +340,38 @@ function AT_walls(rows,vx,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt
 function AT_spiral(spd,col,dur){let t=0,g=0,a=0;return{enter(){t=0;g=0;a=0},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;a+=2.0*dt;if(g>0.12){g=0;spiral(spd,col,a)}},done(){return t>=dur}}}
 function AT_shockwave(spd,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){dt*=GLOBAL_SPEED;t+=dt;g+=dt;if(g>0.8){g=0;ring(16,spd,col)}},done(){return t>=dur}}}
 
-/* Weapons & items (expanded + admin sword) */
+/* Weapons & buffs (effects: lifesteal, poison, etc.) */
 const WEAPONS=[
   {id:'stick', name:'Traveler’s Stick', atk:4},
   {id:'needle', name:'Bone Needle', atk:10},
   {id:'shade', name:'Shadeblade', atk:12},
   {id:'dawn', name:'Dawnbrand', atk:14},
   {id:'facet', name:'Facet Cutter', atk:13},
-  {id:'storm', name:'Tempest Nail', atk:16},
+  {id:'storm', name:'Storm Blade', atk:18, effect:'slow'},
   {id:'phoenix', name:'Ash Talon', atk:17},
-  {id:'abyss', name:'Abyss Fang', atk:15},
+  {id:'abyss', name:'Abyss Fang', atk:15, effect:'lifesteal'},
   {id:'pixel', name:'Glitch Knife', atk:12},
-  {id:'blight', name:'Rot Edge', atk:14},
+  {id:'blight', name:'Rot Edge', atk:14, effect:'poison'},
   {id:'duelist', name:'Golden Brand', atk:16},
   {id:'warden', name:'Frost Lance', atk:15},
   {id:'oracle', name:'Crystal Sabre', atk:14},
   {id:'siren', name:'Brine Cutter', atk:13},
   {id:'chrono', name:'Time Splitter', atk:16},
-  {id:'admin', name:'Admin Sword', atk:9999} // 1-tap
+  {id:'admin', name:'Admin Sword', atk:9999, effect:'instant'}
 ];
 let ownedWeapons = SAVE.weapons || ['stick'];
 let currentWeapon = SAVE.weapon || 'stick';
 
-const ITEMS=[
-  {id:'tea', name:'Mint Tea', heal:8, count:3},
-  {id:'salve', name:'Hollow Salve', heal:12, count:2},
-  {id:'honey', name:'Amber Honey', heal:16, count:1},
-  {id:'elixir', name:'Gold Elixir', heal:22, count:1}
+const BUFFS=[
+  {id:'heal_small', name:'Healing Herb', type:'heal', value:10, count:3},
+  {id:'heal_big', name:'Healing Potion', type:'heal', value:20, count:2},
+  {id:'dmg_small', name:'Rage Tonic', type:'buff', value:1.3, count:2},
+  {id:'dmg_big', name:'Berserk Brew', type:'buff', value:1.6, count:1}
 ];
 
 /* Boss factory and roster (14 normals + 4 admin) */
 function boss(id,name,hp,draw,bg,attacks,intro,isAdmin=false){
-  return {id,name,hpMax:hp,hp:hp,draw,bg,attacks,intro,isAdmin,spareReq:4};
+  return {id,name,hpMax:hp,hp:hp,draw,bg,attacks,intro,isAdmin,spareReq:5,poison:null};
 }
 const BOSSES=[
   boss('duelist','Bone Duelist',300,D_bone_duelist,BG_sun,()=>[AT_ring(18,110,'#ffd166',3.2),AT_rain(12,120,'#fff59a',3.0),AT_aimed(160,'#ffea80',2.6)],
@@ -394,34 +414,58 @@ const BOSSES=[
 ];
 let bi=0; let BOSS=BOSSES[bi];
 
-/* Boss drops: map boss -> weapon + item */
-const BOSS_WEAPON_DROP={
-  duelist:'duelist', warden:'warden', herald:'storm', oracle:'oracle',
-  phoenix:'phoenix', abyss:'abyss', venom:'shade', moon:'dawn',
-  aurora:'facet', colossus:'chrono', siren:'siren', chrono:'chrono',
-  pixel:'pixel', blight:'blight'
-};
-const BOSS_ITEM_DROP={
-  duelist:{id:'tea',name:'Mint Tea',heal:8},
-  warden:{id:'salve',name:'Hollow Salve',heal:12},
-  herald:{id:'honey',name:'Amber Honey',heal:16},
-  oracle:{id:'elixir',name:'Gold Elixir',heal:22},
-  phoenix:{id:'tea',name:'Mint Tea',heal:8},
-  abyss:{id:'salve',name:'Hollow Salve',heal:12},
-  venom:{id:'honey',name:'Amber Honey',heal:16},
-  moon:{id:'elixir',name:'Gold Elixir',heal:22},
-  aurora:{id:'tea',name:'Mint Tea',heal:8},
-  colossus:{id:'salve',name:'Hollow Salve',heal:12},
-  siren:{id:'honey',name:'Amber Honey',heal:16},
-  chrono:{id:'elixir',name:'Gold Elixir',heal:22},
-  pixel:{id:'tea',name:'Mint Tea',heal:8},
-  blight:{id:'salve',name:'Hollow Salve',heal:12}
-};
-function addItemDrop(obj){
-  const ex=ITEMS.find(i=>i.id===obj.id);
-  if(ex) ex.count++;
-  else ITEMS.push({...obj,count:1});
+/* Chest loot table (with 0.001% admin sword chance) */
+const LOOT_TABLE = [
+  {type:'weapon', id:'abyss', chance:0.10},
+  {type:'weapon', id:'blight', chance:0.10},
+  {type:'weapon', id:'storm', chance:0.06},
+  {type:'weapon', id:'shade', chance:0.08},
+  {type:'weapon', id:'pixel', chance:0.06},
+  {type:'buff', id:'heal_small', chance:0.24},
+  {type:'buff', id:'heal_big', chance:0.16},
+  {type:'buff', id:'dmg_small', chance:0.16},
+  {type:'buff', id:'dmg_big', chance:0.08}
+];
+function pullFromLootTable(){
+  const roll = Math.random();
+  if(roll < 0.00001){ // 0.001%
+    return {type:'weapon', id:'admin'};
+  }
+  let r = Math.random(), acc = 0;
+  for(const e of LOOT_TABLE){ acc+=e.chance; if(r<acc) return e; }
+  return {type:'buff',id:'heal_small'};
 }
+function applyLoot(entry){
+  if(entry.type==='weapon'){
+    if(!ownedWeapons.includes(entry.id)) ownedWeapons.push(entry.id);
+    chestText.textContent = `You obtained a sword: ${WEAPONS.find(w=>w.id===entry.id).name}!`;
+    SAVE.weapons=ownedWeapons; writeSave();
+  } else if(entry.type==='buff'){
+    const b=BUFFS.find(x=>x.id===entry.id);
+    if(b) { b.count++; chestText.textContent = `You found a buff: ${b.name}! (+1)`; }
+  }
+}
+function openChest(){
+  chestBox.style.display='block';
+  chestText.textContent = "A chest appears…";
+  // simple opening animation
+  cctx.fillStyle='#0b0b12'; cctx.fillRect(0,0,500,200);
+  let t=0;
+  const anim=()=>{
+    t+=0.016;
+    cctx.fillStyle='#3a2a1a'; cctx.fillRect(150,60,200,80);
+    cctx.fillStyle='#6b4b2a'; cctx.fillRect(150,60,200,40);
+    cctx.fillStyle='rgba(255,215,128,0.25)'; cctx.beginPath(); cctx.arc(250,100,30+Math.sin(t*2)*2,0,Math.PI*2); cctx.fill();
+    if(chestBox.style.display==='block') requestAnimationFrame(anim);
+  };
+  requestAnimationFrame(anim);
+}
+openChestBtn.onclick=()=>{
+  const loot = pullFromLootTable();
+  applyLoot(loot);
+  setTimeout(()=>{ chestBox.style.display='none'; nextBoss(); }, 1500);
+};
+closeChestBtn.onclick=()=>{ chestBox.style.display='none'; nextBoss(); };
 
 /* HUD + dialogue */
 function bossBar(){bossHPFill.style.width=(360*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${Math.max(0,Math.floor(BOSS.hp))}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
@@ -434,7 +478,7 @@ function restoreBubble(){ if(lastDialog){ bubbleText.textContent=lastDialog; bub
 /* Equip UI */
 function openEquip(){
   equipBox.style.display='block';
-  // weapons
+  // swords
   eqWeapons.innerHTML='';
   WEAPONS.forEach(w=>{
     const btn=document.createElement('button');
@@ -445,20 +489,25 @@ function openEquip(){
     btn.onclick=()=>{ currentWeapon=w.id; SAVE.weapon=currentWeapon; writeSave(); openEquip(); };
     eqWeapons.appendChild(btn);
   });
-  // items
-  eqItems.innerHTML='';
-  ITEMS.forEach(it=>{
+  // buffs
+  eqBuffs.innerHTML='';
+  BUFFS.forEach(b=>{
     const btn=document.createElement('button');
     btn.className='eqBtn';
-    btn.textContent=`${it.name} (+${it.heal}) x${it.count}`;
-    btn.disabled=it.count<=0;
+    btn.textContent=`${b.name} (${b.type==='heal'?'+':''}${b.value}${b.type==='buff'?'x dmg':''}) x${b.count}`;
+    btn.disabled=b.count<=0;
     btn.onclick=()=>{
-      if(it.count>0){
-        it.count--; HEART.hp=Math.min(HEART.hpMax, HEART.hp+it.heal); updatePlayerHP();
-        openEquip();
+      if(b.count>0){
+        if(b.type==='heal'){
+          HEART.hp=Math.min(HEART.hpMax, HEART.hp+b.value); updatePlayerHP();
+        } else if(b.type==='buff'){
+          PLAYER_DMG_X = Math.max(1.0, PLAYER_DMG_X*b.value);
+          showBubble(`you feel stronger. (x${PLAYER_DMG_X.toFixed(2)})`);
+        }
+        b.count--; openEquip();
       }
     };
-    eqItems.appendChild(btn);
+    eqBuffs.appendChild(btn);
   });
 }
 eqClose.onclick=()=>{ equipBox.style.display='none'; };
@@ -479,33 +528,36 @@ function finishAttack(){
 }
 function weaponDamage(){
   const w=WEAPONS.find(x=>x.id===currentWeapon)||WEAPONS[0];
-  const base=Math.max(6, w.atk);
+  let base=Math.max(6, w.atk);
+  if(w.effect==='slow') base=Math.floor(base*0.95);
   return Math.floor(base*PLAYER_DMG_X);
 }
 function bossHit(dmg){
-  BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar();
-  damagePopup={x:480,y:200,t:0,text:String(dmg)};
+  const w=WEAPONS.find(x=>x.id===currentWeapon)||WEAPONS[0];
+  let finalDmg=dmg;
+  if(w.effect==='lifesteal'){
+    HEART.hp=Math.min(HEART.hpMax, HEART.hp+Math.floor(dmg*0.30)); updatePlayerHP();
+  }
+  if(w.effect==='poison'){
+    BOSS.poison = {ticks:3, dps:Math.floor(dmg*0.20)};
+  }
+  if(w.effect==='instant'){ finalDmg=BOSS.hp; }
+
+  BOSS.hp=Math.max(0,BOSS.hp-finalDmg); bossBar();
+  damagePopup={x:480,y:200,t:0,text:String(finalDmg)};
   if(BOSS.hp<=0){
-    showBubble("…guess that's it.\ngood fight.");
-    // Drops for normal bosses
-    if(!BOSS.isAdmin){
-      const wid=BOSS_WEAPON_DROP[BOSS.id];
-      if(wid && !ownedWeapons.includes(wid)){ ownedWeapons.push(wid); SAVE.weapons=ownedWeapons; writeSave(); }
-      const it=BOSS_ITEM_DROP[BOSS.id]; if(it){ addItemDrop(it); }
-    } else {
-      // Admin bosses also award Admin Sword
-      if(!ownedWeapons.includes('admin')){ ownedWeapons.push('admin'); SAVE.weapons=ownedWeapons; writeSave(); }
-    }
-    setTimeout(()=>{ nextBoss(); },900);
+    showBubble("…the dust settles.\na chest appears!");
+    setTimeout(openChest,1000);
   }
 }
 
-/* Init + roster navigation — no skip in UI, only auto-advance after win */
+/* Init + roster navigation — auto-advance via chest only */
 function initBattle(){
   HEART.hp=HEART.hpMax=20; updatePlayerHP();
   HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; HEART.i=0;
   turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
-  BOSS.hp=BOSS.hpMax; bossBar();
+  BOSS.hp=BOSS.hpMax; BOSS.poison=null; bossBar();
+  acts=0;
   showBubble(BOSS.intro||"…");
 }
 function loadBoss(i){ bi=(i+BOSSES.length)%BOSSES.length; BOSS=BOSSES[bi]; initBattle(); }
@@ -516,13 +568,16 @@ const down=new Set();
 addEventListener('keydown',e=>{
   if(e.repeat) return;
 
-  // Gate admin unlock sequence
+  // Admin unlock sequence
   if(e.key==='6'||e.key==='7'){ gateAdminKey(e.key); }
 
-  // Toggle admin panel
-  if(e.key==='Tab'){ e.preventDefault(); if(ADMIN_ENABLED){ toggleAdmin(admin.style.display==='none'); } return; }
+  // Admin exit key
+  if(e.key==='x'||e.key==='X'){ if(admin.style.display==='block'){ toggleAdmin(false); } }
 
   down.add(e.key);
+
+  // Admin side button toggling (only when unlocked)
+  if(e.key==='Tab'){ e.preventDefault(); if(ADMIN_ENABLED){ toggleAdmin(admin.style.display==='none'); } return; }
 
   if(e.key===' '){
     if(turn==='player'){ hideBubble(); startAttack(); }
@@ -543,7 +598,8 @@ addEventListener('keydown',e=>{
       "you lower your guard.\njust a bit.",
       "you breathe.\nthat helps.",
       "you nod.\nrespect given.",
-      "you wait.\npatience is a blade."
+      "you wait.\npatience is a blade.",
+      "you listen.\nsilence says enough."
     ];
     showBubble(lines[acts-1]||lines[0]);
     setTimeout(()=>{turn='enemy'; hideBubble(); startAttack();},260);
@@ -551,7 +607,7 @@ addEventListener('keydown',e=>{
   if((e.key==='m'||e.key==='M') && turn==='player'){
     if(acts>=BOSS.spareReq){
       showBubble("…alright.\nwe're done here.");
-      setTimeout(()=>nextBoss(),850);
+      setTimeout(()=>openChest(),850); // spare also gets chest
     } else {
       showBubble(`not yet.\n(${acts}/${BOSS.spareReq})`);
     }
@@ -575,7 +631,7 @@ uiMenu.addEventListener('click',e=>{
   }else if(act==='EQUIP'){
     openEquip();
   }else if(act==='MERCY' && turn==='player'){
-    if(acts>=BOSS.spareReq){ showBubble("…okay.\ngo on."); setTimeout(()=>nextBoss(),850); }
+    if(acts>=BOSS.spareReq){ showBubble("…okay.\ngo on."); setTimeout(()=>openChest(),850); }
     else showBubble(`not yet.\n(${acts}/${BOSS.spareReq})`);
   }
 });
@@ -593,6 +649,18 @@ requestAnimationFrame(loop);
 function update(dt){
   time+=dt*GLOBAL_SPEED;
 
+  // boss poison ticks (gentle DoT)
+  if(BOSS.poison){
+    BOSS.hp=Math.max(0, BOSS.hp - BOSS.poison.dps*dt);
+    bossBar();
+    BOSS.poison.ticks-=dt;
+    if(BOSS.poison.ticks<=0) BOSS.poison=null;
+    if(BOSS.hp<=0 && turn!=='defeat' && chestBox.style.display!=='block'){ // if died via poison
+      showBubble("…the dust settles.\na chest appears!");
+      setTimeout(openChest,800);
+    }
+  }
+
   if(turn==='enemy'){
     // movement
     let dx=0,dy=0;
@@ -602,7 +670,8 @@ function update(dt){
     if(key('ArrowDown')||key('s')) dy+=1;
     const L=Math.hypot(dx,dy)||1;
     HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
-    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
+    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.y+dy/L*HEART.sp*dt)); // typo fix? use ARENA.h
+    HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y)); // correct clamp
     HEART.i=Math.max(0,HEART.i-dt);
 
     // attack update
@@ -613,7 +682,7 @@ function update(dt){
     bullets=bullets.filter(b=>b.x>ARENA.x-160 && b.x<ARENA.x+ARENA.w+160 && b.y>ARENA.y-160 && b.y<ARENA.y+ARENA.h+160);
 
     // collisions
-    if(!ADMIN_INVINC && !ADMIN_INFINITE_HP){
+    if(!ADMIN_INVINCIBLE && !ADMIN_INFINITE_HP){
       for(const b of bullets){
         const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
         if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){
@@ -650,7 +719,7 @@ function render(dt){
   if(turn==='enemy' && showArena){
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(ARENA.x,ARENA.y,ARENA.w,ARENA.h);
     for(const b of bullets){ ctx.fillStyle=b.col||'#fff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r||4,0,Math.PI*2); ctx.fill(); }
-    ctx.save(); // soul
+    ctx.save();
     ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(HEART.x,HEART.y,HEART.r,0,Math.PI*2); ctx.fill();
     ctx.restore();
   }
@@ -666,6 +735,8 @@ function render(dt){
 
 /* Admin panel setup (gated) */
 function buildAdmin(){
+  // side button behavior
+  adminSideBtn.onclick=()=>toggleAdmin(true);
   adminBossList.innerHTML='';
   const list=document.createElement('div');
   list.style.display='flex'; list.style.flexWrap='wrap'; list.style.gap='6px';
@@ -687,17 +758,14 @@ function buildAdmin(){
     adminQuickEquip.appendChild(btn);
   });
 
-  // Tunings
   const adSpeed=document.getElementById('adSpeed'), adSpeedVal=document.getElementById('adSpeedVal');
   const adPDmg=document.getElementById('adPDmg'), adPDmgVal=document.getElementById('adPDmgVal');
   const adBDmg=document.getElementById('adBDmg'), adBDmgVal=document.getElementById('adBDmgVal');
   adSpeed.oninput=()=>{ GLOBAL_SPEED=parseFloat(adSpeed.value)||1; adSpeedVal.textContent=GLOBAL_SPEED.toFixed(2)+'x'; };
   adPDmg.oninput=()=>{ PLAYER_DMG_X=parseFloat(adPDmg.value)||1; adPDmgVal.textContent=PLAYER_DMG_X.toFixed(2); };
   adBDmg.oninput=()=>{ BOSS_DMG_X=parseFloat(adBDmg.value)||1; adBDmgVal.textContent=BOSS_DMG_X.toFixed(2); };
-  document.getElementById('adInv').onchange=(e)=>{ ADMIN_INVINC=e.target.checked; };
+  document.getElementById('adInv').onchange=(e)=>{ ADMIN_INVINCIBLE=e.target.checked; };
   document.getElementById('adInf').onchange=(e)=>{ ADMIN_INFINITE_HP=e.target.checked; };
-
-  // Hard/Insane presets
   document.getElementById('adHard').onchange=(e)=>{
     if(e.target.checked){
       PLAYER_DMG_X=0.9; BOSS_DMG_X=1.4; GLOBAL_SPEED=1.15;
@@ -717,22 +785,25 @@ function buildAdmin(){
     }
   };
 
-  // Goodies
+  // goodies
   document.getElementById('adHeal').onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerHP(); };
   document.getElementById('adClear').onclick=()=>{ bullets.length=0; };
   document.getElementById('adEnd').onclick=()=>{ if(turn==='enemy') finishAttack(); };
   document.getElementById('adStart').onclick=()=>{ if(turn==='player'){ hideBubble(); startAttack(); } };
-  document.getElementById('adWin').onclick=()=>{ BOSS.hp=0; bossBar(); showBubble('…admin says: nap time.'); setTimeout(()=>nextBoss(),600); };
+  document.getElementById('adWin').onclick=()=>{ BOSS.hp=0; bossBar(); showBubble('…admin says: nap time.'); setTimeout(openChest,600); };
   document.getElementById('adGiveAdmin').onclick=()=>{ if(!ownedWeapons.includes('admin')) ownedWeapons.push('admin'); currentWeapon='admin'; SAVE.weapons=ownedWeapons; SAVE.weapon=currentWeapon; writeSave(); };
   document.getElementById('adUnlockAll').onclick=()=>{ ownedWeapons=[...new Set([...ownedWeapons, ...WEAPONS.map(w=>w.id)])]; SAVE.weapons=ownedWeapons; writeSave(); };
-  document.getElementById('adGiveItems').onclick=()=>{ ITEMS.forEach(i=>i.count+=3); };
-  document.getElementById('adClose').onclick=()=>toggleAdmin(false);
+  document.getElementById('adGiveBuffs').onclick=()=>{ BUFFS.forEach(b=>b.count+=2); };
 }
 function toggleAdmin(show){ if(ADMIN_ENABLED){ admin.style.display=show?'block':'none'; }}
 
-/* Boot: auto-start Boss #1, build admin (but only usable after unlock) */
+/* Admin exit by X */
+addEventListener('keydown',e=>{ if(e.key==='x' || e.key==='X'){ if(admin.style.display==='block') toggleAdmin(false); }});
+
+/* Boot: auto-start Boss #1, build admin (side button visible only if unlocked) */
 bossBar(); updatePlayerHP();
 buildAdmin();
+if(ADMIN_ENABLED) adminSideBtn.style.display='block';
 initBattle();
 </script>
 </body>
