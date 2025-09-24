@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Undertale Gold — working baseline</title>
+<title>Undertale Gold — Hollow build (14 bosses + 2 admin, custom backgrounds, weapons & equip, improved admin)</title>
 <style>
-:root{--fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff}
+:root{
+  --fg:#ffd166;--hp:#ff6b6b;--emerald:#7affb7;--ui:#0b0b0b;--line:#262626;--white:#fff;
+}
 html,body{height:100%;margin:0;background:#000;color:var(--fg);font-family:ui-monospace,monospace;image-rendering:pixelated;overflow:hidden}
 #stage{position:fixed;left:50%;top:50%;transform-origin:top left}
 #wrap{position:relative;width:960px;height:720px}
@@ -38,6 +40,21 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
 .uiKey{width:20px;height:20px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .uiLabel{font-size:20px;letter-spacing:1px}
 #uiCenter{font-size:14px}
+#rightPanel{display:flex;align-items:center;gap:14px}
+.small{font-size:12px;color:#cfd}
+
+/* Equip overlay */
+#equip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:640px;max-width:92vw;background:#0f1020;color:#ffd166;border:2px solid #ffd166;border-radius:8px;padding:12px;display:none;z-index:20}
+.eqTitle{font-size:16px;margin-bottom:8px}
+.eqRow{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.eqCard{flex:1;min-width:240px;border:1px solid #34344a;border-radius:6px;padding:8px;background:#121428}
+.eqBtn{margin:4px;padding:6px 10px;background:#0f1020;color:#ffd166;border:1px solid #34344a;border-radius:6px;cursor:pointer}
+
+/* Admin overlay */
+.admin-btn{margin:4px;padding:6px 10px;background:#0f1020;color:#ffd166;border:1px solid #34344a;border-radius:6px;cursor:pointer}
+.admin-sec{margin-top:14px}
+.admin-label{display:inline-block;min-width:120px}
+#admin{position:absolute;inset:0;background:rgba(0,0,0,0.85);color:#ffd166;display:none;z-index:30;padding:20px;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -66,10 +83,72 @@ canvas{display:block;width:960px;height:720px;border:4px solid #0a0a0f;backgroun
     <div class="uiMenu" id="uiMenu">
       <div class="uiBtn" data-act="FIGHT"><div class="uiKey">Z</div><div class="uiLabel">FIGHT</div></div>
       <div class="uiBtn" data-act="ACT"><div class="uiKey">A</div><div class="uiLabel">ACT</div></div>
-      <div class="uiBtn" data-act="ITEM"><div class="uiKey">I</div><div class="uiLabel">ITEM</div></div>
+      <div class="uiBtn" data-act="EQUIP"><div class="uiKey">E</div><div class="uiLabel">EQUIP</div></div>
       <div class="uiBtn" data-act="MERCY"><div class="uiKey">M</div><div class="uiLabel">MERCY</div></div>
     </div>
-    <div id="uiCenter">Your turn.</div>
+    <div id="uiCenter">Your turn. Z/Enter=Fight, A=Act, E=Equip, M=Mercy. Arrows/WASD to move during attacks. Tab=Admin.</div>
+    <div id="rightPanel">
+      <div class="small" id="bossCount">Boss 1/16</div>
+      <button id="prevBtn" class="uiBtn"><div class="uiKey">←</div><div class="small">Prev</div></button>
+      <button id="nextBtn" class="uiBtn"><div class="uiKey">→</div><div class="small">Next</div></button>
+      <button id="attackBtn" class="uiBtn"><div class="uiKey">Space</div><div class="small">Attack phase</div></button>
+    </div>
+  </div>
+
+  <!-- Equip -->
+  <div id="equip">
+    <div class="eqTitle">Equip — Swords & Items (free action)</div>
+    <div class="eqRow">
+      <div class="eqCard">
+        <div><b>Swords</b></div>
+        <div id="eqWeapons"></div>
+      </div>
+      <div class="eqCard">
+        <div><b>Items</b></div>
+        <div id="eqItems"></div>
+      </div>
+    </div>
+    <div class="eqRow" style="justify-content:flex-end">
+      <button class="eqBtn" id="eqClose">Close</button>
+    </div>
+  </div>
+
+  <!-- Admin -->
+  <div id="admin">
+    <h2>⚙️ Admin Panel</h2>
+    <p>Spawn bosses, tune player, equip quickly, and control attacks.</p>
+    <div id="adminBossList" class="admin-sec"></div>
+    <div class="admin-sec">
+      <button class="admin-btn" id="adPrev">⟵ Prev</button>
+      <button class="admin-btn" id="adNext">Next ⟶</button>
+      <button class="admin-btn" id="adClose">Close (Tab)</button>
+    </div>
+    <div class="admin-sec">
+      <span class="admin-label">Player HP</span>
+      <input id="adSetHP" type="number" min="1" max="999" value="20" style="width:80px"/>
+      <button class="admin-btn" id="adApplyHP">Apply</button>
+      <span class="admin-label" style="margin-left:12px">Max HP</span>
+      <input id="adSetMax" type="number" min="1" max="999" value="20" style="width:80px"/>
+      <button class="admin-btn" id="adApplyMax">Apply</button>
+    </div>
+    <div class="admin-sec">
+      <label><input type="checkbox" id="adInf"/> Infinite HP</label>
+      <label style="margin-left:12px"><input type="checkbox" id="adInv"/> Invincible</label>
+      <span class="admin-label" style="margin-left:12px">Damage x</span>
+      <input id="adDmg" type="range" min="0.5" max="3" step="0.05" value="1.00" style="vertical-align:middle"/>
+      <span id="adDmgVal">1.00</span>
+    </div>
+    <div class="admin-sec">
+      <button class="admin-btn" id="adHeal">Heal</button>
+      <button class="admin-btn" id="adClear">Clear bullets</button>
+      <button class="admin-btn" id="adEnd">End attack</button>
+      <button class="admin-btn" id="adWin">Instant win</button>
+      <button class="admin-btn" id="adStart">Start attack</button>
+    </div>
+    <div class="admin-sec">
+      <div><b>Quick equip</b></div>
+      <div id="adminQuickEquip"></div>
+    </div>
   </div>
 </div></div>
 
@@ -89,21 +168,252 @@ const bossHPFill=document.getElementById('bossHPFill'), bossHPVal=document.getEl
 const pHPFill=document.getElementById('pHPFill'), pHPVal=document.getElementById('pHPVal');
 const bubble=document.getElementById('bubble'), bubbleText=document.getElementById('bubbleText');
 const uiCenter=document.getElementById('uiCenter');
+const uiMenu=document.getElementById('uiMenu');
+const bossCount=document.getElementById('bossCount');
+const prevBtn=document.getElementById('prevBtn'), nextBtn=document.getElementById('nextBtn'), attackBtn=document.getElementById('attackBtn');
+
+const equipBox=document.getElementById('equip'), eqWeapons=document.getElementById('eqWeapons'), eqItems=document.getElementById('eqItems'), eqClose=document.getElementById('eqClose');
+
+const admin=document.getElementById('admin'), adminBossList=document.getElementById('adminBossList'), adminQuickEquip=document.getElementById('adminQuickEquip');
 
 /* State */
 const ARENA={x:240,y:420,w:480,h:180};
-const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:20,hpMax:20,_px:0,_py:0,_pdt:1/60};
-let time=0, paused=false, turn='player', showArena=false;
+const HEART={x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,r:4,sp:300,i:0,hp:20,hpMax:20,_px:0,_py:0};
+let time=0, turn='player', showArena=false;
 let attack=null, phaseT=0;
-let bullets=[], scene={flinch:0,shake:0}; let damagePopup=null; let slashes=[];
+let bullets=[], damagePopup=null; let held=new Set();
+let acts=0;
 
-const BOSS={name:'Golden Duelist', hpMax:300, hp:300, damage:7};
+let ADMIN_INFINITE_HP=false, ADMIN_INVINC=false, ADMIN_DAMAGE_MULT=1.0;
+
+/* Weapons & items */
+const WEAPONS=[
+  {id:'stick', name:'Traveler’s Stick', atk:4},
+  {id:'needle', name:'Bone Needle', atk:9},
+  {id:'shade', name:'Shadeblade', atk:12},
+  {id:'dawn', name:'Dawnbrand', atk:14},
+  {id:'crystal', name:'Crystal Sabre', atk:13},
+  {id:'storm', name:'Storm Nail', atk:15},
+  {id:'phoenix', name:'Phoenix Talon', atk:16},
+  {id:'abyss', name:'Abyss Fang', atk:14},
+  {id:'pixel', name:'Glitch Knife', atk:10},
+  {id:'blight', name:'Blight Edge', atk:13},
+  {id:'duelist', name:'Golden Brand', atk:15},
+  {id:'warden', name:'Frost Lance', atk:14},
+  {id:'oracle', name:'Facet Cutter', atk:13},
+  {id:'memelord', name:'Meme Excalibur', atk:999} // unlocked via admin bosses
+];
+let currentWeapon='stick';
+
+const ITEMS=[
+  {id:'tea', name:'Mint Tea', heal:8, count:2},
+  {id:'elixir', name:'Gold Elixir', heal:14, count:1}
+];
+
+/* Helpers */
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function say(txt){bubbleText.textContent=txt;}
+function varBG(){ return (Math.sin(time*0.4)>0)? '#0b0907' : '#120e0b'; }
+
+/* Hollow Knight-style silhouettes (white ink, black outline) */
+function drawHollow(x,y,shapeFn){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.fillStyle='#ffffff';
+  shapeFn();
+  ctx.stroke(); ctx.fill();
+  ctx.restore();
+}
+
+/* Boss sprites */
+function D_duelist(t){
+  const x=480,y=258+Math.sin(t*3)*2;
+  drawHollow(x,y,()=>{ ctx.beginPath(); ctx.ellipse(0,-26,18,22,0,0,Math.PI*2);
+    ctx.rect(-12,-10,24,40);
+    ctx.moveTo(-22,10); ctx.lineTo(-46,34); ctx.lineTo(-6,40);
+    ctx.moveTo(22,10); ctx.lineTo(46,34); ctx.lineTo(6,40);
+  });
+}
+function D_warden(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.ellipse(0,-22,16,18,0,0,Math.PI*2);ctx.rect(-10,-8,20,38);ctx.moveTo(-20,8);ctx.lineTo(-12,30);ctx.moveTo(20,8);ctx.lineTo(12,30);});}
+function D_herald(t){const x=480,y=258+Math.sin(t*4)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.moveTo(0,-26);ctx.lineTo(18,-8);ctx.lineTo(8,-8);ctx.lineTo(22,12);ctx.lineTo(-4,0);ctx.lineTo(10,24);ctx.lineTo(-10,10);ctx.closePath();ctx.rect(-8,-6,16,44);});}
+function D_oracle(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(-10,-10);ctx.lineTo(10,-10);ctx.closePath();ctx.rect(-7,-8,14,40);});}
+function D_phoenix(t){const x=480,y=258+Math.sin(t*4)*3; drawHollow(x,y,()=>{ctx.beginPath();ctx.moveTo(-18,-10);ctx.lineTo(0,-22);ctx.lineTo(18,-10);ctx.lineTo(0,4);ctx.closePath();ctx.rect(-7,-6,14,42);});}
+function D_abyss(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.arc(0,-28,16,0,Math.PI*2);ctx.rect(-8,-12,16,42);});}
+function D_venom(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.arc(-6,-18,8,0,Math.PI*2);ctx.arc(6,-18,8,0,Math.PI*2);ctx.rect(-10,-6,20,40);});}
+function D_moon(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.arc(0,-18,10,0,Math.PI*2);ctx.rect(-10,-6,20,40);});}
+function D_aurora(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.moveTo(-16,-12);ctx.bezierCurveTo(-4,-16,4,-16,16,-12);ctx.bezierCurveTo(6,-6,-6,-6,-16,-12);ctx.rect(-10,-6,20,40);});}
+function D_colossus(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.rect(-20,-8,40,18);ctx.rect(-12,0,24,38);});}
+function D_siren(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.moveTo(0,-18);ctx.bezierCurveTo(12,-10,12,0,0,8);ctx.bezierCurveTo(-12,0,-12,-10,0,-18);ctx.rect(-8,-4,16,36);});}
+function D_chrono(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.arc(0,-20,12,0,Math.PI*2);ctx.rect(-10,-6,20,40);});}
+function D_pixel(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.rect(-14,-22,28,14);ctx.rect(-10,-6,20,40);});}
+function D_blight(t){const x=480,y=258+Math.sin(t*2)*2; drawHollow(x,y,()=>{ctx.beginPath();ctx.arc(0,-18,10,0,Math.PI*2);ctx.rect(-10,-6,20,40);});}
+
+/* Admin memes (simple fun shapes) */
+function D_obliv(t){ // Meme Herald (giant smiley)
+  const x=480,y=300+Math.sin(t*3)*8;
+  ctx.save();
+  ctx.fillStyle='#ffff00'; ctx.strokeStyle='#000'; ctx.lineWidth=6;
+  ctx.beginPath(); ctx.arc(x,y,60,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(x-20,y-10,8,0,Math.PI*2); ctx.arc(x+20,y-10,8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x,y+10,28,0,Math.PI); ctx.stroke();
+  ctx.restore();
+}
+function D_titan(t){ // Meme Titan (buff stickman)
+  const x=480,y=280+Math.sin(t*2)*6;
+  ctx.save();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=8;
+  ctx.beginPath(); ctx.arc(x,y-40,20,0,Math.PI*2); ctx.stroke(); // head
+  ctx.beginPath(); ctx.moveTo(x,y-20); ctx.lineTo(x,y+50); ctx.stroke(); // body
+  ctx.beginPath(); ctx.moveTo(x-40,y-10); ctx.lineTo(x+40,y-10); ctx.stroke(); // arms
+  ctx.beginPath(); ctx.moveTo(x,y+50); ctx.lineTo(x-24,y+96); ctx.moveTo(x,y+50); ctx.lineTo(x+24,y+96); ctx.stroke(); // legs
+  ctx.restore();
+}
+
+/* Backgrounds */
+function BG_sun(){
+  ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
+  ctx.save(); ctx.translate(480,260);
+  for(let i=0;i<24;i++){ const a=i/24*Math.PI*2+time*0.3;
+    ctx.rotate(a); ctx.strokeStyle='rgba(255,200,120,0.35)'; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(160+Math.sin(time*2+a)*16,0); ctx.stroke(); ctx.rotate(-a);
+  }
+  ctx.restore();
+}
+function BG_snow(){
+  ctx.fillStyle=(Math.sin(time*0.4)>0)? '#0c1016' : '#0a0e14'; ctx.fillRect(0,0,960,720);
+  for(let i=0;i<140;i++){ ctx.fillStyle=`rgba(230,247,255,${0.25+Math.random()*0.4})`;
+    ctx.fillRect((i*61+time*80)%960,(i*37+time*60)%720,2,2);
+  }
+}
+function BG_storm(){
+  ctx.fillStyle='#0c0c12'; ctx.fillRect(0,0,960,720);
+  if(Math.random()<0.03){ ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.fillRect(0,0,960,720); }
+  ctx.fillStyle='#141420'; for(let i=0;i<10;i++){ ctx.fillRect(0,100+i*50+Math.sin(time+i)*10,960,28); }
+}
+function BG_crystal(){
+  ctx.fillStyle='#0a0d12'; ctx.fillRect(0,0,960,720);
+  for(let i=0;i<16;i++){ ctx.strokeStyle='rgba(168,230,255,0.35)'; ctx.lineWidth=3; ctx.beginPath();
+    const x=90+i*52+Math.sin(time+i)*14, y=120+i*32;
+    ctx.moveTo(x,y); ctx.lineTo(x+40,y+22); ctx.lineTo(x+8,y+60); ctx.stroke();
+  }
+}
+function BG_embers(){
+  ctx.fillStyle='#0f0908'; ctx.fillRect(0,0,960,720);
+  for(let i=0;i<120;i++){ ctx.fillStyle=`rgba(255,160,120,${0.2+Math.random()*0.3})`;
+    ctx.fillRect(Math.random()*960,Math.random()*720,2,6);
+  }
+}
+function BG_void(){
+  ctx.fillStyle='#08080e'; ctx.fillRect(0,0,960,720);
+  ctx.strokeStyle='rgba(200,185,255,0.18)';
+  for(let r=60;r<=240;r+=24){ ctx.beginPath(); ctx.arc(480,360,r+Math.sin(time*1.4+r)*3,0,Math.PI*2); ctx.stroke(); }
+}
+function BG_pixel(){
+  ctx.fillStyle='#0f1120'; ctx.fillRect(0,0,960,720);
+  for(let y=0;y<720;y+=8){ ctx.fillStyle=(y%16==0)?'#0f1120':'#111325'; ctx.fillRect(0,y,960,8); }
+  ctx.fillStyle='rgba(168,236,255,0.08)'; for(let i=0;i<120;i++){ ctx.fillRect((i*73+time*120)%960,(i*41+time*60)%720,2,6); }
+}
+function BG_blight(){
+  ctx.fillStyle='#0a0d0a'; ctx.fillRect(0,0,960,720);
+  for(let i=0;i<100;i++){ ctx.fillStyle=`rgba(102,255,102,${0.2+Math.random()*0.2})`; ctx.beginPath(); ctx.arc(Math.random()*960,Math.random()*720,2,0,Math.PI*2); ctx.fill(); }
+}
+
+/* Attack building blocks */
+function spawn(b){b.t=0;bullets.push(b);return b;}
+function ring(n,spd,col){for(let k=0;k<n;k++){const ang=k/n*Math.PI*2;spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:3,col});}}
+function rain(rows,vy,col){for(let i=0;i<rows;i++){const x=ARENA.x+10+Math.random()*(ARENA.w-20);spawn({x,y:ARENA.y-16,vx:((i%2)?50:-50),vy:vy,r:3,col});}}
+function aimed(spd,col){const cx=ARENA.x+ARENA.w/2,cy=ARENA.y+ARENA.h/2,dx=HEART.x-cx,dy=HEART.y-cy,L=Math.hypot(dx,dy)||1;spawn({x:cx,y:cy,vx:dx/L*spd,vy:dy/L*spd,r:3,col});}
+function walls(rows,vx,col){
+  const left=Math.random()<0.5;
+  for(let r=0;r<rows;r++){
+    const y=ARENA.y+12+r*((ARENA.h-24)/(rows-1));
+    const x= left? ARENA.x-20 : ARENA.x+ARENA.w+20;
+    spawn({x,y,vx:left?vx:-vx,vy:0,r:4,col});
+  }
+}
+function ribbon(spd,col,phase){
+  const y=ARENA.y+20+Math.sin(time*3+(phase||0))*50;
+  spawn({x:ARENA.x-20,y,vx:spd,vy:Math.sin(time*2)*40,r:3,col});
+}
+function fireArc(vy,col){
+  const base=ARENA.x+ARENA.w*0.5;
+  for(let k=0;k<6;k++){
+    const x=base+(k-3)*34;
+    spawn({x,y:ARENA.y-16,vx:(k-3)*40,vy:vy,r:3,col});
+  }
+}
+function spiral(spd,col,ang){spawn({x:ARENA.x+ARENA.w/2,y:ARENA.y+ARENA.h/2,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:3,col});}
+
+/* Attack wrappers */
+function AT_ring(n,spd,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){t+=dt;g+=dt;if(g>0.35){g=0;ring(n,spd,col)}},done(){return t>=dur}}}
+function AT_rain(rows,vy,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){t+=dt;g+=dt;if(g>0.12){g=0;rain(rows,vy,col)}},done(){return t>=dur}}}
+function AT_aimed(spd,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){t+=dt;g+=dt;if(g>0.28){g=0;aimed(spd,col)}},done(){return t>=dur}}}
+function AT_walls(rows,vx,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){t+=dt;g+=dt;if(g>0.45){g=0;walls(rows,vx,col)}},done(){return t>=dur}}}
+function AT_ribbon(spd,col,dur){let t=0,g=0,ph=0;return{enter(){t=0;g=0;ph=0},update(dt){t+=dt;g+=dt;ph+=0.5;if(g>0.18){g=0;ribbon(spd,col,ph)}},done(){return t>=dur}}}
+function AT_fireArc(vy,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){t+=dt;g+=dt;if(g>0.26){g=0;fireArc(vy,col)}},done(){return t>=dur}}}
+function AT_spiral(spd,col,dur){let t=0,g=0,a=0;return{enter(){t=0;g=0;a=0},update(dt){t+=dt;g+=dt;a+=2.6*dt;if(g>0.08){g=0;spiral(spd,col,a)}},done(){return t>=dur}}}
+function AT_shockwave(spd,col,dur){let t=0,g=0;return{enter(){t=0;g=0},update(dt){t+=dt;g+=dt;if(g>0.7){g=0;ring(18,spd,col)}},done(){return t>=dur}}}
+
+/* Boss factory and roster (14 normals + 2 admin) */
+function boss(name,hp,draw,bg,attacks,intro,isAdmin=false){
+  return {name,hpMax:hp,hp:hp,damage:7,draw,bg,attacks,intro,isAdmin};
+}
+const BOSSES=[
+  boss('Golden Duelist',300,D_duelist,BG_sun,()=>[
+    AT_ring(18,120,'#ffd166',3.2), AT_rain(14,140,'#fff59a',3.0), AT_aimed(180,'#ffea80',2.6)
+  ], "The hall brightens as blades cross the air.\nA bow. A trial."),
+  boss('Frostbite Warden',320,D_warden,BG_snow,()=>[
+    AT_rain(16,150,'#d8f4ff',3.2), AT_ring(22,120,'#cfeeff',3.0), AT_shockwave(280,'#aee3ff',2.8)
+  ], "Cold clarifies.\nSteady your breath."),
+  boss('Storm Herald',340,D_herald,BG_storm,()=>[
+    AT_shockwave(300,'#fff59a',2.8), AT_walls(12,320,'#ffe066',3.0), AT_ring(26,140,'#fff59a',3.2)
+  ], "Thunder answers.\nStand inside the sound."),
+  boss('Crystal Oracle',320,D_oracle,BG_crystal,()=>[
+    AT_ribbon(180,'#a8e6ff',3.4), AT_ring(24,120,'#d0f8ff',3.0), AT_aimed(180,'#bfefff',2.6)
+  ], "Facets sing.\nChoose your angle."),
+  boss('Ashen Phoenix',360,D_phoenix,BG_embers,()=>[
+    AT_fireArc(240,'#ff9a4a',3.2), AT_rain(18,160,'#ffc07a',3.2), AT_ring(28,140,'#ffd166',3.0)
+  ], "Fall. Rise. Repeat.\nAsh remembers."),
+  boss('Abyss Jester',300,D_abyss,BG_void,()=>[
+    AT_spiral(140,'#c9b9ff',3.2), AT_walls(10,300,'#a89bff',3.0), AT_aimed(200,'#c0b3ff',2.8)
+  ], "The abyss laughs.\nEyes beget eyes."),
+  boss('Venom Dancer',320,D_venom,BG_embers,()=>[
+    AT_rain(16,150,'#66ffa1',3.0), AT_walls(12,300,'#70ff88',3.2), AT_ring(24,120,'#66ff66',3.2)
+  ], "Sway with toxin.\nEvery step a sting."),
+  boss('Moonbreaker Knight',320,D_moon,BG_void,()=>[
+    AT_ring(24,120,'#e3e7ff',3.0), AT_aimed(180,'#cfd6ff',2.6), AT_shockwave(280,'#c0c9ff',2.8)
+  ], "The moon watches.\nStep softly."),
+  boss('Aurora Weaver',320,D_aurora,BG_crystal,()=>[
+    AT_ribbon(180,'#ffc3f3',3.4), AT_ring(24,120,'#ffd6f8',3.0), AT_aimed(180,'#ffb6f2',2.6)
+  ], "Colors hum.\nFollow the thread."),
+  boss('Iron Colossus',360,D_colossus,BG_storm,()=>[
+    AT_walls(12,320,'#ff9f40',3.0), AT_ring(26,140,'#b3b3b3',3.2), AT_shockwave(300,'#ff9f40',2.8)
+  ], "Furnace roars.\nSteel remembers impact."),
+  boss('Tidecaller Siren',320,D_siren,BG_void,()=>[
+    AT_rain(16,150,'#88d9ff',3.0), AT_ring(24,120,'#99ddff',3.0), AT_aimed(180,'#66ccff',2.6)
+  ], "The tide rises.\nBreathe."),
+  boss('Chrono Warden',340,D_chrono,BG_crystal,()=>[
+    AT_spiral(140,'#64f0c2',3.2), AT_ring(26,140,'#a0ffd6',3.2), AT_walls(12,320,'#a0ffd6',3.0)
+  ], "Time bends.\nHeartbeat is a metronome."),
+  boss('Pixel Phantom',320,D_pixel,BG_pixel,()=>[
+    AT_ring(24,120,'#a8ecff',3.0), AT_walls(12,320,'#9fe0ff',3.0), AT_spiral(140,'#7fdcff',3.2)
+  ], "gl1tch… r3ady?\nhold the frame."),
+  boss('Blight Witch',340,D_blight,BG_blight,()=>[
+    AT_rain(18,160,'#66ff66',3.2), AT_ring(26,140,'#66ff66',3.0), AT_aimed(180,'#99ff99',2.6)
+  ], "Rot is patient.\nBloom is brief."),
+  // Admin memes
+  boss('Meme Herald',700,D_obliv,BG_void,()=>[
+    AT_shockwave(320,'#ffd166',3.8), AT_rain(22,180,'#fff59a',3.8), AT_ring(32,160,'#ffd166',3.8)
+  ], "Nice try.\nPrepare to be memed.", true),
+  boss('Meme Titan',800,D_titan,BG_storm,()=>[
+    AT_shockwave(300,'#ffd166',3.8), AT_walls(14,360,'#b3b3b3',3.8), AT_ring(30,160,'#ffea80',3.8)
+  ], "Swole vibes only.\nHit me bro.", true)
+];
+let bi=0; let BOSS=BOSSES[bi];
+
+/* HUD + dialogue */
 function bossBar(){bossHPFill.style.width=(360*Math.max(0,BOSS.hp/BOSS.hpMax))+'px'; bossHPVal.textContent=`${BOSS.hp}/${BOSS.hpMax}`; bossNameEl.textContent=BOSS.name;}
-bossBar();
 function updatePlayerHP(){pHPFill.style.width=(220*Math.max(0,HEART.hp/HEART.hpMax))+'px';pHPVal.textContent=`${HEART.hp}/${HEART.hpMax}`;}
-updatePlayerHP();
-
-/* Dialogue helpers */
 let lastDialog='';
 function showBubble(t){lastDialog=t; bubble.style.display='block'; bubbleText.textContent=t;}
 function hideBubble(){bubble.style.display='none';}
@@ -118,79 +428,130 @@ function drawHeart(ctx,x,y,color='#ffd166',scale=0.8){
   ctx.restore();
 }
 
-/* Simple boss sprite */
-function drawDuelist(ctx,t,flinch=0){
-  const x=480,y=258+Math.sin(t*6)*3;
-  ctx.save();
-  if(flinch>0){ctx.globalAlpha=0.6;ctx.fillStyle='#fff1b6';ctx.beginPath();ctx.arc(x,y,46,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-  ctx.shadowColor='#ffd166';ctx.shadowBlur=10;
-  ctx.fillStyle='#b8902f';
-  ctx.beginPath();ctx.moveTo(x-22,y+6);ctx.lineTo(x-50,y+28+Math.sin(t*2)*2);ctx.lineTo(x-12,y+40);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(x+22,y+6);ctx.lineTo(x+50,y+28+Math.cos(t*2)*2);ctx.lineTo(x+12,y+40);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#e5bf4d';ctx.fillRect(x-5,y-8,10,40);ctx.fillRect(x-4,y+30,8,12);
-  ctx.beginPath();ctx.ellipse(x,y+50,12,10,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x-12,y-12);ctx.lineTo(x+12,y-12);ctx.closePath();ctx.fill();
-  ctx.restore();
-}
-
-/* Attack (reliable) */
-function makeAttack(duration=4){
-  let t=0, g=0;
-  return {
-    enter(){t=0; g=0;},
-    update(dt){
-      t+=dt; g+=dt;
-      if(g>0.15){ g=0;
-        const y=ARENA.y+Math.random()*ARENA.h;
-        const left=Math.random()<0.5;
-        const x=left?ARENA.x-20:ARENA.x+ARENA.w+20;
-        const dir=left?1:-1;
-        bullets.push({x,y,vx:dir*360,vy:0,r:4,col:'#ffd166',t:0});
-      }
-    },
-    done(){return t>=duration;}
-  };
-}
-
 /* Flow */
 function startAttack(){
-  bullets.length=0; phaseT=0; showArena=true; boxEl.style.display='block';
-  attack=makeAttack(4); attack.enter();
+  showArena=true; boxEl.style.display='block'; uiCenter.textContent='Dodge! (Arrows/WASD)';
+  turn='enemy'; phaseT=0; bullets.length=0;
+  const seq=BOSS.attacks();
+  if(!startAttack._ix && startAttack._ix!==0) startAttack._ix=0;
+  attack=seq[startAttack._ix % seq.length]; startAttack._ix=(startAttack._ix+1)%seq.length;
+  attack.enter();
 }
 function finishAttack(){
   turn='player'; uiCenter.textContent='Your turn';
   showArena=false; boxEl.style.display='none';
   restoreBubble();
 }
-function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; }
+function weaponDamage(){
+  const w=WEAPONS.find(x=>x.id===currentWeapon)||WEAPONS[0];
+  return Math.max(6, w.atk);
+}
+function bossHit(dmg){ BOSS.hp=Math.max(0,BOSS.hp-dmg); bossBar(); damagePopup={x:480,y:200,t:0,text:String(dmg)}; if(BOSS.hp<=0){ showBubble('Defeated.'); if(BOSS.isAdmin){unlockMemeSword();} setTimeout(()=>nextBoss(),700); }}
+function unlockMemeSword(){
+  if(!WEAPONS.find(w=>w.id==='memelord')) WEAPONS.push({id:'memelord', name:'Meme Excalibur', atk:999});
+}
 
-/* Init */
+/* Equip UI */
+function openEquip(){
+  equipBox.style.display='block';
+  // weapons
+  eqWeapons.innerHTML='';
+  WEAPONS.forEach(w=>{
+    const btn=document.createElement('button');
+    btn.className='eqBtn';
+    btn.textContent=`${w.name} (ATK ${w.atk})${w.id===currentWeapon?' [EQUIPPED]':''}`;
+    btn.onclick=()=>{ currentWeapon=w.id; openEquip(); };
+    eqWeapons.appendChild(btn);
+  });
+  // items
+  eqItems.innerHTML='';
+  ITEMS.forEach(it=>{
+    const btn=document.createElement('button');
+    btn.className='eqBtn';
+    btn.textContent=`${it.name} (+${it.heal}) x${it.count}`;
+    btn.disabled=it.count<=0;
+    btn.onclick=()=>{
+      if(it.count>0){
+        it.count--; HEART.hp=Math.min(HEART.hpMax, HEART.hp+it.heal); updatePlayerHP();
+        openEquip();
+      }
+    };
+    eqItems.appendChild(btn);
+  });
+}
+eqClose.onclick=()=>{ equipBox.style.display='none'; };
+
+/* Init + roster navigation */
 function initBattle(){
-  HEART.hp=20; updatePlayerHP();
+  HEART.hp=HEART.hpMax=20; updatePlayerHP();
   HEART.x=ARENA.x+ARENA.w/2; HEART.y=ARENA.y+ARENA.h/2; HEART.i=0;
   turn='player'; uiCenter.textContent='Your turn'; showArena=false; boxEl.style.display='none';
-  showBubble("The hall brightens as blades cross the air.\nA bow. A trial.");
+  BOSS.hp=BOSS.hpMax; bossBar();
+  showBubble(BOSS.intro||"...");
+  bossCount.textContent=`Boss ${bi+1}/${BOSSES.length}`;
 }
-initBattle();
+function loadBoss(i){ bi=(i+BOSSES.length)%BOSSES.length; BOSS=BOSSES[bi]; acts=0; initBattle(); }
+function nextBoss(){ loadBoss(bi+1); }
+function prevBoss(){ loadBoss(bi-1); }
 
 /* Input */
 const down=new Set();
 addEventListener('keydown',e=>{
+  if(e.key==='Tab'){e.preventDefault(); toggleAdmin(admin.style.display==='none'); return;}
   down.add(e.key);
+
+  if(e.key===' '){
+    if(turn==='player'){ hideBubble(); startAttack(); }
+    else if(turn==='enemy'){ finishAttack(); }
+  }
+
+  if((e.key==='e'||e.key==='E') && turn==='player'){
+    openEquip(); // free action
+  }
+
   if((e.key==='z'||e.key==='Z'||e.key==='Enter') && turn==='player'){
-    showBubble('You strike.');
-    bossHit(20);
-    setTimeout(()=>{turn='enemy'; uiCenter.textContent='Enemy turn'; hideBubble(); startAttack();},220);
+    showBubble('You strike with '+(WEAPONS.find(x=>x.id===currentWeapon)||WEAPONS[0]).name+'.');
+    bossHit(weaponDamage());
+    if(BOSS.hp>0) setTimeout(()=>{turn='enemy'; uiCenter.textContent='Enemy turn'; hideBubble(); startAttack();},220);
+  }
+  if((e.key==='a'||e.key==='A') && turn==='player'){
+    acts=Math.min(4,acts+1);
+    showBubble(`You show respect. (${acts}/4)`);
+    setTimeout(()=>{turn='enemy'; hideBubble(); startAttack();},260);
+  }
+  if((e.key==='m'||e.key==='M') && turn==='player'){
+    if(acts>=4){ showBubble(`You spared ${BOSS.name}.`); setTimeout(()=>nextBoss(),700); }
+    else showBubble(`Not ready. (${acts}/4)`);
   }
 });
 addEventListener('keyup',e=>down.delete(e.key));
 function key(k){return down.has(k)||down.has(k.toUpperCase());}
 
+/* UI clicks */
+uiMenu.addEventListener('click',e=>{
+  const btn=e.target.closest('.uiBtn'); if(!btn) return;
+  const act=btn.dataset.act;
+  if(act==='FIGHT' && turn==='player'){
+    showBubble('You strike with '+(WEAPONS.find(x=>x.id===currentWeapon)||WEAPONS[0]).name+'.'); bossHit(weaponDamage());
+    if(BOSS.hp>0) setTimeout(()=>{turn='enemy'; uiCenter.textContent='Enemy turn'; hideBubble(); startAttack();},220);
+  }else if(act==='ACT' && turn==='player'){
+    acts=Math.min(4,acts+1); showBubble(`You show respect. (${acts}/4)`); setTimeout(()=>{turn='enemy'; hideBubble(); startAttack();},260);
+  }else if(act==='EQUIP' && turn==='player'){
+    openEquip();
+  }else if(act==='MERCY' && turn==='player'){
+    if(acts>=4){ showBubble(`You spared ${BOSS.name}.`); setTimeout(()=>nextBoss(),700); }
+    else showBubble(`Not ready. (${acts}/4)`);
+  }
+});
+prevBtn.addEventListener('click',()=>prevBoss());
+nextBtn.addEventListener('click',()=>nextBoss());
+attackBtn.addEventListener('click',()=>{ if(turn==='player'){ hideBubble(); startAttack(); } else finishAttack(); });
+
 /* Loop */
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.033,(now-last)/1000); last=now;
-  if(!paused){ update(dt); render(dt); }
+  update(dt); render(dt);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -211,20 +572,25 @@ function update(dt){
     const L=Math.hypot(dx,dy)||1;
     HEART.x=Math.max(ARENA.x+HEART.r, Math.min(ARENA.x+ARENA.w-HEART.r, HEART.x+dx/L*HEART.sp*dt));
     HEART.y=Math.max(ARENA.y+HEART.r, Math.min(ARENA.y+ARENA.h-HEART.r, HEART.y+dy/L*HEART.sp*dt));
-    HEART._pdt=dt; HEART._px=HEART.x; HEART._py=HEART.y;
-    HEART.i=Math.max(0,HEART.i-dt);
+    HEART._px=HEART.x; HEART._py=HEART.y; HEART.i=Math.max(0,HEART.i-dt);
 
     // attack update
     attack && attack.update(dt);
 
     // bullets
     for(const b of bullets){ b.t+=dt; b.x+=b.vx*dt; b.y+=b.vy*dt; }
-    bullets=bullets.filter(b=>b.x>ARENA.x-120 && b.x<ARENA.x+ARENA.w+120 && b.y>ARENA.y-120 && b.y<ARENA.y+ARENA.h+120);
+    bullets=bullets.filter(b=>b.x>ARENA.x-160 && b.x<ARENA.x+ARENA.w+160 && b.y>ARENA.y-160 && b.y<ARENA.y+ARENA.h+160);
 
     // collisions
     for(const b of bullets){
       const dx2=b.x-HEART.x, dy2=b.y-HEART.y, rr=(b.r||4)+HEART.r;
-      if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){ HEART.hp=Math.max(0,HEART.hp-7); updatePlayerHP(); HEART.i=0.85; }
+      if(dx2*dx2+dy2*dy2<=rr*rr && HEART.i<=0){
+        const dmg=Math.floor(7*ADMIN_DAMAGE_MULT);
+        if(!ADMIN_INVINC && !ADMIN_INFINITE_HP){
+          HEART.hp=Math.max(0,HEART.hp-dmg);
+        }
+        updatePlayerHP(); HEART.i=0.85;
+      }
     }
 
     // end phase
@@ -233,7 +599,7 @@ function update(dt){
     // defeat
     if(HEART.hp<=0){
       turn='defeat'; showBubble('You fall. The hall dims.');
-      setTimeout(()=>initBattle(),1000);
+      setTimeout(()=>initBattle(),900);
     }
   }
 
@@ -243,13 +609,15 @@ function update(dt){
 
 /* Render */
 function render(dt){
-  // background
-  ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,960,720);
+  // background per boss
+  BOSS.bg();
+
+  // subtle star noise
   ctx.fillStyle='#1a130f';
-  for(let i=0;i<96;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
+  for(let i=0;i<64;i++){const x=(i*97)%960, y=(i*151)%720; ctx.fillRect(x,y,2,2);}
 
   // boss sprite
-  drawDuelist(ctx,time,scene.flinch);
+  BOSS.draw(time);
 
   // arena on enemy turn
   if(turn==='enemy' && showArena){
@@ -268,6 +636,57 @@ function render(dt){
     ctx.restore();
   }
 }
+
+/* Admin panel setup */
+function buildAdmin(){
+  adminBossList.innerHTML='';
+  const list=document.createElement('div');
+  list.style.display='flex'; list.style.flexWrap='wrap'; list.style.gap='6px';
+  BOSSES.forEach((b,i)=>{
+    const btn=document.createElement('button');
+    btn.textContent=`${i+1}. ${b.name}${b.isAdmin?' [ADMIN]':''}`;
+    btn.className='admin-btn';
+    btn.onclick=()=>{ loadBoss(i); toggleAdmin(false); };
+    list.appendChild(btn);
+  });
+  adminBossList.appendChild(list);
+
+  adminQuickEquip.innerHTML='';
+  WEAPONS.forEach(w=>{
+    const btn=document.createElement('button');
+    btn.textContent=`${w.name} (ATK ${w.atk})`;
+    btn.className='admin-btn';
+    btn.onclick=()=>{ currentWeapon=w.id; };
+    adminQuickEquip.appendChild(btn);
+  });
+
+  document.getElementById('adPrev').onclick=()=>{ prevBoss(); toggleAdmin(false); };
+  document.getElementById('adNext').onclick=()=>{ nextBoss(); toggleAdmin(false); };
+  document.getElementById('adClose').onclick=()=>toggleAdmin(false);
+  document.getElementById('adApplyHP').onclick=()=>{
+    const v=parseInt(document.getElementById('adSetHP').value||HEART.hp,10);
+    HEART.hp=clamp(v,1,999); updatePlayerHP();
+  };
+  document.getElementById('adApplyMax').onclick=()=>{
+    const v=parseInt(document.getElementById('adSetMax').value||HEART.hpMax,10);
+    HEART.hpMax=clamp(v,1,999); HEART.hp=Math.min(HEART.hp,HEART.hpMax); updatePlayerHP();
+  };
+  document.getElementById('adInf').onchange=(e)=>{ ADMIN_INFINITE_HP=e.target.checked; };
+  document.getElementById('adInv').onchange=(e)=>{ ADMIN_INVINC=e.target.checked; };
+  document.getElementById('adDmg').oninput=(e)=>{ ADMIN_DAMAGE_MULT=parseFloat(e.target.value)||1; document.getElementById('adDmgVal').textContent=(ADMIN_DAMAGE_MULT.toFixed(2)); };
+  document.getElementById('adHeal').onclick=()=>{ HEART.hp=HEART.hpMax; updatePlayerHP(); };
+  document.getElementById('adClear').onclick=()=>{ bullets.length=0; };
+  document.getElementById('adEnd').onclick=()=>{ if(turn==='enemy'){ finishAttack(); } };
+  document.getElementById('adWin').onclick=()=>{ BOSS.hp=0; bossBar(); showBubble('Admin win.'); setTimeout(()=>nextBoss(),600); };
+  document.getElementById('adStart').onclick=()=>{ if(turn==='player'){ hideBubble(); startAttack(); } };
+}
+function toggleAdmin(show){ admin.style.display=show?'block':'none'; }
+addEventListener('keydown',e=>{ if(e.key==='Tab'){ e.preventDefault(); toggleAdmin(admin.style.display==='none'); }});
+
+/* Boot: auto-start Boss #1 and build admin */
+bossBar(); updatePlayerHP();
+buildAdmin();
+initBattle();
 </script>
 </body>
 </html>
