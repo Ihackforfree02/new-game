@@ -1,169 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Battle.html — Bullet Heart Run: Meme Boss Edition</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    :root{
-      --bg:#07060a; --panel:#111; --neon:#33f7ff; --accent:#ffd166; --danger:#ff5c5c;
-      --ui:#1b1b1b; --muted:#888;
-    }
-    html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:monospace;display:flex;align-items:center;justify-content:center;}
-    #container{position:relative;width:960px;height:720px;box-shadow:0 0 0 6px #000 inset, 0 0 20px rgba(0,0,0,0.6);}
-    canvas{display:block;background:linear-gradient(180deg,#05050a 0%, #0b0b10 100%);width:960px;height:720px;image-rendering:pixelated}
-    /* Admin and UI panels */
-    #adminPanel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--panel);padding:10px;border:2px solid var(--accent);display:none;z-index:50;border-radius:6px;}
-    #adminPanel input,#adminPanel select,#adminPanel button{margin:6px 6px 0 0;padding:6px;background:#000;border:1px solid #333;color:#fff;border-radius:4px;}
-    #equip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--ui);padding:12px;border:2px solid #fff;display:none;z-index:40;border-radius:6px;}
-    #equip button{margin-top:8px;padding:6px 10px;background:#000;border:1px solid #333;color:#fff;border-radius:4px;}
-    /* HUD */
-    #hud{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:6px;border:1px solid #222;font-size:14px;z-index:45;}
-    #controlsHint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;border:1px solid #222;font-size:13px;z-index:45;color:var(--muted)}
-    .buttonUI{display:inline-block;margin-right:8px;padding:6px 10px;background:#111;border:1px solid #333;border-radius:4px;color:#fff;}
-  </style>
+<meta charset="utf-8" />
+<title>battle.html — Bullet Heart Run: Meme Boss Edition (Final)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+:root{
+  --bg:#07060a; --panel:#111; --neon:#33f7ff; --accent:#ffd166; --danger:#ff5c5c;
+  --ui:#1b1b1b; --muted:#888;
+}
+html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:monospace;display:flex;align-items:center;justify-content:center;}
+#container{position:relative;width:960px;height:720px;box-shadow:0 0 0 6px #000 inset, 0 0 20px rgba(0,0,0,0.6);}
+canvas{display:block;background:linear-gradient(180deg,#05050a 0%, #0b0b10 100%);width:960px;height:720px;image-rendering:pixelated}
+#adminPanel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--panel);padding:10px;border:2px solid var(--accent);display:none;z-index:50;border-radius:6px;}
+#adminPanel button,#adminPanel select{margin:6px 6px 0 0;padding:6px;background:#000;border:1px solid #333;color:#fff;border-radius:4px;}
+#equip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--ui);padding:12px;border:2px solid #fff;display:none;z-index:40;border-radius:6px;}
+#equip button{margin-top:8px;padding:6px 10px;background:#000;border:1px solid #333;color:#fff;border-radius:4px;}
+#hud{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:6px;border:1px solid #222;font-size:14px;z-index:45;}
+#controlsHint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;border:1px solid #222;font-size:13px;z-index:45;color:var(--muted)}
+.menu{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);display:flex;gap:8px;z-index:46}
+.menu .opt{padding:10px 18px;background:#111;border:2px solid #222;border-radius:6px;color:#fff;font-weight:bold}
+.menu .sel{border-color:var(--neon);box-shadow:0 0 18px rgba(51,247,255,0.12);background:linear-gradient(180deg,#121212,#0b0b0b)}
+.infoBox{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);background:rgba(0,0,0,0.5);padding:6px 12px;border-radius:6px;border:1px solid #222;z-index:46}
+.small{font-size:13px;color:var(--muted)}
+</style>
 </head>
 <body>
-  <div id="container">
-    <canvas id="game" width="960" height="720"></canvas>
+<div id="container">
+  <canvas id="game" width="960" height="720"></canvas>
 
-    <div id="adminPanel">
-      <strong>Admin Panel</strong><br/>
-      <input id="announceInput" placeholder="Announcement" />
-      <button onclick="announce()">Announce</button>
-      <button onclick="spawnChest()">Spawn Chest</button>
-      <button onclick="healPlayer()">Heal</button>
-      <select id="bossSelect">
-        <option value="shrek">Shrekonator</option>
-        <option value="cheesus">Cheesus</option>
-        <option value="cluck">Cluckthulhu</option>
-      </select>
-      <button onclick="spawnMemeBoss()">Spawn Boss</button>
-    </div>
-
-    <div id="equip">
-      <strong>Equip</strong>
-      <div id="wepList" style="margin-top:8px">Weapon: <span id="wepCurrent">Banana Blade</span></div>
-      <div id="buffList" style="margin-top:6px">Buffs: <span id="buffCurrent">None</span></div>
-      <button onclick="closeEquip()">Close</button>
-    </div>
-
-    <div id="hud">
-      <span id="txtLV">LV 1</span> &nbsp; <span id="txtGold">G: 0</span> &nbsp;
-      <span id="txtHP">HP: 20/20</span> &nbsp; <span id="txtBoss">Boss: None</span>
-    </div>
-
-    <div id="controlsHint">
-      Arrows: Move &nbsp; Enter: Open Chest &nbsp; E: Equip &nbsp; Type 6/7 sequence to open Admin
-    </div>
+  <div id="adminPanel">
+    <strong>Admin</strong><br/>
+    <select id="bossSelect">
+      <option value="shrek">Shrekonator</option>
+      <option value="cheesus">Cheesus</option>
+      <option value="cluck">Cluckthulhu</option>
+    </select>
+    <button onclick="adminSpawnBoss()">Spawn Boss</button>
+    <button onclick="adminSpawnChest()">Spawn Chest</button>
+    <button onclick="adminHeal()">Heal Player</button>
+    <button onclick="adminWin()">Win Boss</button>
   </div>
 
+  <div id="equip">
+    <strong>Equip</strong>
+    <div style="margin-top:8px">Weapon: <span id="wepCur">Banana Blade</span></div>
+    <div style="margin-top:6px">Buffs: <span id="buffCur">None</span></div>
+    <div style="margin-top:8px">
+      <button onclick="equipWeapon('Banana Blade',6)">Banana Blade (6)</button>
+      <button onclick="equipWeapon('Laser Katana',12)">Laser Katana (12)</button>
+      <button onclick="applyBuff('Rage Tonic')">Use Rage Tonic</button>
+    </div>
+    <button onclick="closeEquip()">Close</button>
+  </div>
+
+  <div id="hud">
+    <span id="txtLV">LV 1</span> &nbsp; <span id="txtGold">G: 0</span> &nbsp;
+    <span id="txtHP">HP: 20/20</span> &nbsp; <span id="txtBoss">Boss: None</span>
+  </div>
+
+  <div class="menu" id="menu">
+    <div class="opt sel" data-i="0">FIGHT</div>
+    <div class="opt" data-i="1">ACT</div>
+    <div class="opt" data-i="2">EQUIP</div>
+    <div class="opt" data-i="3">MERCY</div>
+  </div>
+
+  <div class="infoBox small" id="info">Use arrow keys to move during enemy attacks. Use arrow keys + Enter to pick menu option.</div>
+
+  <div id="controlsHint">Arrows: Move &nbsp; Enter: Confirm &nbsp; E: Equip &nbsp; Type 676767 to open Admin</div>
+</div>
+
 <script>
-/* ---------------------------
-   Game core & state
-   --------------------------- */
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-
+/* ---------------------
+   Basic setup
+   --------------------- */
+const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
-let dt = 0, last = performance.now(), timeAcc = 0;
+let last = performance.now(), dt = 0, accTime = 0;
 let keys = new Set();
-let mouse = {x:0,y:0};
-
-document.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  mouse.x = (e.clientX - rect.left) * (canvas.width/rect.width);
-  mouse.y = (e.clientY - rect.top) * (canvas.height/rect.height);
-});
+let adminSeq = '', adminOpen = false;
 
 document.addEventListener('keydown', e => {
   keys.add(e.key);
-  handleAdminCode(e.key);
+  handleAdminSeq(e.key);
   if(e.key==='e' || e.key==='E') toggleEquip(true);
-  if(e.key==='Enter') tryOpenChest();
+  if(e.key==='Enter') onMenuConfirm();
 });
 document.addEventListener('keyup', e => keys.delete(e.key));
+document.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
+  mouse.y = (e.clientY - r.top) * (canvas.height / r.height);
+});
 
-/* Player heart */
-let player = {
-  x: W/2, y: H - 120, r: 8,
-  hp: 20, maxHp: 20, lv:1, gold:0,
-  weapon: {name:'Banana Blade', dmg:6},
-  buffs: []
-};
+/* ---------------------
+   Player & HUD
+   --------------------- */
+let mouse = {x:0,y:0};
+let player = {x:W/2, y:H-140, r:8, hp:20, maxHp:20, lv:1, gold:0, weapon:{name:'Banana Blade',dmg:6}, buffs:[]};
+const hudHP = document.getElementById('txtHP'), hudGold = document.getElementById('txtGold'), hudLV = document.getElementById('txtLV'), hudBoss = document.getElementById('txtBoss');
+const wepCurSpan = document.getElementById('wepCur'), buffCurSpan = document.getElementById('buffCur');
 
-/* UI elements */
-const hudHP = document.getElementById('txtHP');
-const hudGold = document.getElementById('txtGold');
-const hudLV = document.getElementById('txtLV');
-const hudBoss = document.getElementById('txtBoss');
-const wepCur = document.getElementById('wepCurrent');
-const buffCur = document.getElementById('buffCurrent');
+/* ---------------------
+   Game objects
+   --------------------- */
+let bullets = [], chests = [];
+let menuIndex = 0; // 0 fight,1 act,2 equip,3 mercy
+let flowState = 'player-menu'; // 'player-menu' | 'player-fight-dodge' | 'enemy' | 'victory'
+let boss = null;
 
-/* admin code input */
-let adminSequence = '';
-let adminUnlocked = false;
-
-/* world objects */
-let chests = [];
-let bullets = [];
-let boss = null; // boss object when active
-let state = 'fight'; // fight / player / boss-turn / menu
-
-/* constants */
+/* ---------------------
+   Constants
+   --------------------- */
 const SPEED = 220;
-const BULLET_LIFE = 8; // seconds
+const BULLET_LIFE = 8;
 
-/* Helpers */
-function rand(min, max){ return Math.random()*(max-min)+min; }
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
-
-/* ---------------------------
-   Boss definitions & behaviors
-   --------------------------- */
+/* ---------------------
+   Boss definitions (improved)
+   --------------------- */
 const BOSS_DEFS = {
   shrek: {
-    name:'Shrekonator', hp:150, color:'#37a83a',
-    intro: 'URGLE. SWAMP PROTOCOL ONLINE.',
-    pattern(dt, self){
-      if(Math.random() < 0.02){
-        const n = 6;
+    id:'shrek', name:'Shrekonator', hp:160, color:'#37a83a',
+    intro: 'SHREKONATOR ONLINE',
+    actPhrases: ['Smell of swamp', 'Offer onion', 'Sing loud'],
+    pattern(self){
+      // cluster missiles and some homing mud orbs
+      if(Math.random() < 0.018){
+        const n = 8;
         for(let i=0;i<n;i++){
-          const a = (i/n)*Math.PI*2 + rand(-0.2,0.2);
-          bullets.push(makeBullet(self.x + Math.cos(a)*40, self.y + Math.sin(a)*40, Math.cos(a)*150, Math.sin(a)*150, 5, '#2de'));
+          const a = (i/n)*Math.PI*2 + rand(-0.25,0.25);
+          bullets.push(makeBullet(self.x + Math.cos(a)*36, self.y + Math.sin(a)*36, Math.cos(a)*140, Math.sin(a)*140, 6, '#8ff'));
         }
       }
-      if(Math.random() < 0.015){
-        let angle = Math.atan2(player.y - self.y, player.x - self.x) + rand(-0.6,0.6);
-        bullets.push(makeHoming(self.x, self.y, Math.cos(angle)*90, Math.sin(angle)*90, 10, '#3f3', 0.4));
+      if(Math.random() < 0.012){
+        const ang = Math.atan2(player.y-self.y, player.x-self.x) + rand(-0.6,0.6);
+        bullets.push(makeHoming(self.x, self.y, Math.cos(ang)*90, Math.sin(ang)*90, 12, '#3f3', 0.45));
       }
     }
   },
   cheesus: {
-    name:'Cheesus', hp:120, color:'#ffdf5b',
-    intro: 'BEHOLD THE DIVINE CHEESE!',
-    pattern(dt,self){
+    id:'cheesus', name:'Cheesus', hp:130, color:'#ffdf5b',
+    intro: 'BEHOLD THE DIVINE CHEESE',
+    actPhrases: ['Praise cheese', 'Offer cracker', 'Mozzarella?'],
+    pattern(self){
       if(Math.random() < 0.03){
-        const n = 12 + Math.floor(rand(0,6));
+        const n = 10 + Math.floor(rand(0,6));
         for(let i=0;i<n;i++){
-          const a = (i/n)*Math.PI*2 + rand(-0.1,0.1);
-          bullets.push(makeBullet(self.x + Math.cos(a)*30, self.y + Math.sin(a)*30, Math.cos(a)*120, Math.sin(a)*120, 4, '#ffb'));
+          const a = (i/n)*Math.PI*2 + rand(-0.12,0.12);
+          bullets.push(makeBullet(self.x + Math.cos(a)*30, self.y + Math.sin(a)*30, Math.cos(a)*130, Math.sin(a)*130, 4, '#ffd'));
         }
       }
       if(Math.random() < 0.02){
         const rows = 3;
         for(let r=0;r<rows;r++){
           const y = 160 + r*18 + rand(-6,6);
-          bullets.push(makeStraight(80 + rand(-20,20), y, 260, 0, 8, '#ffd166'));
+          bullets.push(makeStraight(80 + rand(-20,20), y, 280, 0, 9, '#ffd166'));
         }
       }
     }
   },
   cluck: {
-    name:'Cluckthulhu', hp:180, color:'#fff1f0',
-    intro: 'CLUCKTHULHU AWAKENS',
-    pattern(dt,self){
+    id:'cluck', name:'Cluckthulhu', hp:180, color:'#fff1f0',
+    intro: 'THE CLUCK RISES',
+    actPhrases: ['Comfort chicken','Feed worm','Sing lullaby'],
+    pattern(self){
       if(Math.random() < 0.025){
         const center = {x:480 + rand(-200,200), y:200 + rand(-40,40)};
         for(let i=0;i<8;i++){
@@ -182,125 +183,184 @@ const BOSS_DEFS = {
   }
 };
 
-/* ---------------------------
-   Bullet factory helpers
-   --------------------------- */
-function makeBullet(x,y,dx,dy,r,color){
-  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'bullet',tick:0};
-}
-function makeHoming(x,y,dx,dy,r,color,homingPower=0.6){
-  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'homing',homing:homingPower,tick:0};
-}
-function makeStraight(x,y,dx,dy,r,color){
-  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'straight',tick:0};
-}
-function makeOrbit(x,y,dx,dy,r,color){
-  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'orbit',tick:0,ang:rand(0,Math.PI*2)};
-}
+/* ---------------------
+   Bullet factories
+   --------------------- */
+function makeBullet(x,y,dx,dy,r,color){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'bullet',tick:0}; }
+function makeHoming(x,y,dx,dy,r,color,homing=0.6){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'homing',homing,tick:0}; }
+function makeStraight(x,y,dx,dy,r,color){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'straight',tick:0}; }
+function makeOrbit(x,y,dx,dy,r,color){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'orbit',tick:0,ang:rand(0,Math.PI*2)}; }
 
-/* ---------------------------
-   Game control functions
-   --------------------------- */
-function spawnMemeBoss(){
-  const sel = document.getElementById('bossSelect').value;
-  const def = BOSS_DEFS[sel];
+/* ---------------------
+   Utility
+   --------------------- */
+function rand(a,b){ return Math.random()*(b-a)+a; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function dist(ax,ay,bx,by){ return Math.hypot(ax-bx,ay-by); }
+
+/* ---------------------
+   Admin panel control
+   --------------------- */
+function handleAdminSeq(key){
+  adminSeq += key;
+  adminSeq = adminSeq.slice(-20);
+  if(!adminOpen && adminSeq.replace(/[^67]/g,'').endsWith('676767')){
+    adminOpen = true;
+    document.getElementById('adminPanel').style.display = 'block';
+    alert('Admin Panel unlocked');
+  }
+}
+function adminSpawnBoss(){ spawnBoss(document.getElementById('bossSelect').value); }
+function adminSpawnChest(){ chests.push({x:rand(120,W-120), y:rand(180,H-220), opened:false}); }
+function adminHeal(){ player.hp = player.maxHp; updateHUD(); }
+function adminWin(){ if(boss){ boss.hp = 0; } }
+
+/* ---------------------
+   Spawn & equip
+   --------------------- */
+function spawnBoss(key){
+  const def = BOSS_DEFS[key];
   boss = {
-    id: sel,
-    name: def.name,
-    x: W/2, y: 140,
-    hp: def.hp,
-    maxHp: def.hp,
-    color: def.color,
-    def: def,
-    introTimer: 180 // frames
+    id: def.id, name: def.name, x: W/2, y: 140,
+    hp: def.hp, maxHp: def.hp, color: def.color, def: def, introTimer: 120
   };
   bullets = [];
   hudBoss.textContent = `Boss: ${boss.name}`;
+  flowState = 'player-menu';
 }
-function spawnChest(){
-  chests.push({x: rand(120, W-120), y: rand(180, H-220), opened:false});
+function equipWeapon(name,dmg){ player.weapon = {name,dmg}; wepCurSpan.textContent = name; closeEquip(); }
+function applyBuff(name){
+  if(name === 'Rage Tonic'){ player.buffs.push({name:'Rage Tonic', dmgMult:1.5, dur:60}); buffCurSpan.textContent = player.buffs.map(b=>b.name).join(', '); closeEquip(); }
 }
-function healPlayer(){ player.hp = player.maxHp; updateHUD(); }
-function announce(){ const s = document.getElementById('announceInput').value; if(s) alert('📢 '+s); }
-
-/* Admin unlocking by typing sequence 6 and 7 pattern 676767 */
-function handleAdminCode(key){
-  adminSequence += key;
-  adminSequence = adminSequence.slice(-20);
-  if(!adminUnlocked && adminSequence.replace(/[^67]/g,'').endsWith('676767')){
-    adminUnlocked = true;
-    document.getElementById('adminPanel').style.display = 'block';
-    alert('Admin Panel Unlocked');
-  }
-}
-
-/* Equip UI */
-function toggleEquip(show){
-  if(show) document.getElementById('equip').style.display = 'block';
-  else document.getElementById('equip').style.display = 'none';
-}
+function toggleEquip(show){ document.getElementById('equip').style.display = show ? 'block' : 'none'; }
 function closeEquip(){ toggleEquip(false); }
 
-/* open chests */
-function tryOpenChest(){
-  for(const c of chests){
-    if(c.opened) continue;
-    const dx = player.x - c.x, dy = player.y - c.y;
-    if(Math.hypot(dx,dy) < 30){
-      c.opened = true;
-      player.gold = (player.gold||0) + Math.floor(rand(5,30));
-      if(Math.random() < 0.25){
-        player.weapon = {name:'Laser Katana', dmg:12};
-        wepCur.textContent = player.weapon.name;
-        alert('You found a Laser Katana!');
-      } else if(Math.random() < 0.15){
-        player.buffs.push({name:'Rage Tonic', dmgMult:1.5, dur:60});
-        buffCur.textContent = player.buffs.map(b=>b.name).join(', ');
-        alert('You found a Rage Tonic!');
-      } else {
-        alert('You found gold!');
-      }
-      updateHUD();
-      break;
-    }
+/* ---------------------
+   Menu interactions (Undertale-like)
+   --------------------- */
+const menuEls = Array.from(document.querySelectorAll('.menu .opt'));
+function updateMenuVisual(){
+  menuEls.forEach((el,i)=>{ el.classList.toggle('sel', i===menuIndex); });
+}
+function onMenuConfirm(){
+  if(flowState !== 'player-menu') return;
+  const sel = menuIndex;
+  if(sel===0) beginFightTurn();
+  else if(sel===1) beginAct();
+  else if(sel===2) toggleEquip(true);
+  else if(sel===3) attemptMercy();
+}
+
+/* FIGHT flow: show short attack/dodge phase */
+function beginFightTurn(){
+  if(!boss) return;
+  flowState = 'player-fight-dodge';
+  // player deals damage proportional to weapon and buffs, applied after dodge counter window ends
+  // start a short dodge timer where enemy may shoot bullets
+  player.pendingDamage = player.weapon.dmg * (player.buffs.reduce((m,b)=>m*(b.dmgMult||1),1));
+  // give small grace for 1s then enemy attack will occur naturally via boss pattern
+  setTimeout(()=>endPlayerAttack(), 1200);
+}
+function endPlayerAttack(){
+  if(boss){
+    boss.hp -= Math.floor(player.pendingDamage || 0);
+    if(boss.hp <= 0) boss.hp = 0;
+  }
+  player.pendingDamage = 0;
+  flowState = 'enemy';
+  // enemy will run its pattern over time; after short delay return to player menu
+  setTimeout(()=>{ if(boss && boss.hp>0) flowState = 'player-menu'; else if(!boss) flowState='victory'; }, 800);
+}
+
+/* ACT flow: simple interactions to modify boss state to enable mercy */
+function beginAct(){
+  if(!boss) return;
+  const phrases = boss.def.actPhrases || ['...'];
+  const choice = phrases[Math.floor(Math.random()*phrases.length)];
+  // simple simulated interaction: chance to pacify
+  const success = Math.random() < 0.45;
+  if(success){
+    // make bullets slower and small hp reduction
+    if(boss){ boss.hp -= 4; }
+    // reduce bullet spawn for a time by tagging boss with pacified flag
+    boss.pacified = (boss.pacified || 0) + 300; // frames of reduced aggression
+    alert(`ACT: You "${choice}" — effect!`);
+  } else {
+    alert(`ACT: You "${choice}" — no effect.`);
+  }
+  flowState = 'enemy';
+  setTimeout(()=>{ if(boss && boss.hp>0) flowState='player-menu'; else if(!boss) flowState='victory'; }, 700);
+}
+
+/* MERCY flow */
+function attemptMercy(){
+  if(!boss) return;
+  // allow mercy if hp below threshold or pacified flag present
+  const canSpare = (boss.hp <= boss.maxHp * 0.18) || (boss.pacified && boss.pacified > 0);
+  if(canSpare){
+    alert(`You spared ${boss.name}! No exp, but you get gold.`);
+    player.gold += Math.floor(rand(30,80));
+    boss = null;
+    hudBoss.textContent = 'Boss: None';
+    flowState = 'player-menu';
+    updateHUD();
+  } else {
+    alert('Mercy refused.');
+    flowState = 'enemy';
+    setTimeout(()=>{ if(boss) flowState='player-menu'; }, 600);
   }
 }
 
-/* ---------------------------
-   Update & draw
-   --------------------------- */
-function updateGame(delta){
-  timeAcc += delta*1000;
-  // player movement
-  let vx = 0, vy = 0;
-  if(keys.has('ArrowLeft')) vx -= 1;
-  if(keys.has('ArrowRight')) vx += 1;
-  if(keys.has('ArrowUp')) vy -= 1;
-  if(keys.has('ArrowDown')) vy += 1;
-  const mag = Math.hypot(vx,vy) || 1;
-  player.x += (vx/mag) * SPEED * delta;
-  player.y += (vy/mag) * SPEED * delta;
-  player.x = clamp(player.x, 20, W-20);
-  player.y = clamp(player.y, 100, H-30);
-
-  // boss logic
-  if(boss){
-    if(boss.introTimer > 0){
-      boss.introTimer--;
-    } else {
-      boss.def.pattern(delta, boss);
-    }
-    boss.y = 120 + Math.sin(timeAcc*0.002 + (boss.id.length)) * 8;
+/* ---------------------
+   Update loop
+   --------------------- */
+function update(delta){
+  accTime += delta * 1000;
+  // menu navigation (only when in player-menu)
+  if(flowState === 'player-menu'){
+    if(keys.has('ArrowLeft')){ menuIndex = (menuIndex + 3) % 4; updateMenuVisual(); keys.delete('ArrowLeft'); }
+    if(keys.has('ArrowRight')){ menuIndex = (menuIndex + 1) % 4; updateMenuVisual(); keys.delete('ArrowRight'); }
+    if(keys.has('ArrowUp')){ menuIndex = (menuIndex + 3) % 4; updateMenuVisual(); keys.delete('ArrowUp'); }
+    if(keys.has('ArrowDown')){ menuIndex = (menuIndex + 1) % 4; updateMenuVisual(); keys.delete('ArrowDown'); }
   }
 
-  // bullets update
+  // player movement allowed except in menu when not in dodge
+  let mv = 0;
+  if(flowState !== 'player-menu' || flowState === 'player-fight-dodge'){
+    let vx=0, vy=0;
+    if(keys.has('ArrowLeft')) vx-=1;
+    if(keys.has('ArrowRight')) vx+=1;
+    if(keys.has('ArrowUp')) vy-=1;
+    if(keys.has('ArrowDown')) vy+=1;
+    const m = Math.hypot(vx,vy) || 1;
+    player.x += (vx/m) * SPEED * delta;
+    player.y += (vy/m) * SPEED * delta;
+    player.x = clamp(player.x, 20, W-20); player.y = clamp(player.y, 120, H-30);
+  }
+
+  // boss behavior & bullet spawning
+  if(boss){
+    if(boss.introTimer > 0){ boss.introTimer--; }
+    else {
+      // pacified reduces aggression
+      const pac = boss.pacified ? boss.pacified > 0 : false;
+      if(boss.pacified) boss.pacified = Math.max(0, boss.pacified - 1);
+      // spawn bullets via pattern but lower rate if pacified
+      if(!pac) boss.def.pattern(delta, boss);
+      else {
+        if(Math.random() < 0.008) boss.def.pattern(delta, boss);
+      }
+      boss.y = 120 + Math.sin(accTime*0.002 + boss.id.length) * 8;
+    }
+  }
+
+  // update bullets
   for(let i=bullets.length-1;i>=0;i--){
     const b = bullets[i];
-    b.tick += delta;
-    b.life -= delta;
+    b.tick += delta; b.life -= delta;
     if(b.type === 'homing'){
       const ang = Math.atan2(player.y - b.y, player.x - b.x);
-      const spd = Math.hypot(b.dx, b.dy) || 1;
+      const spd = Math.hypot(b.dx,b.dy) || 1;
       b.dx = (1-b.homing)*b.dx + b.homing * Math.cos(ang)*spd;
       b.dy = (1-b.homing)*b.dy + b.homing * Math.sin(ang)*spd;
       b.x += b.dx * delta;
@@ -310,235 +370,151 @@ function updateGame(delta){
       b.x += b.dx * delta * 0.2 + Math.cos(b.ang)*20*delta;
       b.y += b.dy * delta * 0.2 + Math.sin(b.ang)*20*delta;
     } else {
-      b.x += b.dx * delta;
-      b.y += b.dy * delta;
+      b.x += b.dx * delta; b.y += b.dy * delta;
     }
-
-    if(b.life <= 0 || b.x < -50 || b.x > W+50 || b.y < -50 || b.y > H+50){
-      bullets.splice(i,1);
-      continue;
-    }
-
-    const dx = player.x - b.x, dy = player.y - b.y;
-    if(Math.hypot(dx,dy) < b.r + player.r){
-      let dmg = 1;
+    if(b.life <= 0 || b.x < -60 || b.x > W+60 || b.y < -60 || b.y > H+60){ bullets.splice(i,1); continue; }
+    // collision
+    if(dist(b.x,b.y,player.x,player.y) < b.r + player.r){
+      // apply damage
+      const dmg = Math.max(1, Math.floor((b.r/3)));
       player.hp -= dmg;
       bullets.splice(i,1);
-      if(player.hp <= 0){
-        player.hp = 0;
-        setTimeout(()=>resetPlayer(), 600);
-      }
+      if(player.hp <= 0){ player.hp = 0; setTimeout(()=>playerRespawn(), 700); }
     }
   }
 
   // reduce buff durations
   for(let i=player.buffs.length-1;i>=0;i--){
     const bf = player.buffs[i];
-    if(bf.dur){
-      bf.dur -= delta*60;
-      if(bf.dur <= 0) player.buffs.splice(i,1);
-    }
+    if(bf.dur){ bf.dur -= delta*60; if(bf.dur <= 0) player.buffs.splice(i,1); }
   }
 
-  // boss defeat
+  // check boss death
   if(boss && boss.hp <= 0){
+    // victory handling
     alert(`${boss.name} defeated!`);
-    player.gold = (player.gold||0) + Math.floor(rand(50,150));
-    boss = null;
-    hudBoss.textContent = 'Boss: None';
-    updateHUD();
+    player.gold += Math.floor(rand(50,150));
+    boss = null; hudBoss.textContent = 'Boss: None'; flowState = 'player-menu'; updateHUD();
   }
-}
 
-/* reset on death */
-function resetPlayer(){
-  player.x = W/2; player.y = H-120; player.hp = player.maxHp;
   updateHUD();
 }
 
-/* ---------------------------
-   Drawing
-   --------------------------- */
-function drawScene(){
+/* ---------------------
+   Player respawn
+   --------------------- */
+function playerRespawn(){ player.x = W/2; player.y = H-140; player.hp = player.maxHp; updateHUD(); }
+
+/* ---------------------
+   Draw
+   --------------------- */
+function draw(){
   ctx.clearRect(0,0,W,H);
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#081026'); g.addColorStop(1,'#05040a');
-  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-
-  ctx.globalAlpha = 0.06;
-  ctx.fillStyle = '#0ff';
-  for(let i=0;i<6;i++){
-    const y = ((timeAcc*0.02) + i*120) % H;
-    ctx.fillRect(0,y,W,1);
-  }
+  // background
+  const g = ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#081026'); g.addColorStop(1,'#05040a'); ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // scanlines
+  ctx.globalAlpha = 0.06; ctx.fillStyle = '#0ff';
+  for(let i=0;i<6;i++){ const y = ((accTime*0.02) + i*120) % H; ctx.fillRect(0,y,W,1); }
   ctx.globalAlpha = 1;
-
-  ctx.fillStyle = 'rgba(50,50,80,0.12)';
-  ctx.fillRect(40, 60, W-80, H-150);
-
-  for(const c of chests){
-    ctx.fillStyle = c.opened ? '#666' : '#ffcc66';
-    roundRect(ctx, c.x-14, c.y-10, 28, 20, 4, true, false);
-    ctx.strokeStyle = '#000'; ctx.strokeRect(c.x-14, c.y-10, 28, 20);
-  }
-
+  // stage
+  ctx.fillStyle = 'rgba(50,50,80,0.12)'; ctx.fillRect(40,60,W-80,H-150);
+  // chests
+  for(const c of chests){ ctx.fillStyle = c.opened ? '#666' : '#ffcc66'; roundRect(ctx,c.x-14,c.y-10,28,20,4,true,false); ctx.strokeStyle='#000'; ctx.strokeRect(c.x-14,c.y-10,28,20); }
+  // bullets
   for(const b of bullets){
-    ctx.beginPath();
-    ctx.fillStyle = b.color || '#f55';
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = b.color || '#f55';
-    ctx.arc(b.x, b.y, b.r*2.8, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.fillStyle = b.color || '#f55'; ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.globalAlpha = 0.16; ctx.fillStyle = b.color || '#f55'; ctx.arc(b.x,b.y,b.r*2.6,0,Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
   }
-
+  // boss
   if(boss){
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.ellipse(boss.x, boss.y+36, 70, 18, 0,0,Math.PI*2);
-    ctx.fill();
-    drawBossSprite(boss);
-
-    const bw = 520;
-    const hpPct = clamp(boss.hp / boss.maxHp, 0,1);
-    const bx = (W-bw)/2, by = 28;
-    ctx.fillStyle = '#222';
-    roundRect(ctx,bx,by,bw,14,6,true,false);
-    ctx.fillStyle = boss.color || '#ffd166';
-    roundRect(ctx,bx+2,by+2,(bw-4)*hpPct,10,4,true,false);
-    ctx.strokeStyle = '#000'; ctx.strokeRect(bx,by,bw,14);
-    if(boss.introTimer>0){
-      ctx.fillStyle = '#fff';
-      ctx.font = '18px monospace';
-      ctx.fillText(boss.def.intro, W/2 - ctx.measureText(boss.def.intro).width/2, by+40);
-    }
+    ctx.beginPath(); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.ellipse(boss.x,boss.y+36,70,18,0,0,Math.PI*2); ctx.fill();
+    drawBoss(boss);
+    // health bar
+    const bw = 520; const bp = clamp(boss.hp/boss.maxHp,0,1); const bx=(W-bw)/2, by=26;
+    ctx.fillStyle='#222'; roundRect(ctx,bx,by,bw,14,6,true,false);
+    ctx.fillStyle = boss.color || '#ffd166'; roundRect(ctx,bx+2,by+2,(bw-4)*bp,10,4,true,false);
+    ctx.strokeStyle='#000'; ctx.strokeRect(bx,by,bw,14);
+    if(boss.introTimer>0){ ctx.fillStyle='#fff'; ctx.font='18px monospace'; ctx.fillText(boss.def.intro, W/2-ctx.measureText(boss.def.intro).width/2, by+40); }
   }
-
-  drawHeart(player.x, player.y, player.r);
-
-  hudHP.textContent = `HP: ${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`;
-  hudGold.textContent = `G: ${player.gold||0}`;
-  hudLV.textContent = `LV ${player.lv}`;
-  wepCur.textContent = player.weapon.name;
-  buffCur.textContent = player.buffs.length ? player.buffs.map(x=>x.name).join(', ') : 'None';
+  // player heart
+  drawHeart(player.x,player.y,player.r);
+  // HUD text (DOM updated separately)
 }
 
-function drawBossSprite(boss){
-  const x = boss.x, y = boss.y;
-  ctx.save();
-  ctx.translate(x,y);
-  ctx.fillStyle = boss.color;
-  ctx.beginPath();
-  ctx.ellipse(0,0,56,44,0,0,Math.PI*2);
-  ctx.fill();
-  if(boss.id === 'shrek'){
-    ctx.fillStyle = '#2a2a2a';
-    ctx.fillRect(-24,-18,12,8);
-    ctx.fillRect(12,-18,12,8);
-    ctx.fillStyle = '#091';
-    ctx.fillRect(-14,-8,28,12);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-18,10,6,6);
-    ctx.fillRect(12,10,6,6);
-  } else if(boss.id === 'cheesus'){
-    ctx.fillStyle = '#f7c94f';
-    for(let i=0;i<8;i++){
-      ctx.beginPath(); ctx.arc(rand(-30,30), rand(-18,18), rand(3,7), 0, Math.PI*2); ctx.fillStyle = '#e0a800'; ctx.fill();
-    }
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-20,-10,40,6);
-  } else if(boss.id === 'cluck'){
-    ctx.fillStyle = '#ff6';
-    ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(22,0); ctx.lineTo(0,8); ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.fillRect(-18,-14,12,8);
-    ctx.fillRect(-18,2,12,8);
-  }
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = boss.color || '#fff';
-  ctx.beginPath(); ctx.ellipse(0,0,80,60,0,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha = 1;
+/* draw boss sprite */
+function drawBoss(b){
+  ctx.save(); ctx.translate(b.x,b.y);
+  ctx.fillStyle = b.color; ctx.beginPath(); ctx.ellipse(0,0,56,44,0,0,Math.PI*2); ctx.fill();
+  if(b.id==='shrek'){ ctx.fillStyle='#2a2a2a'; ctx.fillRect(-24,-18,12,8); ctx.fillRect(12,-18,12,8); ctx.fillStyle='#091'; ctx.fillRect(-14,-8,28,12); ctx.fillStyle='#fff'; ctx.fillRect(-18,10,6,6); ctx.fillRect(12,10,6,6); }
+  else if(b.id==='cheesus'){ ctx.fillStyle='#f7c94f'; for(let i=0;i<8;i++){ ctx.beginPath(); ctx.arc(rand(-30,30),rand(-18,18),rand(3,7),0,Math.PI*2); ctx.fillStyle='#e0a800'; ctx.fill(); } ctx.fillStyle='#fff'; ctx.fillRect(-20,-10,40,6); }
+  else if(b.id==='cluck'){ ctx.fillStyle='#ff6'; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(22,0); ctx.lineTo(0,8); ctx.fill(); ctx.fillStyle='#222'; ctx.fillRect(-18,-14,12,8); ctx.fillRect(-18,2,12,8); }
+  ctx.globalAlpha = 0.12; ctx.fillStyle = b.color || '#fff'; ctx.beginPath(); ctx.ellipse(0,0,80,60,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
   ctx.restore();
 }
 
+/* draw heart */
 function drawHeart(x,y,r){
-  ctx.save();
-  ctx.translate(x,y);
-  ctx.fillStyle = '#fff';
-  roundRect(ctx, -r-1, -r-1, r*2+2, r*2+2, 4, true, false);
-  ctx.fillStyle = '#ff4d4d';
-  ctx.beginPath();
-  ctx.moveTo(0, r/1.2);
-  ctx.bezierCurveTo(r*1.6, r/1.4, r*1.6, -r*1.1, 0, -r*1.8);
-  ctx.bezierCurveTo(-r*1.6, -r*1.1, -r*1.6, r/1.4, 0, r/1.2);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.beginPath();
-  ctx.ellipse(-r*0.3, -r*0.6, r*0.5, r*0.3, 0, 0, Math.PI*2);
-  ctx.fill();
+  ctx.save(); ctx.translate(x,y);
+  ctx.fillStyle = '#fff'; roundRect(ctx,-r-1,-r-1,r*2+2,r*2+2,4,true,false);
+  ctx.fillStyle = '#ff4d4d'; ctx.beginPath(); ctx.moveTo(0,r/1.2); ctx.bezierCurveTo(r*1.6,r/1.4,r*1.6,-r*1.1,0,-r*1.8); ctx.bezierCurveTo(-r*1.6,-r*1.1,-r*1.6,r/1.4,0,r/1.2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.ellipse(-r*0.3,-r*0.6,r*0.5,r*0.3,0,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
+/* rounded rect helper */
 function roundRect(ctx,x,y,w,h,r,fill,stroke){
-  if(r===undefined) r=5;
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
-  if(fill) ctx.fill();
-  if(stroke) ctx.stroke();
+  if(r===undefined) r=5; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke();
 }
 
-/* ---------------------------
-   Game loop
-   --------------------------- */
-function updateHUD(){ hudHP.textContent = `HP: ${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`; hudGold.textContent = `G: ${player.gold||0}`; hudLV.textContent = `LV ${player.lv}`; }
+/* ---------------------
+   HUD & helpers
+   --------------------- */
+function updateHUD(){ hudHP.textContent = `HP: ${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`; hudGold.textContent = `G: ${player.gold||0}`; hudLV.textContent = `LV ${player.lv}`; if(boss) hudBoss.textContent = `Boss: ${boss.name}`; else hudBoss.textContent='Boss: None'; wepCurSpan.textContent = player.weapon.name; buffCurSpan.textContent = player.buffs.length ? player.buffs.map(x=>x.name).join(', ') : 'None'; updateMenuVisual(); }
 
+/* ---------------------
+   Main Loop
+   --------------------- */
 function loop(now){
-  dt = (now - last)/1000;
-  last = now;
+  dt = (now - last)/1000; last = now;
   dt = Math.min(0.04, dt);
-  updateGame(dt);
-  drawScene();
+  update(dt); draw(); updateHUD();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-/* ---------------------------
-   Initial setup: spawn a boss for demo + some chests
-   --------------------------- */
+/* ---------------------
+   Misc helpers used by patterns & admin
+   --------------------- */
+function spawnBulletAt(x,y,angle,speed,rad,color){ bullets.push(makeBullet(x,y,Math.cos(angle)*speed,Math.sin(angle)*speed,rad,color)); }
+function makeStraight(x,y,dx,dy,r,color){ return makeStraightFactory(x,y,dx,dy,r,color); }
+function makeStraightFactory(x,y,dx,dy,r,color){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'straight',tick:0}; }
+
+/* initial demo spawn */
 spawnChest(); spawnChest();
-document.getElementById('bossSelect').value = 'shrek';
-spawnMemeBoss();
+spawnBoss('shrek');
+
+/* ---------------------
+   Small utility & aliases for pattern code
+   --------------------- */
+function makeBullet(x,y,dx,dy,r,color){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'bullet',tick:0}; }
+function makeHoming(x,y,dx,dy,r,color,homing){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'homing',homing,tick:0}; }
+function makeOrbit(x,y,dx,dy,r,color){ return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'orbit',tick:0,ang:rand(0,Math.PI*2)}; }
+
+function playerRespawn(){ player.x=W/2; player.y=H-140; player.hp=player.maxHp; updateHUD(); }
+function updateMenuVisual(){ const els = menuEls(); els.forEach((el,i)=>el.classList.toggle('sel', i===menuIndex)); }
+function menuEls(){ return Array.from(document.querySelectorAll('.menu .opt')); }
+
+/* set up initial menu visuals */
 updateHUD();
 
-/* ---------------------------
-   Additional utilities and extra behaviors
-   --------------------------- */
-function spawnBulletAt(x,y,angle,speed,rad,color){
-  bullets.push(makeBullet(x,y, Math.cos(angle)*speed, Math.sin(angle)*speed, rad, color));
-}
-
-/* Expose admin functions */
-window.spawnMemeBoss = spawnMemeBoss;
-window.spawnChest = spawnChest;
-window.healPlayer = healPlayer;
-window.announce = announce;
-window.closeEquip = closeEquip;
-
-/* ---------------------------
-   NOTES:
-   - Save as battle.html and open in a modern browser.
-   - Controls: Arrow keys to move, Enter to open nearby chest, E to open Equip UI.
-   - Type the sequence 676767 (6 and 7 only) to unlock admin panel.
-   - Bosses have different attack patterns; defeat them to earn gold.
-   --------------------------- */
+/* ---------------------
+   Endnotes & small helpers
+   --------------------- */
+/* Notes:
+ - This file implements a turn-based flow modeled after the menu/dodge system used in Undertale and extends it with ACT/EQUIP/MERCY and improved boss patterns[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://www.gamedeveloper.com/design/game-design-deep-dive-i-undertale-i-s-action-based-rpg-battles?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054&citationId=1 "Game Developer").
+ - Controls: Arrow keys to move (during enemy attack phases), Arrow keys to change menu selection in player-menu, Enter to confirm, E to open Equip.
+ - Type 676767 to reveal Admin panel (no announcement feature - admin can spawn boss/chest/heal/force-win).
+*/
 </script>
 </body>
 </html>
