@@ -1,192 +1,622 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Black Hole Snake.io</title>
-  <style>
-    html, body {
-      margin: 0;
-      overflow: hidden;
-      background: radial-gradient(circle at center, #000010 0%, #000000 100%);
-    }
-    canvas {
-      display: block;
-    }
-    #adminPanel {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: rgba(0,0,0,0.85);
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #444;
-      display: none;
-      z-index: 10;
-      color: white;
-      font-family: sans-serif;
-    }
-    #adminPanel h3 {
-      margin-top: 0;
-      color: #7be3ff;
-    }
-    #adminPanel button {
-      margin: 4px 0;
-      padding: 6px 10px;
-      background: #123;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Black Hole Snake Arena</title>
+<style>
+  :root{--bg:#02040a;--panel:#07101a;--accent:#7be3ff;--muted:#9fbcd0}
+  html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 25%, #00121a 0%, #000010 45%, #000 100%);font-family:Inter,system-ui,Segoe UI,Arial;color:#eaf6ff;overflow:hidden}
+  canvas{display:block;width:100vw;height:100vh}
+  /* Admin panel */
+  #adminPanel{position:fixed;right:18px;top:18px;width:340px;background:linear-gradient(180deg,var(--panel),#021019);border-radius:12px;padding:12px;border:1px solid rgba(123,227,255,0.06);box-shadow:0 10px 30px rgba(0,0,0,0.6);z-index:100;display:none}
+  #adminPanel h3{margin:0 0 8px 0;color:var(--accent);font-size:16px}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+  .col{display:flex;flex-direction:column;gap:8px}
+  button,select,input[type="range"]{background:#05202a;border:1px solid rgba(255,255,255,0.04);color:#dff6ff;padding:8px;border-radius:8px;cursor:pointer}
+  .small{font-size:13px;color:var(--muted)}
+  .accessory{width:56px;height:36px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.04)}
+  #adminPanel label{font-size:13px;color:var(--muted)}
+  /* HUD */
+  #hud{position:fixed;left:16px;top:16px;z-index:80;background:rgba(2,6,12,0.5);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);font-weight:700}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);top:18%;background:linear-gradient(90deg,#042 0%,#013 100%);padding:8px 12px;border-radius:10px;border:1px solid rgba(123,227,255,0.06);display:none;z-index:90}
+  /* Guide */
+  #guide{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(1,6,10,0.96);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);z-index:95;max-width:92vw}
+  #guide h2{margin:0 0 8px 0;color:var(--accent)}
+  #guide p{margin:6px 0;color:var(--muted)}
+  .btn{background:var(--accent);color:#012;padding:8px 10px;border-radius:8px;border:0;cursor:pointer;font-weight:800}
+  @media (max-width:520px){#adminPanel{width:92%}}
+</style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
+<canvas id="c"></canvas>
 
-<div id="adminPanel">
-  <h3>Admin Panel</h3>
-  <button onclick="state.invincible = true">Toggle Invincibility</button>
-  <button onclick="spawnBot()">Spawn Bot</button>
-  <button onclick="state.abilities.push('speed')">Unlock Speed Boost</button>
-  <button onclick="state.abilities.push('minis')">Unlock Mini Holes</button>
-  <button onclick="state.abilities.push('pulse')">Unlock Gravity Pulse</button>
-  <button onclick="state.abilities.push('slow')">Unlock Time Warp</button>
-  <button onclick="document.getElementById('adminPanel').style.display='none'">Close</button>
+<div id="hud">Score: <span id="score">0</span> · Length: <span id="len">1</span> · Bots: <span id="bots">0</span></div>
+<div id="toast"></div>
+
+<div id="guide">
+  <h2>Black Hole Snake Arena</h2>
+  <p>Move with Arrow keys or W A S D. Eat glowing dots to grow. Bots roam the arena. When you die your tail becomes dots. Type <b>67</b> three times to open your private admin panel.</p>
+  <div style="display:flex;gap:8px;margin-top:8px"><button id="startBtn" class="btn">Start</button><button id="hideGuide" class="btn" style="background:#013;color:#9fe">Don't show again</button></div>
+</div>
+
+<!-- Private admin panel -->
+<div id="adminPanel" aria-hidden="true">
+  <h3>Admin Deck</h3>
+  <div class="small">Private controls (only you). Upload accessories, adjust bots, toggle rules.</div>
+  <div class="row">
+    <button id="spawnBotBtn">Spawn Bot</button>
+    <button id="spawnDotsBtn">Spawn Dots</button>
+  </div>
+  <div class="row">
+    <button id="toggleInfiniteBtn">Toggle Infinite Lives</button>
+    <button id="toggleGameOverBtn">Toggle Game Over</button>
+  </div>
+  <div class="row">
+    <label class="small">Bot count</label>
+    <select id="botCount">
+      <option value="0">0</option>
+      <option value="1">1</option>
+      <option value="3" selected>3</option>
+      <option value="6">6</option>
+    </select>
+  </div>
+  <div class="row">
+    <label class="small">Gravity Strength</label>
+    <input id="gravRange" type="range" min="0.2" max="2" step="0.1" value="1">
+  </div>
+  <div class="row">
+    <label class="small">Arena Clear</label>
+    <button id="clearBtn">Clear Dots & Bots</button>
+  </div>
+  <div style="margin-top:8px"><label class="small">Accessory upload (PNG/JPG ≤ 1.5MB)</label></div>
+  <div class="row"><input id="accUpload" type="file" accept="image/png,image/jpeg" /></div>
+  <div id="accList" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+  <div class="row" style="margin-top:10px"><button id="closeAdmin">Close</button></div>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let W = window.innerWidth;
-let H = window.innerHeight;
-canvas.width = W;
-canvas.height = H;
+/* Black Hole Snake Arena
+   - Snake-like growth
+   - Dots, Bots, Boss concept
+   - Death leaves dots
+   - Abilities skeleton
+   - Private admin panel (open with "67" typed three times)
+*/
+(() => {
+  // Canvas
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = canvas.width = window.innerWidth;
+  let H = canvas.height = window.innerHeight;
+  window.addEventListener('resize', ()=>{ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; });
 
-const state = {
-  x: W/2,
-  y: H/2,
-  vx: 0,
-  vy: 0,
-  tail: [],
-  dots: [],
-  bots: [],
-  abilities: [],
-  invincible: true,
-  adminCode: '',
-  adminCount: 0
-};
+  // HUD and UI
+  const scoreEl = document.getElementById('score');
+  const lenEl = document.getElementById('len');
+  const botsEl = document.getElementById('bots');
+  const toastEl = document.getElementById('toast');
+  const guide = document.getElementById('guide');
+  const startBtn = document.getElementById('startBtn');
+  const hideGuide = document.getElementById('hideGuide');
 
-function spawnDot(x, y) {
-  state.dots.push({
-    x: x || Math.random() * W,
-    y: y || Math.random() * H,
-    r: 6 + Math.random() * 4,
-    color: `hsl(${Math.random()*360}, 80%, 60%)`
+  // Admin UI
+  const admin = document.getElementById('adminPanel');
+  const spawnBotBtn = document.getElementById('spawnBotBtn');
+  const spawnDotsBtn = document.getElementById('spawnDotsBtn');
+  const toggleInfiniteBtn = document.getElementById('toggleInfiniteBtn');
+  const toggleGameOverBtn = document.getElementById('toggleGameOverBtn');
+  const botCountSelect = document.getElementById('botCount');
+  const gravRange = document.getElementById('gravRange');
+  const clearBtn = document.getElementById('clearBtn');
+  const accUpload = document.getElementById('accUpload');
+  const accList = document.getElementById('accList');
+  const closeAdmin = document.getElementById('closeAdmin');
+
+  // State
+  const state = {
+    head: { x: W/2, y: H/2, dir: {x:0,y:-1}, speed: 3.6 },
+    tail: [],         // array of points {x,y}
+    maxTail: 24,      // initial length
+    dots: [],         // collectible dots
+    bots: [],         // bot snakes
+    boss: null,       // boss placeholder
+    score: 0,
+    dead: false,
+    infiniteLives: true,
+    allowGameOver: false,
+    gravity: 1.0,
+    accessories: [], // {id,dataURL,name}
+    equipped: null,  // accessory id
+    abilities: { expand:false, minis:false, pulse:false, slow:false },
+    adminCode: '',
+    adminCount: 0
+  };
+
+  // Helpers
+  const rand = (a,b)=> Math.random()*(b-a)+a;
+  const irand = (a,b)=> Math.floor(rand(a,b+1));
+  const clamp = (v,a,b)=> Math.max(a, Math.min(b, v));
+  const dist = (a,b)=> Math.hypot(a.x-b.x,a.y-b.y);
+
+  // Textured dot draw using radial gradient
+  function drawDot(x,y,r,color){
+    const g = ctx.createRadialGradient(x,y,0,x,y,r*1.6);
+    g.addColorStop(0, color);
+    g.addColorStop(0.4, color.replace('hsl','hsla').replace(')',' ,0.85)'));
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    // inner shine
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(x - r*0.3, y - r*0.3, r*0.35, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Initialize dots
+  function spawnDot(x,y){
+    const hue = irand(0,360);
+    const r = rand(5,10);
+    state.dots.push({x: x ?? rand(40,W-40), y: y ?? rand(40,H-40), r, color:`hsl(${hue} 80% 60%)`});
+  }
+  for(let i=0;i<140;i++) spawnDot();
+
+  // Movement: smooth turning with velocity towards direction input
+  const input = { left:false, right:false, up:false, down:false };
+  window.addEventListener('keydown', e=>{
+    const k = e.key.toLowerCase();
+    if(k==='arrowleft' || k==='a') input.left=true;
+    if(k==='arrowright' || k==='d') input.right=true;
+    if(k==='arrowup' || k==='w') input.up=true;
+    if(k==='arrowdown' || k==='s') input.down=true;
+    // admin hidden code
+    state.adminCode += k;
+    if(state.adminCode.endsWith('67')){ state.adminCount++; state.adminCode=''; }
+    if(state.adminCount >= 3){ admin.style.display='block'; admin.setAttribute('aria-hidden','false'); refreshAccessoriesUI(); state.adminCount=0; showToast('Admin panel opened'); }
   });
-}
-
-function spawnBot() {
-  state.bots.push({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    tail: [],
-    color: `hsl(${Math.random()*360}, 80%, 60%)`
+  window.addEventListener('keyup', e=>{
+    const k = e.key.toLowerCase();
+    if(k==='arrowleft' || k==='a') input.left=false;
+    if(k==='arrowright' || k==='d') input.right=false;
+    if(k==='arrowup' || k==='w') input.up=false;
+    if(k==='arrowdown' || k==='s') input.down=false;
   });
-}
 
-function drawDot(d) {
-  ctx.fillStyle = d.color;
-  ctx.beginPath();
-  ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
-  ctx.fill();
-}
-
-function drawTail(tail, color) {
-  ctx.fillStyle = color;
-  tail.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 10, 0, Math.PI*2);
-    ctx.fill();
-  });
-}
-
-function update() {
-  if (state.keys['ArrowLeft'] || state.keys['a']) state.vx = -4;
-  if (state.keys['ArrowRight'] || state.keys['d']) state.vx = 4;
-  if (state.keys['ArrowUp'] || state.keys['w']) state.vy = -4;
-  if (state.keys['ArrowDown'] || state.keys['s']) state.vy = 4;
-
-  state.x += state.vx;
-  state.y += state.vy;
-
-  state.tail.push({x: state.x, y: state.y});
-  if (state.tail.length > 50) state.tail.shift();
-
-  state.dots.forEach((d, i) => {
-    const dx = d.x - state.x;
-    const dy = d.y - state.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < 20) {
-      state.dots.splice(i,1);
-      state.tail.push({x: state.x, y: state.y});
+  // Tail follow behavior
+  function moveHead(){
+    // direction input influences heading angle
+    let dx = 0, dy = 0;
+    if(input.left) dx -= 1;
+    if(input.right) dx += 1;
+    if(input.up) dy -= 1;
+    if(input.down) dy += 1;
+    if(dx!==0 || dy!==0){
+      // normalize and set dir
+      const mag = Math.hypot(dx,dy)||1;
+      state.head.dir.x = dx/mag; state.head.dir.y = dy/mag;
     }
-  });
+    // movement speed affected by abilities (mini or expand can allow slight speed change)
+    const sp = state.head.speed;
+    state.head.x += state.head.dir.x * sp;
+    state.head.y += state.head.dir.y * sp;
+    // wrap around edges (arena loop)
+    if(state.head.x < -30) state.head.x = W+30;
+    if(state.head.x > W+30) state.head.x = -30;
+    if(state.head.y < -30) state.head.y = H+30;
+    if(state.head.y > H+30) state.head.y = -30;
+    // push to tail
+    state.tail.push({x: state.head.x, y: state.head.y});
+    while(state.tail.length > state.maxTail) state.tail.shift();
+  }
 
-  state.bots.forEach(bot => {
-    bot.x += (Math.random()-0.5)*4;
-    bot.y += (Math.random()-0.5)*4;
-    bot.tail.push({x: bot.x, y: bot.y});
-    if (bot.tail.length > 40) bot.tail.shift();
+  // Bot logic (simple)
+  function spawnBot(){
+    const b = {
+      id: 'b'+Date.now()+Math.random().toString(36).slice(2,6),
+      x: rand(60,W-60),
+      y: rand(60,H-60),
+      dir: {x:rand(-1,1), y:rand(-1,1)},
+      speed: rand(1.0,2.4),
+      tail: [],
+      maxTail: irand(18,36),
+      color: `hsl(${irand(0,360)} 80% 60%)`,
+      alive: true
+    };
+    state.bots.push(b);
+    botsEl.textContent = state.bots.length;
+  }
 
-    state.dots.forEach((d, i) => {
-      const dx = d.x - bot.x;
-      const dy = d.y - bot.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < 20) {
-        state.dots.splice(i,1);
-        bot.tail.push({x: bot.x, y: bot.y});
+  // Spawn some initial bots
+  for(let i=0;i<3;i++) spawnBot();
+
+  // Bot ai step
+  function botStep(bot){
+    // simple attract to nearest dot, some randomness, avoid head
+    if(Math.random() < 0.02) { bot.dir.x += rand(-0.6,0.6); bot.dir.y += rand(-0.6,0.6); }
+    // find nearest dot
+    let nearest = null, nd = 1e9;
+    for(const d of state.dots){
+      const dx = d.x - bot.x, dy = d.y - bot.y; const dd = dx*dx+dy*dy;
+      if(dd < nd){ nd = dd; nearest = d; }
+    }
+    if(nearest && Math.random() < 0.9){
+      const dx = nearest.x - bot.x, dy = nearest.y - bot.y; const m = Math.hypot(dx,dy)||1;
+      bot.dir.x = (bot.dir.x*0.6) + (dx/m)*0.4;
+      bot.dir.y = (bot.dir.y*0.6) + (dy/m)*0.4;
+    }
+    // normalize
+    const mag = Math.hypot(bot.dir.x, bot.dir.y) || 1;
+    bot.dir.x /= mag; bot.dir.y /= mag;
+    bot.x += bot.dir.x * bot.speed;
+    bot.y += bot.dir.y * bot.speed;
+    // wrap
+    if(bot.x < -30) bot.x = W+30;
+    if(bot.x > W+30) bot.x = -30;
+    if(bot.y < -30) bot.y = H+30;
+    if(bot.y > H+30) bot.y = -30;
+    bot.tail.push({x:bot.x,y:bot.y});
+    while(bot.tail.length > bot.maxTail) bot.tail.shift();
+  }
+
+  // Collision helpers
+  function pointCircleDist(px,py,cx,cy){ return Math.hypot(px-cx,py-cy); }
+
+  // Abilities (skeleton)
+  function gravityPulse(){
+    // small push away effect on nearby bots and dots condense
+    for(const b of state.bots){
+      const d = pointCircleDist(state.head.x, state.head.y, b.x, b.y);
+      if(d < 220){ const k = 1.6 * (1 - d/220) * 8; b.x += (b.x - state.head.x)/Math.max(1,d) * k; b.y += (b.y - state.head.y)/Math.max(1,d) * k; }
+    }
+    showToast('Gravity Pulse!');
+  }
+
+  function spawnMiniHoles(){
+    // create orbiting mini helpers (simple moving absorbers)
+    if(!state.abilities.minis) return;
+    for(let i=0;i<2;i++){
+      const angle = rand(0,Math.PI*2);
+      const mini = { x: state.head.x + Math.cos(angle)*80, y: state.head.y + Math.sin(angle)*80, r:14, life: 120 + irand(0,200) };
+      state.dots.push({x:mini.x,y:mini.y,r:6,color:'hsl(190 80% 60%)'}); // seed a dot near mini
+      // minis are represented only as temporary absorbers via life field (visuals done in draw)
+      mini.id = 'm'+Date.now()+i;
+      mini.orbit = angle;
+      mini.speed = 0.04 + Math.random()*0.04;
+      state.bots.push(mini); // reuse bots array for orbiters with special flag
+      mini.isMini = true;
+    }
+    showToast('Mini Holes spawned');
+  }
+
+  // Death handling: release tail as dots
+  function dieAndScatter(){
+    // scatter tail into dots
+    for(const p of state.tail){
+      if(Math.random() < 0.6) state.dots.push({x:p.x + rand(-6,6), y:p.y + rand(-6,6), r: rand(4,9), color:`hsl(${irand(0,360)} 80% 60%)`});
+    }
+    state.tail = [];
+    state.maxTail = 12; // reset
+    state.score = Math.max(0, state.score - 10);
+    state.head.x = rand(60,W-60); state.head.y = rand(60,H-60);
+    showToast('You died — tail scattered');
+  }
+
+  // Boss skeleton: appears occasionally, shoots projectiles that you can absorb
+  function spawnBoss(){
+    state.boss = {
+      x: rand(120,W-120),
+      y: rand(80,H/3),
+      r: 46,
+      hp: 120,
+      shots: [],
+      phase:0,
+      timer: 0
+    };
+    showToast('Boss appeared!');
+  }
+  function bossStep(){
+    if(!state.boss) return;
+    const b = state.boss;
+    b.timer++;
+    // move slowly
+    b.x += Math.sin(b.timer*0.01) * 1.4;
+    // shoot projectiles periodically
+    if(b.timer % 50 === 0){
+      const ang = Math.atan2(state.head.y - b.y, state.head.x - b.x);
+      for(let i=-1;i<=1;i++){
+        const a = ang + i*0.18;
+        b.shots.push({x:b.x + Math.cos(a)*b.r, y:b.y + Math.sin(a)*b.r, vx:Math.cos(a)*3.4, vy:Math.sin(a)*3.4, r:8});
       }
-    });
+    }
+    // update shots
+    for(let i=b.shots.length-1;i>=0;i--){
+      const s = b.shots[i];
+      s.x += s.vx; s.y += s.vy;
+      // if shot intersects head within radius -> get absorbed (reduce hp) or damage if not absorb
+      const d = Math.hypot(s.x - state.head.x, s.y - state.head.y);
+      if(d < Math.max(state.maxTail*0.4, 36)){
+        // absorb
+        b.hp -= 6;
+        b.shots.splice(i,1);
+        state.score += 1;
+      } else if(s.x < -50 || s.x > W+50 || s.y < -50 || s.y > H+50){
+        b.shots.splice(i,1);
+      }
+    }
+    if(b.hp <= 0){
+      // boss exhausted, can be eaten: grant ability
+      showToast('Boss defeated! Eat it to gain ability.');
+      // boss converts to big dot
+      state.dots.push({x:b.x,y:b.y,r:34,color:'hsl(260 80% 60%)', bossReward:true});
+      state.boss = null;
+    }
+  }
+
+  // Check interactions: head vs dots, bots vs dots, head vs bots/tails
+  function interactions(){
+    // head eats dots
+    for(let i=state.dots.length-1;i>=0;i--){
+      const d = state.dots[i];
+      const distance = Math.hypot(d.x - state.head.x, d.y - state.head.y);
+      if(distance < (d.r + 14)){
+        // consume
+        state.dots.splice(i,1);
+        state.score += Math.max(1, Math.floor(d.r/3));
+        state.maxTail = Math.min(120, state.maxTail + Math.floor(d.r/3));
+        if(d.bossReward){
+          // grant random ability
+          const choose = ['expand','minis','pulse','slow'][irand(0,3)];
+          state.abilities[choose] = true;
+          showToast('Ability unlocked: ' + choose);
+        }
+      }
+    }
+    // bots eat dots
+    for(const bot of state.bots){
+      if(!bot.alive) continue;
+      if(bot.isMini){ // orbiters
+        bot.orbit += bot.speed;
+        bot.x = state.head.x + Math.cos(bot.orbit)*80;
+        bot.y = state.head.y + Math.sin(bot.orbit)*80;
+        // mini absorbs dots nearby
+        for(let j=state.dots.length-1;j>=0;j--){
+          const d = state.dots[j];
+          if(Math.hypot(d.x - bot.x, d.y - bot.y) < 22){ state.dots.splice(j,1); }
+        }
+        bot.life--; if(bot.life<=0) bot.alive=false;
+        continue;
+      }
+      // normal bot collects dots & may collide with head
+      for(let j=state.dots.length-1;j>=0;j--){
+        const d = state.dots[j];
+        if(Math.hypot(d.x - bot.x, d.y - bot.y) < (d.r + 10)){
+          state.dots.splice(j,1);
+          bot.maxTail = Math.min(100, bot.maxTail + 1);
+        }
+      }
+      // collision with head -> death if not invincible
+      // head vs bot tail collision check
+      for(let k = 0; k < bot.tail.length; k+=4){
+        const p = bot.tail[k];
+        if(!p) continue;
+        const d = Math.hypot(p.x - state.head.x, p.y - state.head.y);
+        if(d < 12){
+          if(!state.infiniteLives && state.allowGameOver){
+            dieAndScatter();
+          } else {
+            // if invincible or infinite lives, just bounce back
+            state.head.x += (state.head.x - p.x) * 2;
+            state.head.y += (state.head.y - p.y) * 2;
+            showToast('Bumped!');
+          }
+        }
+      }
+    }
+
+    // head intersects boss big reward (eat boss)
+    if(state.boss === null){
+      // check for big boss-dot z (rare large dot with bossReward)
+      for(let i=state.dots.length-1;i>=0;i--){
+        const d = state.dots[i];
+        if(d.bossReward){
+          if(Math.hypot(d.x - state.head.x, d.y - state.head.y) < d.r + 14){
+            // consume and grant ability and big length
+            state.dots.splice(i,1);
+            state.abilities.expand = true;
+            state.maxTail = Math.min(200, state.maxTail + 40);
+            showToast('Boss consumed: Expand ability granted!');
+          }
+        }
+      }
+    }
+
+    // tail length/connect hud
+    lenEl.textContent = state.maxTail;
+    scoreEl.textContent = state.score;
+  }
+
+  // Visual render
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    // background subtle stars texture
+    const bgGrad = ctx.createLinearGradient(0,0,0,H);
+    bgGrad.addColorStop(0,'#00111a'); bgGrad.addColorStop(1,'#00010a');
+    ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,H);
+
+    // draw dots
+    for(const d of state.dots) drawDot(d.x,d.y,d.r,d.color);
+
+    // draw bots tails
+    for(const bot of state.bots){
+      if(!bot.alive) continue;
+      ctx.beginPath();
+      for(let i=0;i<bot.tail.length;i++){
+        const p = bot.tail[i];
+        const t = i/bot.tail.length;
+        ctx.fillStyle = bot.color;
+        ctx.globalAlpha = 0.7 * (t*0.9 + 0.1);
+        ctx.beginPath(); ctx.arc(p.x,p.y, 8*(1 - t) + 2, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // boss shots and boss
+    if(state.boss){
+      for(const s of state.boss.shots){
+        ctx.fillStyle = '#ffd86a';
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+      }
+      // boss core
+      ctx.beginPath(); ctx.fillStyle = state.boss.hp > 40 ? '#ff6b6b' : '#a18';
+      ctx.arc(state.boss.x, state.boss.y, state.boss.r,0,Math.PI*2); ctx.fill();
+      // boss shield ring
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(state.boss.x, state.boss.y, state.boss.r+10,0,Math.PI*2); ctx.stroke();
+    }
+
+    // tail render (smooth gradient)
+    for(let i=0;i<state.tail.length;i+=1){
+      const p = state.tail[i];
+      const age = i / state.tail.length;
+      const size = 12 * (1 - age) + 2;
+      const hue = 200 + (age*120);
+      ctx.fillStyle = `hsl(${hue} 80% ${40 + age*40}%)`;
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // head (black hole ring + accessory)
+    const hx = state.head.x, hy = state.head.y, hr = 18 + Math.min(40, state.maxTail*0.06);
+    // outer glow
+    const g = ctx.createRadialGradient(hx,hy,hr*0.2,hx,hy,hr*3);
+    g.addColorStop(0,'rgba(123,227,255,0.25)'); g.addColorStop(0.6,'rgba(123,227,255,0.06)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx,hy,hr*3,0,Math.PI*2); ctx.fill();
+    // dark core ring
+    ctx.beginPath(); ctx.fillStyle = '#000'; ctx.arc(hx,hy,hr*0.9,0,Math.PI*2); ctx.fill();
+    // event horizon
+    ctx.beginPath(); ctx.fillStyle = '#08121a'; ctx.arc(hx,hy,hr*0.5,0,Math.PI*2); ctx.fill();
+    // accessory draw if equipped
+    if(state.equipped){
+      const acc = state.accessories.find(a=>a.id===state.equipped);
+      if(acc){
+        const img = new Image(); img.src = acc.data;
+        try{ ctx.drawImage(img, hx - hr*1.2, hy - hr*1.2, hr*2.4, hr*2.4); }catch(e){}
+      }
+    }
+
+    // small HUD effects
+    ctx.fillStyle = '#fff';
+  }
+
+  // Utility: show toast
+  let toastTimer = null;
+  function showToast(txt, ms=2200){
+    toastEl.textContent = txt;
+    toastEl.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> toastEl.style.display = 'none', ms);
+  }
+
+  // Admin actions
+  spawnBotBtn.addEventListener('click', ()=>{ spawnBot(); spawnBot(); botsEl.textContent=state.bots.length; showToast('Bots spawned'); });
+  spawnDotsBtn.addEventListener('click', ()=>{ for(let i=0;i<40;i++) spawnDot(); showToast('Dots spawned'); });
+  toggleInfiniteBtn.addEventListener('click', ()=>{ state.infiniteLives = !state.infiniteLives; showToast('Infinite Lives: ' + (state.infiniteLives ? 'ON' : 'OFF')); });
+  toggleGameOverBtn.addEventListener('click', ()=>{ state.allowGameOver = !state.allowGameOver; showToast('Game Over allowed: ' + (state.allowGameOver ? 'YES' : 'NO')); });
+  botCountSelect.addEventListener('change', ()=>{ const n = Number(botCountSelect.value); // adjust bots
+    state.bots.length = 0; for(let i=0;i<n;i++) spawnBot(); botsEl.textContent=state.bots.length; });
+  gravRange.addEventListener('input', ()=>{ state.gravity = Number(gravRange.value); showToast('Gravity: '+state.gravity.toFixed(1)); });
+  clearBtn.addEventListener('click', ()=>{ state.dots.length=0; state.bots.length=0; state.boss=null; showToast('Arena cleared'); });
+
+  closeAdmin.addEventListener('click', ()=>{ admin.style.display='none'; admin.setAttribute('aria-hidden','true'); });
+
+  // Accessory upload handling (client-only, validated)
+  accUpload.addEventListener('change', (ev)=>{
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    if(f.size > 1.5*1024*1024){ alert('File too large'); return; }
+    if(!/image\/(png|jpeg|jpg)/.test(f.type)){ alert('Only PNG/JPEG allowed'); return; }
+    const fr = new FileReader();
+    fr.onload = e=>{
+      const id = 'acc_'+Date.now();
+      state.accessories.push({id, data:e.target.result, name:f.name});
+      refreshAccessoriesUI();
+      // auto-equip new accessory
+      state.equipped = id;
+      showToast('Accessory uploaded and equipped');
+    };
+    fr.readAsDataURL(f);
+    ev.target.value = '';
   });
 
-  if (Math.random() < 0.05) spawnDot();
-}
-
-function draw() {
-  ctx.clearRect(0,0,W,H);
-  state.dots.forEach(drawDot);
-  drawTail(state.tail, '#7be3ff');
-  state.bots.forEach(bot => drawTail(bot.tail, bot.color));
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(state.x, state.y, 12, 0, Math.PI*2);
-  ctx.fill();
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-window.addEventListener('keydown', e => {
-  state.keys[e.key] = true;
-  state.adminCode += e.key;
-  if (state.adminCode.endsWith('67')) {
-    state.adminCount++;
-    state.adminCode = '';
+  function refreshAccessoriesUI(){
+    accList.innerHTML = '';
+    for(const a of state.accessories){
+      const d = document.createElement('div'); d.style.display='flex'; d.style.flexDirection='column'; d.style.alignItems='center';
+      const img = document.createElement('img'); img.src = a.data; img.className='accessory'; img.style.width='64px'; img.style.height='36px';
+      const btn = document.createElement('button'); btn.textContent = (state.equipped===a.id? 'Unequip':'Equip');
+      btn.style.marginTop='6px'; btn.addEventListener('click', ()=>{
+        if(state.equipped===a.id){ state.equipped=null; btn.textContent='Equip'; showToast('Accessory unequipped'); }
+        else{ state.equipped=a.id; btn.textContent='Unequip'; showToast('Accessory equipped'); }
+        refreshAccessoriesUI();
+      });
+      d.appendChild(img); d.appendChild(btn); accList.appendChild(d);
+    }
   }
-  if (state.adminCount >= 3) {
-    document.getElementById('adminPanel').style.display = 'block';
-    state.adminCount = 0;
-  }
-});
-window.addEventListener('keyup', e => {
-  state.keys[e.key] = false;
-});
 
-loop();
+  // Game loop
+  let last = performance.now();
+  function loop(t){
+    const dt = Math.min(48, t-last);
+    last = t;
+    // head movement and tail
+    moveHead();
+
+    // bots logic
+    for(const bot of state.bots) botStep(bot);
+
+    // boss step
+    bossStep();
+
+    // interactions
+    interactions();
+
+    // occasional spawn of boss
+    if(!state.boss && Math.random() < 0.0009) spawnBoss();
+
+    // occasionally spawn dots to keep arena lively
+    if(state.dots.length < 100 && Math.random() < 0.6) { if(Math.random()<0.12) spawnDot(); }
+
+    // draw
+    render();
+
+    requestAnimationFrame(loop);
+  }
+
+  // Start & guide UI
+  startBtn.addEventListener('click', ()=>{ guide.style.display='none'; last = performance.now(); requestAnimationFrame(loop); showToast('Game started'); });
+  hideGuide.addEventListener('click', ()=>{ guide.style.display='none'; localStorage.setItem('bh_guide_hidden','1'); last = performance.now(); requestAnimationFrame(loop); });
+
+  if(localStorage.getItem('bh_guide_hidden')) guide.style.display='none'; // auto-hide if user chose earlier
+
+  // Expose some functions for quick control
+  window.spawnDot = spawnDot;
+  window.spawnBot = spawnBot;
+  window.spawnBoss = spawnBoss;
+  window.showToast = showToast;
+
+  // Initialize HUD values
+  botsEl.textContent = state.bots.length;
+  scoreEl.textContent = state.score;
+  lenEl.textContent = state.maxTail;
+
+  // Start automatically if guide hidden; else wait
+  if(!localStorage.getItem('bh_guide_hidden')) {
+    // show guide; no auto start
+  } else {
+    last = performance.now(); requestAnimationFrame(loop);
+  }
+
+})();
 </script>
 </body>
 </html>
