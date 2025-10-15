@@ -2,204 +2,543 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Bullet Heart Run — Meme Boss Edition</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Battle.html — Bullet Heart Run: Meme Boss Edition</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    html, body {
-      margin: 0;
-      background: #000;
-      color: #fff;
-      font-family: monospace;
-      image-rendering: pixelated;
-      overflow: hidden;
+    :root{
+      --bg:#07060a; --panel:#111; --neon:#33f7ff; --accent:#ffd166; --danger:#ff5c5c;
+      --ui:#1b1b1b; --muted:#888;
     }
-    canvas {
-      display: block;
-      width: 960px;
-      height: 720px;
-      border: 4px solid #fff;
-      background: #070606;
-    }
-    #adminPanel {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #111;
-      padding: 12px;
-      border: 2px solid #ffd166;
-      display: none;
-      z-index: 10;
-    }
-    #adminPanel input, #adminPanel button, #adminPanel select {
-      margin: 4px;
-    }
-    #equip {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #222;
-      padding: 12px;
-      border: 2px solid #fff;
-      display: none;
-      z-index: 9;
-    }
+    html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:monospace;display:flex;align-items:center;justify-content:center;}
+    #container{position:relative;width:960px;height:720px;box-shadow:0 0 0 6px #000 inset, 0 0 20px rgba(0,0,0,0.6);}
+    canvas{display:block;background:linear-gradient(180deg,#05050a 0%, #0b0b10 100%);width:960px;height:720px;image-rendering:pixelated}
+    /* Admin and UI panels */
+    #adminPanel{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--panel);padding:10px;border:2px solid var(--accent);display:none;z-index:50;border-radius:6px;}
+    #adminPanel input,#adminPanel select,#adminPanel button{margin:6px 6px 0 0;padding:6px;background:#000;border:1px solid #333;color:#fff;border-radius:4px;}
+    #equip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--ui);padding:12px;border:2px solid #fff;display:none;z-index:40;border-radius:6px;}
+    #equip button{margin-top:8px;padding:6px 10px;background:#000;border:1px solid #333;color:#fff;border-radius:4px;}
+    /* HUD */
+    #hud{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,0.5);padding:8px;border-radius:6px;border:1px solid #222;font-size:14px;z-index:45;}
+    #controlsHint{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;border:1px solid #222;font-size:13px;z-index:45;color:var(--muted)}
+    .buttonUI{display:inline-block;margin-right:8px;padding:6px 10px;background:#111;border:1px solid #333;border-radius:4px;color:#fff;}
   </style>
 </head>
 <body>
-  <canvas id="game" width="960" height="720"></canvas>
+  <div id="container">
+    <canvas id="game" width="960" height="720"></canvas>
 
-  <!-- Admin Panel -->
-  <div id="adminPanel">
-    <div><b>Admin Panel</b></div>
-    <input id="announceInput" placeholder="Global announcement" />
-    <button onclick="announce()">Announce</button>
-    <button onclick="spawnChest()">Spawn Chest</button>
-    <button onclick="healPlayer()">Heal Player</button>
-    <select id="bossSelect">
-      <option value="shrek">Shrekonator</option>
-      <option value="cheesus">Cheesus</option>
-      <option value="cluck">Cluckthulhu</option>
-    </select>
-    <button onclick="spawnMemeBoss()">Spawn Meme Boss</button>
+    <div id="adminPanel">
+      <strong>Admin Panel</strong><br/>
+      <input id="announceInput" placeholder="Announcement" />
+      <button onclick="announce()">Announce</button>
+      <button onclick="spawnChest()">Spawn Chest</button>
+      <button onclick="healPlayer()">Heal</button>
+      <select id="bossSelect">
+        <option value="shrek">Shrekonator</option>
+        <option value="cheesus">Cheesus</option>
+        <option value="cluck">Cluckthulhu</option>
+      </select>
+      <button onclick="spawnMemeBoss()">Spawn Boss</button>
+    </div>
+
+    <div id="equip">
+      <strong>Equip</strong>
+      <div id="wepList" style="margin-top:8px">Weapon: <span id="wepCurrent">Banana Blade</span></div>
+      <div id="buffList" style="margin-top:6px">Buffs: <span id="buffCurrent">None</span></div>
+      <button onclick="closeEquip()">Close</button>
+    </div>
+
+    <div id="hud">
+      <span id="txtLV">LV 1</span> &nbsp; <span id="txtGold">G: 0</span> &nbsp;
+      <span id="txtHP">HP: 20/20</span> &nbsp; <span id="txtBoss">Boss: None</span>
+    </div>
+
+    <div id="controlsHint">
+      Arrows: Move &nbsp; Enter: Open Chest &nbsp; E: Equip &nbsp; Type 6/7 sequence to open Admin
+    </div>
   </div>
 
-  <!-- Equip Panel -->
-  <div id="equip">
-    <div><b>Equip</b></div>
-    <div id="weapons"></div>
-    <div id="buffs"></div>
-    <button onclick="closeEquip()">Close</button>
-  </div>
+<script>
+/* ---------------------------
+   Game core & state
+   --------------------------- */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    let keys = new Set();
-    let heart = { x: 480, y: 540, r: 6, hp: 50, max: 50, i: 0 };
-    let boss = null;
-    let bullets = [], chests = [], buffs = [], weapons = [], turn = 'player', time = 0;
-    let adminCode = '', adminUnlocked = false;
+const W = canvas.width, H = canvas.height;
+let dt = 0, last = performance.now(), timeAcc = 0;
+let keys = new Set();
+let mouse = {x:0,y:0};
 
-    document.addEventListener('keydown', e => {
-      keys.add(e.key);
-      if (!adminUnlocked) {
-        adminCode += e.key;
-        if (adminCode.replace(/[^67]/g, '').endsWith('676767')) {
-          document.getElementById('adminPanel').style.display = 'block';
-          adminUnlocked = true;
+document.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = (e.clientX - rect.left) * (canvas.width/rect.width);
+  mouse.y = (e.clientY - rect.top) * (canvas.height/rect.height);
+});
+
+document.addEventListener('keydown', e => {
+  keys.add(e.key);
+  handleAdminCode(e.key);
+  if(e.key==='e' || e.key==='E') toggleEquip(true);
+  if(e.key==='Enter') tryOpenChest();
+});
+document.addEventListener('keyup', e => keys.delete(e.key));
+
+/* Player heart */
+let player = {
+  x: W/2, y: H - 120, r: 8,
+  hp: 20, maxHp: 20, lv:1, gold:0,
+  weapon: {name:'Banana Blade', dmg:6},
+  buffs: []
+};
+
+/* UI elements */
+const hudHP = document.getElementById('txtHP');
+const hudGold = document.getElementById('txtGold');
+const hudLV = document.getElementById('txtLV');
+const hudBoss = document.getElementById('txtBoss');
+const wepCur = document.getElementById('wepCurrent');
+const buffCur = document.getElementById('buffCurrent');
+
+/* admin code input */
+let adminSequence = '';
+let adminUnlocked = false;
+
+/* world objects */
+let chests = [];
+let bullets = [];
+let boss = null; // boss object when active
+let state = 'fight'; // fight / player / boss-turn / menu
+
+/* constants */
+const SPEED = 220;
+const BULLET_LIFE = 8; // seconds
+
+/* Helpers */
+function rand(min, max){ return Math.random()*(max-min)+min; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+/* ---------------------------
+   Boss definitions & behaviors
+   --------------------------- */
+const BOSS_DEFS = {
+  shrek: {
+    name:'Shrekonator', hp:150, color:'#37a83a',
+    intro: 'URGLE. SWAMP PROTOCOL ONLINE.',
+    pattern(dt, self){
+      if(Math.random() < 0.02){
+        const n = 6;
+        for(let i=0;i<n;i++){
+          const a = (i/n)*Math.PI*2 + rand(-0.2,0.2);
+          bullets.push(makeBullet(self.x + Math.cos(a)*40, self.y + Math.sin(a)*40, Math.cos(a)*150, Math.sin(a)*150, 5, '#2de'));
         }
       }
-      if (e.key === 'e') document.getElementById('equip').style.display = 'block';
-      if (e.key === 'Enter') checkChest();
-    });
-
-    document.addEventListener('keyup', e => keys.delete(e.key));
-
-    function announce() {
-      const msg = document.getElementById('announceInput').value;
-      alert("📢 " + msg);
+      if(Math.random() < 0.015){
+        let angle = Math.atan2(player.y - self.y, player.x - self.x) + rand(-0.6,0.6);
+        bullets.push(makeHoming(self.x, self.y, Math.cos(angle)*90, Math.sin(angle)*90, 10, '#3f3', 0.4));
+      }
     }
-
-    function spawnChest() {
-      chests.push({ x: Math.random() * 900 + 30, y: Math.random() * 600 + 60, opened: false });
-    }
-
-    function healPlayer() {
-      heart.hp = heart.max;
-    }
-
-    function spawnMemeBoss() {
-      const type = document.getElementById('bossSelect').value;
-      boss = { type, hp: 100, max: 100 };
-      alert(`⚔️ ${type.toUpperCase()} enters the arena!`);
-    }
-
-    function closeEquip() {
-      document.getElementById('equip').style.display = 'none';
-    }
-
-    function checkChest() {
-      for (const c of chests) {
-        const dx = heart.x - c.x, dy = heart.y - c.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 20 && !c.opened) {
-          c.opened = true;
-          alert("🎁 Chest opened! You found a Rage Tonic.");
-          buffs.push({ name: "Rage Tonic", effect: "x1.5 dmg" });
+  },
+  cheesus: {
+    name:'Cheesus', hp:120, color:'#ffdf5b',
+    intro: 'BEHOLD THE DIVINE CHEESE!',
+    pattern(dt,self){
+      if(Math.random() < 0.03){
+        const n = 12 + Math.floor(rand(0,6));
+        for(let i=0;i<n;i++){
+          const a = (i/n)*Math.PI*2 + rand(-0.1,0.1);
+          bullets.push(makeBullet(self.x + Math.cos(a)*30, self.y + Math.sin(a)*30, Math.cos(a)*120, Math.sin(a)*120, 4, '#ffb'));
+        }
+      }
+      if(Math.random() < 0.02){
+        const rows = 3;
+        for(let r=0;r<rows;r++){
+          const y = 160 + r*18 + rand(-6,6);
+          bullets.push(makeStraight(80 + rand(-20,20), y, 260, 0, 8, '#ffd166'));
         }
       }
     }
+  },
+  cluck: {
+    name:'Cluckthulhu', hp:180, color:'#fff1f0',
+    intro: 'CLUCKTHULHU AWAKENS',
+    pattern(dt,self){
+      if(Math.random() < 0.025){
+        const center = {x:480 + rand(-200,200), y:200 + rand(-40,40)};
+        for(let i=0;i<8;i++){
+          const a = rand(0,Math.PI*2);
+          bullets.push(makeOrbit(center.x + Math.cos(a)*30, center.y + Math.sin(a)*30, rand(-120,120), rand(-120,120), 5, '#f8f'));
+        }
+      }
+      if(Math.random() < 0.02){
+        const n = 9;
+        for(let i=0;i<n;i++){
+          const a = (i/n)*Math.PI*2 + rand(-0.2,0.2);
+          bullets.push(makeBullet(self.x + Math.cos(a)*50, self.y + Math.sin(a)*50, Math.cos(a)*180, Math.sin(a)*180, 5, '#f0f'));
+        }
+      }
+    }
+  }
+};
 
-    function update(dt) {
-      time += dt;
-      if (keys.has('ArrowLeft')) heart.x -= 200 * dt;
-      if (keys.has('ArrowRight')) heart.x += 200 * dt;
-      if (keys.has('ArrowUp')) heart.y -= 200 * dt;
-      if (keys.has('ArrowDown')) heart.y += 200 * dt;
-      heart.x = Math.max(heart.r, Math.min(960 - heart.r, heart.x));
-      heart.y = Math.max(heart.r, Math.min(720 - heart.r, heart.y));
+/* ---------------------------
+   Bullet factory helpers
+   --------------------------- */
+function makeBullet(x,y,dx,dy,r,color){
+  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'bullet',tick:0};
+}
+function makeHoming(x,y,dx,dy,r,color,homingPower=0.6){
+  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'homing',homing:homingPower,tick:0};
+}
+function makeStraight(x,y,dx,dy,r,color){
+  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'straight',tick:0};
+}
+function makeOrbit(x,y,dx,dy,r,color){
+  return {x,y,dx,dy,r,color,life:BULLET_LIFE,type:'orbit',tick:0,ang:rand(0,Math.PI*2)};
+}
+
+/* ---------------------------
+   Game control functions
+   --------------------------- */
+function spawnMemeBoss(){
+  const sel = document.getElementById('bossSelect').value;
+  const def = BOSS_DEFS[sel];
+  boss = {
+    id: sel,
+    name: def.name,
+    x: W/2, y: 140,
+    hp: def.hp,
+    maxHp: def.hp,
+    color: def.color,
+    def: def,
+    introTimer: 180 // frames
+  };
+  bullets = [];
+  hudBoss.textContent = `Boss: ${boss.name}`;
+}
+function spawnChest(){
+  chests.push({x: rand(120, W-120), y: rand(180, H-220), opened:false});
+}
+function healPlayer(){ player.hp = player.maxHp; updateHUD(); }
+function announce(){ const s = document.getElementById('announceInput').value; if(s) alert('📢 '+s); }
+
+/* Admin unlocking by typing sequence 6 and 7 pattern 676767 */
+function handleAdminCode(key){
+  adminSequence += key;
+  adminSequence = adminSequence.slice(-20);
+  if(!adminUnlocked && adminSequence.replace(/[^67]/g,'').endsWith('676767')){
+    adminUnlocked = true;
+    document.getElementById('adminPanel').style.display = 'block';
+    alert('Admin Panel Unlocked');
+  }
+}
+
+/* Equip UI */
+function toggleEquip(show){
+  if(show) document.getElementById('equip').style.display = 'block';
+  else document.getElementById('equip').style.display = 'none';
+}
+function closeEquip(){ toggleEquip(false); }
+
+/* open chests */
+function tryOpenChest(){
+  for(const c of chests){
+    if(c.opened) continue;
+    const dx = player.x - c.x, dy = player.y - c.y;
+    if(Math.hypot(dx,dy) < 30){
+      c.opened = true;
+      player.gold = (player.gold||0) + Math.floor(rand(5,30));
+      if(Math.random() < 0.25){
+        player.weapon = {name:'Laser Katana', dmg:12};
+        wepCur.textContent = player.weapon.name;
+        alert('You found a Laser Katana!');
+      } else if(Math.random() < 0.15){
+        player.buffs.push({name:'Rage Tonic', dmgMult:1.5, dur:60});
+        buffCur.textContent = player.buffs.map(b=>b.name).join(', ');
+        alert('You found a Rage Tonic!');
+      } else {
+        alert('You found gold!');
+      }
+      updateHUD();
+      break;
+    }
+  }
+}
+
+/* ---------------------------
+   Update & draw
+   --------------------------- */
+function updateGame(delta){
+  timeAcc += delta*1000;
+  // player movement
+  let vx = 0, vy = 0;
+  if(keys.has('ArrowLeft')) vx -= 1;
+  if(keys.has('ArrowRight')) vx += 1;
+  if(keys.has('ArrowUp')) vy -= 1;
+  if(keys.has('ArrowDown')) vy += 1;
+  const mag = Math.hypot(vx,vy) || 1;
+  player.x += (vx/mag) * SPEED * delta;
+  player.y += (vy/mag) * SPEED * delta;
+  player.x = clamp(player.x, 20, W-20);
+  player.y = clamp(player.y, 100, H-30);
+
+  // boss logic
+  if(boss){
+    if(boss.introTimer > 0){
+      boss.introTimer--;
+    } else {
+      boss.def.pattern(delta, boss);
+    }
+    boss.y = 120 + Math.sin(timeAcc*0.002 + (boss.id.length)) * 8;
+  }
+
+  // bullets update
+  for(let i=bullets.length-1;i>=0;i--){
+    const b = bullets[i];
+    b.tick += delta;
+    b.life -= delta;
+    if(b.type === 'homing'){
+      const ang = Math.atan2(player.y - b.y, player.x - b.x);
+      const spd = Math.hypot(b.dx, b.dy) || 1;
+      b.dx = (1-b.homing)*b.dx + b.homing * Math.cos(ang)*spd;
+      b.dy = (1-b.homing)*b.dy + b.homing * Math.sin(ang)*spd;
+      b.x += b.dx * delta;
+      b.y += b.dy * delta;
+    } else if(b.type === 'orbit'){
+      b.ang += delta * 4;
+      b.x += b.dx * delta * 0.2 + Math.cos(b.ang)*20*delta;
+      b.y += b.dy * delta * 0.2 + Math.sin(b.ang)*20*delta;
+    } else {
+      b.x += b.dx * delta;
+      b.y += b.dy * delta;
     }
 
-    function draw() {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 960, 720);
+    if(b.life <= 0 || b.x < -50 || b.x > W+50 || b.y < -50 || b.y > H+50){
+      bullets.splice(i,1);
+      continue;
+    }
 
+    const dx = player.x - b.x, dy = player.y - b.y;
+    if(Math.hypot(dx,dy) < b.r + player.r){
+      let dmg = 1;
+      player.hp -= dmg;
+      bullets.splice(i,1);
+      if(player.hp <= 0){
+        player.hp = 0;
+        setTimeout(()=>resetPlayer(), 600);
+      }
+    }
+  }
+
+  // reduce buff durations
+  for(let i=player.buffs.length-1;i>=0;i--){
+    const bf = player.buffs[i];
+    if(bf.dur){
+      bf.dur -= delta*60;
+      if(bf.dur <= 0) player.buffs.splice(i,1);
+    }
+  }
+
+  // boss defeat
+  if(boss && boss.hp <= 0){
+    alert(`${boss.name} defeated!`);
+    player.gold = (player.gold||0) + Math.floor(rand(50,150));
+    boss = null;
+    hudBoss.textContent = 'Boss: None';
+    updateHUD();
+  }
+}
+
+/* reset on death */
+function resetPlayer(){
+  player.x = W/2; player.y = H-120; player.hp = player.maxHp;
+  updateHUD();
+}
+
+/* ---------------------------
+   Drawing
+   --------------------------- */
+function drawScene(){
+  ctx.clearRect(0,0,W,H);
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#081026'); g.addColorStop(1,'#05040a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#0ff';
+  for(let i=0;i<6;i++){
+    const y = ((timeAcc*0.02) + i*120) % H;
+    ctx.fillRect(0,y,W,1);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = 'rgba(50,50,80,0.12)';
+  ctx.fillRect(40, 60, W-80, H-150);
+
+  for(const c of chests){
+    ctx.fillStyle = c.opened ? '#666' : '#ffcc66';
+    roundRect(ctx, c.x-14, c.y-10, 28, 20, 4, true, false);
+    ctx.strokeStyle = '#000'; ctx.strokeRect(c.x-14, c.y-10, 28, 20);
+  }
+
+  for(const b of bullets){
+    ctx.beginPath();
+    ctx.fillStyle = b.color || '#f55';
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = b.color || '#f55';
+    ctx.arc(b.x, b.y, b.r*2.8, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if(boss){
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.ellipse(boss.x, boss.y+36, 70, 18, 0,0,Math.PI*2);
+    ctx.fill();
+    drawBossSprite(boss);
+
+    const bw = 520;
+    const hpPct = clamp(boss.hp / boss.maxHp, 0,1);
+    const bx = (W-bw)/2, by = 28;
+    ctx.fillStyle = '#222';
+    roundRect(ctx,bx,by,bw,14,6,true,false);
+    ctx.fillStyle = boss.color || '#ffd166';
+    roundRect(ctx,bx+2,by+2,(bw-4)*hpPct,10,4,true,false);
+    ctx.strokeStyle = '#000'; ctx.strokeRect(bx,by,bw,14);
+    if(boss.introTimer>0){
       ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(heart.x, heart.y, heart.r, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (boss) {
-        ctx.fillStyle = '#ffd166';
-        ctx.font = '16px monospace';
-        ctx.fillText(`Boss: ${boss.type.toUpperCase()} HP: ${boss.hp}/${boss.max}`, 20, 30);
-        drawBossSprite(boss.type);
-      }
-
-      for (const c of chests) {
-        ctx.fillStyle = c.opened ? '#aaa' : '#ffcc66';
-        ctx.fillRect(c.x - 10, c.y - 10, 20, 20);
-      }
+      ctx.font = '18px monospace';
+      ctx.fillText(boss.def.intro, W/2 - ctx.measureText(boss.def.intro).width/2, by+40);
     }
+  }
 
-    function drawBossSprite(type) {
-      const x = 480, y = 240;
-      ctx.save();
-      ctx.translate(x, y);
-      if (type === 'shrek') {
-        ctx.fillStyle = '#3f3';
-        ctx.fillRect(-20, -20, 40, 40);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(-10, -10, 6, 6);
-        ctx.fillRect(4, -10, 6, 6);
-      } else if (type === 'cheesus') {
-        ctx.fillStyle = '#ff6';
-        ctx.beginPath();
-        ctx.arc(0, 0, 24, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(-6, -6, 12, 2);
-      } else if (type === 'cluck') {
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(0, 0, 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#f00';
-        ctx.fillRect(-4, -12, 8, 4);
-      }
-      ctx.restore();
-    }
+  drawHeart(player.x, player.y, player.r);
 
-    let last = performance.now();
-    function loop(now) {
-      const dt = Math.min(0.033, (now - last) / 1000);
-      last = now;
-      update(dt);
-      draw();
-      requestAnimationFrame(loop);
+  hudHP.textContent = `HP: ${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`;
+  hudGold.textContent = `G: ${player.gold||0}`;
+  hudLV.textContent = `LV ${player.lv}`;
+  wepCur.textContent = player.weapon.name;
+  buffCur.textContent = player.buffs.length ? player.buffs.map(x=>x.name).join(', ') : 'None';
+}
+
+function drawBossSprite(boss){
+  const x = boss.x, y = boss.y;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle = boss.color;
+  ctx.beginPath();
+  ctx.ellipse(0,0,56,44,0,0,Math.PI*2);
+  ctx.fill();
+  if(boss.id === 'shrek'){
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(-24,-18,12,8);
+    ctx.fillRect(12,-18,12,8);
+    ctx.fillStyle = '#091';
+    ctx.fillRect(-14,-8,28,12);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-18,10,6,6);
+    ctx.fillRect(12,10,6,6);
+  } else if(boss.id === 'cheesus'){
+    ctx.fillStyle = '#f7c94f';
+    for(let i=0;i<8;i++){
+      ctx.beginPath(); ctx.arc(rand(-30,30), rand(-18,18), rand(3,7), 0, Math.PI*2); ctx.fillStyle = '#e0a800'; ctx.fill();
     }
-    requestAnimationFrame(loop);
-  </script>
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-20,-10,40,6);
+  } else if(boss.id === 'cluck'){
+    ctx.fillStyle = '#ff6';
+    ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(22,0); ctx.lineTo(0,8); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.fillRect(-18,-14,12,8);
+    ctx.fillRect(-18,2,12,8);
+  }
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = boss.color || '#fff';
+  ctx.beginPath(); ctx.ellipse(0,0,80,60,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawHeart(x,y,r){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle = '#fff';
+  roundRect(ctx, -r-1, -r-1, r*2+2, r*2+2, 4, true, false);
+  ctx.fillStyle = '#ff4d4d';
+  ctx.beginPath();
+  ctx.moveTo(0, r/1.2);
+  ctx.bezierCurveTo(r*1.6, r/1.4, r*1.6, -r*1.1, 0, -r*1.8);
+  ctx.bezierCurveTo(-r*1.6, -r*1.1, -r*1.6, r/1.4, 0, r/1.2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath();
+  ctx.ellipse(-r*0.3, -r*0.6, r*0.5, r*0.3, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function roundRect(ctx,x,y,w,h,r,fill,stroke){
+  if(r===undefined) r=5;
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  if(fill) ctx.fill();
+  if(stroke) ctx.stroke();
+}
+
+/* ---------------------------
+   Game loop
+   --------------------------- */
+function updateHUD(){ hudHP.textContent = `HP: ${Math.max(0,Math.floor(player.hp))}/${player.maxHp}`; hudGold.textContent = `G: ${player.gold||0}`; hudLV.textContent = `LV ${player.lv}`; }
+
+function loop(now){
+  dt = (now - last)/1000;
+  last = now;
+  dt = Math.min(0.04, dt);
+  updateGame(dt);
+  drawScene();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------------------------
+   Initial setup: spawn a boss for demo + some chests
+   --------------------------- */
+spawnChest(); spawnChest();
+document.getElementById('bossSelect').value = 'shrek';
+spawnMemeBoss();
+updateHUD();
+
+/* ---------------------------
+   Additional utilities and extra behaviors
+   --------------------------- */
+function spawnBulletAt(x,y,angle,speed,rad,color){
+  bullets.push(makeBullet(x,y, Math.cos(angle)*speed, Math.sin(angle)*speed, rad, color));
+}
+
+/* Expose admin functions */
+window.spawnMemeBoss = spawnMemeBoss;
+window.spawnChest = spawnChest;
+window.healPlayer = healPlayer;
+window.announce = announce;
+window.closeEquip = closeEquip;
+
+/* ---------------------------
+   NOTES:
+   - Save as battle.html and open in a modern browser.
+   - Controls: Arrow keys to move, Enter to open nearby chest, E to open Equip UI.
+   - Type the sequence 676767 (6 and 7 only) to unlock admin panel.
+   - Bosses have different attack patterns; defeat them to earn gold.
+   --------------------------- */
+</script>
 </body>
 </html>
