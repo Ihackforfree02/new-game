@@ -17,13 +17,9 @@
       margin: 0 auto;
       background: transparent;
     }
-    #scoreboard {
+    #scoreboard, #characterSelect {
       text-align: center;
       font-size: 1.2em;
-      margin-top: 10px;
-    }
-    #characterSelect {
-      text-align: center;
       margin: 10px;
     }
     .char-btn {
@@ -32,39 +28,62 @@
       font-size: 1em;
       cursor: pointer;
     }
+    #adminPanel {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #222;
+      padding: 10px;
+      border: 2px solid #fff;
+      z-index: 999;
+    }
+    #adminPanel button {
+      margin: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div id="characterSelect">
     Choose your catcher:
-    <button class="char-btn" onclick="selectCharacter('astronaut')">🧑‍🚀 Astronaut</button>
-    <button class="char-btn" onclick="selectCharacter('alien')">👽 Alien</button>
-    <button class="char-btn" onclick="selectCharacter('robot')">🤖 Robot</button>
+    <button class="char-btn" onclick="selectCharacter('astronaut')">Astronaut</button>
+    <button class="char-btn" onclick="selectCharacter('alien')">Alien</button>
+    <button class="char-btn" onclick="selectCharacter('robot')">Robot</button>
   </div>
   <canvas id="gameCanvas" width="480" height="640"></canvas>
-  <div id="scoreboard">Score: 0 | Lives: 3 | Level: 1</div>
+  <div id="scoreboard">Score: 0 | Lives: 3 | Level: 1 | Ammo: 0</div>
+
+  <div id="adminPanel">
+    <h3>Admin Panel</h3>
+    <button onclick="lives += 5">+5 Lives</button>
+    <button onclick="ammo += 10">+10 Ammo</button>
+    <button onclick="skipWave()">Skip Wave</button>
+  </div>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    let character = 'astronaut';
 
-    const catcherImages = {
-      astronaut: '🧑‍🚀',
-      alien: '👽',
-      robot: '🤖'
+    let character = 'astronaut';
+    let catcher = { x: canvas.width / 2 - 20, y: canvas.height - 60, width: 40, height: 40 };
+    let stars = [], bullets = [];
+    let score = 0, lives = 3, level = 1, ammo = 0;
+    let keys = {}, starSpeed = 2, waveStars = 10, starsCaught = 0;
+
+    const characterSprites = {
+      astronaut: 'https://opengameart.org/sites/default/files/astronaut.png',
+      alien: 'https://opengameart.org/sites/default/files/alienGreen.png',
+      robot: 'https://opengameart.org/sites/default/files/robot.png'
     };
 
-    let catcher = { x: canvas.width / 2 - 20, y: canvas.height - 40, width: 40, height: 40 };
-    let stars = [];
-    let score = 0;
-    let lives = 3;
-    let level = 1;
-    let keys = {};
-    let starSpeed = 2;
+    const characterImg = new Image();
+    characterImg.src = characterSprites[character];
 
     function selectCharacter(type) {
       character = type;
+      characterImg.src = characterSprites[type];
     }
 
     function createStar() {
@@ -73,9 +92,15 @@
       stars.push({ x, y: 0, radius: 8, color });
     }
 
+    function shoot() {
+      if (ammo > 0) {
+        bullets.push({ x: catcher.x + catcher.width / 2 - 2, y: catcher.y });
+        ammo--;
+      }
+    }
+
     function drawCatcher() {
-      ctx.font = '32px Arial';
-      ctx.fillText(catcherImages[character], catcher.x, catcher.y + 30);
+      ctx.drawImage(characterImg, catcher.x, catcher.y, catcher.width, catcher.height);
     }
 
     function drawStars() {
@@ -90,6 +115,13 @@
       });
     }
 
+    function drawBullets() {
+      ctx.fillStyle = 'yellow';
+      bullets.forEach(b => {
+        ctx.fillRect(b.x, b.y, 4, 10);
+      });
+    }
+
     function updateStars() {
       stars.forEach((star, index) => {
         star.y += starSpeed;
@@ -99,15 +131,26 @@
           star.x < catcher.x + catcher.width
         ) {
           score++;
+          ammo++;
+          starsCaught++;
           stars.splice(index, 1);
-          if (score % 10 === 0) {
+          if (starsCaught >= waveStars) {
             level++;
             starSpeed += 0.5;
+            waveStars += 5;
+            starsCaught = 0;
           }
         } else if (star.y > canvas.height) {
           lives--;
           stars.splice(index, 1);
         }
+      });
+    }
+
+    function updateBullets() {
+      bullets.forEach((b, i) => {
+        b.y -= 5;
+        if (b.y < 0) bullets.splice(i, 1);
       });
     }
 
@@ -126,7 +169,14 @@
     }
 
     function updateScoreboard() {
-      document.getElementById('scoreboard').textContent = `Score: ${score} | Lives: ${lives} | Level: ${level}`;
+      document.getElementById('scoreboard').textContent = `Score: ${score} | Lives: ${lives} | Level: ${level} | Ammo: ${ammo}`;
+    }
+
+    function skipWave() {
+      level++;
+      starSpeed += 0.5;
+      waveStars += 5;
+      starsCaught = 0;
     }
 
     function gameLoop() {
@@ -141,15 +191,35 @@
       drawBackgroundStars();
       drawCatcher();
       drawStars();
+      drawBullets();
       updateStars();
+      updateBullets();
       updateCatcher();
       updateScoreboard();
       requestAnimationFrame(gameLoop);
     }
 
     setInterval(createStar, 800);
-    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === ' ') shoot();
+      handleAdminTrigger(e.key);
+    });
     window.addEventListener('keyup', e => keys[e.key] = false);
+
+    // 🔐 Hidden Admin Panel Trigger
+    let adminCode = '';
+    let adminTriggerCount = 0;
+    function handleAdminTrigger(key) {
+      adminCode += key;
+      if (adminCode.endsWith('67')) {
+        adminTriggerCount++;
+        adminCode = '';
+      }
+      if (adminTriggerCount >= 3) {
+        document.getElementById('adminPanel').style.display = 'block';
+      }
+    }
 
     gameLoop();
   </script>
