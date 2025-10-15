@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Black Hole Starcatcher</title>
+<title>Black Hole Starcatcher — Saved Progress & Rewards</title>
 <style>
   :root{--ui-bg:rgba(8,10,20,0.6);--accent:#7be3ff;--muted:#cfeefc}
   html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 10%, #071827 0%, #00010a 40%, #000 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
@@ -25,6 +25,7 @@
   .acc-item img{width:36px;height:36px;object-fit:cover;border-radius:6px}
   #guideOverlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(2,6,12,0.95);padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);max-width:92%;z-index:60}
   #guideOverlay h3{margin:0 0 8px 0;color:var(--accent)}
+  #rewardToast{position:fixed;left:50%;transform:translateX(-50%);top:14%;background:linear-gradient(90deg,#0b2030,#022);padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);color:#fff;display:none;z-index:70}
   #gameOverOverlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0.2));z-index:60}
   #gameOverCard{background:rgba(6,8,12,0.95);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);text-align:center}
   @media (max-width:600px){#skinSelect{font-size:13px}.skin-btn{padding:6px 8px}#scoreboard{font-size:13px}}
@@ -39,7 +40,7 @@
       <button class="skin-btn" data-skin="ancient">Ancient</button>
     </div>
     <div id="scoreboard" aria-live="polite">
-      Score: <strong id="sc">0</strong> • Lives: <strong id="lv">3</strong> • Level: <strong id="lvn">1</strong>
+      Score: <strong id="sc">0</strong> • Lives: <strong id="lv">3</strong> • Level: <strong id="lvn">1</strong> • Best Level: <strong id="best">0</strong>
     </div>
   </div>
 
@@ -86,6 +87,8 @@
     </div>
   </div>
 
+  <div id="rewardToast"></div>
+
   <div id="gameOverOverlay" style="display:flex">
     <div id="gameOverCard">
       <h2 id="overTitle" style="margin:0 0 6px">Game Over</h2>
@@ -95,72 +98,59 @@
   </div>
 
 <script>
-/* Black Hole Starcatcher — skins + accessories, client-side uploads in Admin Panel */
+/* Black Hole Starcatcher — saved progress + rewards */
 (() => {
-  // Canvas setup
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d', { alpha:true });
   const VW = 720, VH = 960;
   let scale = 1, DPR = Math.max(1, window.devicePixelRatio || 1);
+
   function resizeCanvas(){ const w = Math.max(320, Math.floor(VW * Math.min(window.innerWidth / VW, window.innerHeight / VH))); const h = Math.max(480, Math.floor(VH * Math.min(window.innerWidth / VW, window.innerHeight / VH))); canvas.style.width = w + 'px'; canvas.style.height = h + 'px'; canvas.width = Math.floor(w * DPR); canvas.height = Math.floor(h * DPR); ctx.setTransform(DPR,0,0,DPR,0,0); scale = w / VW; }
   window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-  // State
   const state = {
     running:false, lastTime:0, keys:{},
     hole: { x: VW/2, y: VH - 200, radius: 56, vx:0 },
     stars: [], enemies: [], upgrades: [], particles: [],
     score:0, lives:3, level:1, starSpeed:2, waveStars:10, starsCaught:0,
-    starTimer:null, adminCode:'', adminCount:0,
-    skin: 'classic', accessories: [], equipped: {}
+    starTimer:null, adminCode:'', adminCount:0, accessories:[], equipped:{}
   };
 
-  // Preset skins (styling parameters)
+  // Saved progress keys
+  const STORAGE_KEY = 'BHSC_PROGRESS_v1';
+
+  function loadProgress(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return { bestLevel:0, wavesCleared:0 };
+      return JSON.parse(raw);
+    }catch(e){ return { bestLevel:0, wavesCleared:0 }; }
+  }
+  function saveProgress(progress){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }catch(e){}
+  }
+
+  // initialize progress
+  let progress = loadProgress();
+  document.getElementById('best').textContent = progress.bestLevel || 0;
+  console.log('Loaded progress:', progress);
+
+  // presets & accessories
   const skins = {
     classic: { coreColor:'#000', ringColor:'#222', glow:'#101010', accent:'#7be3ff' },
     neon: { coreColor:'#050018', ringColor:'#2b0044', glow:'#6d00ff', accent:'#ff6de6' },
     ancient: { coreColor:'#040200', ringColor:'#2b1f00', glow:'#5a3a00', accent:'#ffd66b' }
   };
 
-  // Load accessory images storage (in-memory array of {id,img,name})
-  let accessoryStore = [];
-
-  // Helpers
-  const rand = (a,b) => Math.random()*(b-a)+a;
-  const irand = (a,b) => Math.floor(rand(a,b+1));
-  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-  const hit = (ax,ay,ar, bx,by,bw,bh) => ax - ar < bx + bw && ax + ar > bx && ay - ar < by + bh && ay + ar > by;
-
-  // Spawn functions
-  function spawnStar(){ const r = irand(8,16); const x = rand(r, VW-r); const hue = irand(200,340); state.stars.push({ x, y:-r*2, r, vx:rand(-0.6,0.6), vy: state.starSpeed + rand(0,1.2), color:`hsl(${hue} 88% 68%)` }); }
-  function spawnEnemy(){ const w=44,h=44; const x=rand(40,VW-40-w), y=rand(40,160); const type = Math.random()<0.6?'basic':'kamikaze'; state.enemies.push({ x,y,w,h,type,dir:Math.random()<0.5?-1:1 }); }
-  function spawnUpgrade(x,y){ const types=['life','bonus','speed']; const t=types[irand(0,types.length-1)]; state.upgrades.push({ x,y,vy:1.2,r:12,type:t,color: t==='life'?'#7bffb8': t==='bonus'?'#ffd66b':'#cfa0ff' }); }
-  function spawnParticle(x,y,c){ for(let i=0;i<8;i++) state.particles.push({ x,y,vx:rand(-2,2),vy:rand(-2,0),life:irand(24,72),col:c }); }
-
-  // Star pulling: black hole attracts nearby stars within pullRadius
-  function applyGravity(){
-    const pullRadius = state.hole.radius * 4;
-    state.stars.forEach(s => {
-      const dx = state.hole.x - s.x, dy = state.hole.y - s.y;
-      const d2 = Math.max(6, Math.sqrt(dx*dx + dy*dy));
-      if(d2 < pullRadius){
-        const strength = (pullRadius - d2) / pullRadius * 0.45;
-        s.vx += (dx / d2) * strength * 0.6;
-        s.vy += (dy / d2) * strength * 0.6;
-      }
-    });
-  }
-
-  // Admin & accessory UI
-  const adminPanel = document.getElementById('adminPanel');
+  let accessoryStore = []; // {id, data, name}
   const accessoryListEl = document.getElementById('accessoryList');
   const accPosSelect = document.getElementById('accPosition');
 
   function refreshAccessoryList(){
     accessoryListEl.innerHTML = '';
-    accessoryStore.forEach(acc=>{
+    accessoryStore.forEach(acc => {
       const div = document.createElement('div'); div.className='acc-item';
-      const img = document.createElement('img'); img.src = acc.data; img.alt = acc.name || 'acc';
+      const img = document.createElement('img'); img.src = acc.data;
       const label = document.createElement('div'); label.style.fontSize='12px'; label.style.color='#dfeff6'; label.textContent = acc.name || 'Accessory';
       const toggle = document.createElement('input'); toggle.type='checkbox'; toggle.style.marginLeft='6px';
       toggle.checked = !!state.equipped[acc.id];
@@ -169,136 +159,192 @@
     });
   }
 
-  // Upload accessory (client-only)
+  // helper functions
+  const rand = (a,b) => Math.random()*(b-a)+a;
+  const irand = (a,b) => Math.floor(rand(a,b+1));
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const hit = (ax,ay,ar, bx,by,bw,bh) => ax - ar < bx + bw && ax + ar > bx && ay - ar < by + bh && ay + ar > by;
+
+  // spawn helpers
+  function spawnStar(){ const r = irand(8,16); const x = rand(r, VW-r); const hue = irand(200,340); state.stars.push({ x, y:-r*2, r, vx:rand(-0.6,0.6), vy: state.starSpeed + rand(0,1.2), color:`hsl(${hue} 88% 68%)` }); }
+  function spawnEnemy(){ const w=44,h=44; const x=rand(40,VW-40-w), y=rand(40,160); const type = Math.random()<0.6?'basic':'kamikaze'; state.enemies.push({ x,y,w,h,type,dir:Math.random()<0.5?-1:1 }); }
+  function spawnUpgrade(x,y){ const types=['life','bonus','speed']; const t=types[irand(0,types.length-1)]; state.upgrades.push({ x,y,vy:1.2,r:12,type:t,color: t==='life'?'#7bffb8': t==='bonus'?'#ffd66b':'#cfa0ff' }); }
+  function spawnParticle(x,y,c){ for(let i=0;i<8;i++) state.particles.push({ x,y,vx:rand(-2,2),vy:rand(-2,0),life:irand(24,72),col:c }); }
+
+  // gravity
+  function applyGravity(){
+    const pullRadius = state.hole.radius * 4;
+    state.stars.forEach(s => {
+      const dx = state.hole.x - s.x, dy = state.hole.y - s.y; const d2 = Math.max(6, Math.sqrt(dx*dx + dy*dy));
+      if(d2 < pullRadius){
+        const strength = (pullRadius - d2) / pullRadius * 0.45;
+        s.vx += (dx / d2) * strength * 0.6;
+        s.vy += (dy / d2) * strength * 0.6;
+      }
+    });
+  }
+
+  // timers
+  function spawnWave(){
+    const n = 1 + Math.floor(state.level/2);
+    for(let i=0;i<n;i++) spawnStar();
+    if(Math.random() < 0.22 + state.level*0.03) spawnEnemy();
+    if(Math.random() < 0.06 + state.level*0.02) spawnUpgrade(rand(40,VW-40), -10);
+  }
+  function startStarTimer(){ stopStarTimer(); state.starTimer = setInterval(spawnWave, Math.max(260, 900 - state.level*60)); }
+  function stopStarTimer(){ if(state.starTimer){ clearInterval(state.starTimer); state.starTimer = null; } }
+
+  // admin & accessory wiring
   document.getElementById('accessoryUpload').addEventListener('change', e=>{
     const f = e.target.files && e.target.files[0]; if(!f) return;
     const fr = new FileReader();
-    fr.onload = ev => {
-      const id = 'acc_' + Date.now();
-      accessoryStore.push({ id, data: ev.target.result, name: f.name });
-      refreshAccessoryList();
-    };
+    fr.onload = ev => { const id = 'acc_' + Date.now(); accessoryStore.push({ id, data: ev.target.result, name: f.name }); refreshAccessoryList(); };
     fr.readAsDataURL(f);
   });
 
-  // Admin trigger & wiring
-  function adminKey(k){ state.adminCode += k.toString(); if(state.adminCode.endsWith('67')){ state.adminCount++; state.adminCode = ''; } if(state.adminCount >= 3){ adminPanel.style.display = 'block'; adminPanel.setAttribute('aria-hidden','false'); state.adminCount=0; state.adminCode=''; refreshAccessoryList(); } if(state.adminCode.length > 12) state.adminCode = state.adminCode.slice(-12); }
-  window.addEventListener('keydown', e=>{ state.keys[e.key]=true; if(e.key===' '){} adminKey(e.key); }, false);
-  window.addEventListener('keyup', e=> state.keys[e.key]=false, false);
-  document.getElementById('hideAdmin').addEventListener('click', ()=> { adminPanel.style.display='none'; adminPanel.setAttribute('aria-hidden','true'); });
+  function adminKey(k){
+    state.adminCode += k.toString();
+    if(state.adminCode.endsWith('67')){ state.adminCount++; state.adminCode=''; }
+    if(state.adminCount >= 3){ document.getElementById('adminPanel').style.display = 'block'; document.getElementById('adminPanel').setAttribute('aria-hidden','false'); state.adminCount = 0; state.adminCode=''; refreshAccessoryList(); }
+    if(state.adminCode.length > 12) state.adminCode = state.adminCode.slice(-12);
+  }
+  window.addEventListener('keydown', e => { state.keys[e.key] = true; adminKey(e.key); }, false);
+  window.addEventListener('keyup', e => { state.keys[e.key] = false; }, false);
+  document.getElementById('hideAdmin').addEventListener('click', ()=>{ document.getElementById('adminPanel').style.display='none'; });
 
-  // Skin selection UI
-  document.querySelectorAll('.skin-btn').forEach(b=>{
-    b.addEventListener('click', ()=>{
+  // UI & controls
+  document.getElementById('btnLeft').addEventListener('pointerdown', ()=> state.keys.LeftBtn=true);
+  document.getElementById('btnLeft').addEventListener('pointerup', ()=> state.keys.LeftBtn=false);
+  document.getElementById('btnRight').addEventListener('pointerdown', ()=> state.keys.RightBtn=true);
+  document.getElementById('btnRight').addEventListener('pointerup', ()=> state.keys.RightBtn=false);
+  document.getElementById('btnCenter').addEventListener('click', ()=> { state.hole.x = VW/2; });
+
+  document.querySelectorAll('.skin-btn').forEach(b => {
+    b.addEventListener('click', ()=> {
       document.querySelectorAll('.skin-btn').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
       state.skin = b.getAttribute('data-skin');
     });
   });
 
-  // Movement controls (keyboard + onscreen)
-  document.getElementById('btnLeft').addEventListener('pointerdown', ()=> state.keys.LeftBtn = true);
-  document.getElementById('btnLeft').addEventListener('pointerup', ()=> state.keys.LeftBtn = false);
-  document.getElementById('btnRight').addEventListener('pointerdown', ()=> state.keys.RightBtn = true);
-  document.getElementById('btnRight').addEventListener('pointerup', ()=> state.keys.RightBtn = false);
-  document.getElementById('btnCenter').addEventListener('click', ()=> { state.hole.x = VW/2; });
-
-  // touch drag for mobile
-  canvas.addEventListener('touchstart', e=>{
-    const t = e.touches[0]; const rect = canvas.getBoundingClientRect();
-    const x = (t.clientX - rect.left) / (rect.width / VW);
-    state.hole.x = clamp(x, 60, VW-60);
-    e.preventDefault();
-  }, {passive:false});
-  canvas.addEventListener('touchmove', e=>{
-    const t = e.touches[0]; const rect = canvas.getBoundingClientRect();
-    const x = (t.clientX - rect.left) / (rect.width / VW);
-    state.hole.x = clamp(x, 60, VW-60);
-    e.preventDefault();
-  }, {passive:false});
-
-  // Guide overlay wiring
   document.getElementById('closeGuide').addEventListener('click', ()=> { document.getElementById('guideOverlay').style.display='none'; if(!state.running) startGame(); });
+  document.getElementById('restartBtn').addEventListener('click', ()=> { document.getElementById('gameOverOverlay').style.display='none'; restartGame(); });
+  document.getElementById('giveLives').addEventListener('click', ()=> { state.lives += 5; updateUI(); });
+  document.getElementById('skipWave').addEventListener('click', ()=> { levelComplete(); });
 
-  // Restart wiring
-  document.getElementById('restartBtn').addEventListener('click', ()=> restartGame());
+  // update UI
+  function updateUI(){ document.getElementById('sc').textContent = state.score; document.getElementById('lv').textContent = state.lives; document.getElementById('lvn').textContent = state.level; document.getElementById('best').textContent = (progress.bestLevel || 0); }
 
-  // Timers and level progression
-  function spawnWave(){
-    const n = 1 + Math.floor(state.level/2);
-    for(let i=0;i<n;i++) spawnStar();
-    // spawn enemies occasionally
-    if(Math.random() < 0.25 + state.level*0.03) spawnEnemy();
-    if(Math.random() < 0.07 + state.level*0.02) spawnUpgrade(rand(40,VW-40), -10);
+  // reward toast
+  const toast = document.getElementById('rewardToast');
+  let toastTimer = null;
+  function showReward(text){
+    toast.textContent = text;
+    toast.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>{ toast.style.display = 'none'; }, 2500);
   }
-  function startStarTimer(){ stopStarTimer(); state.starTimer = setInterval(spawnWave, Math.max(260, 900 - state.level*60)); }
-  function stopStarTimer(){ if(state.starTimer){ clearInterval(state.starTimer); state.starTimer=null; } }
 
-  // Game actions
-  function giveLives(n){ state.lives += n; updateUI(); }
-  function skipWave(){ state.level++; state.starSpeed += 0.6; state.waveStars += 5; state.starsCaught = 0; updateUI(); }
-  function restartGame(){ state.stars=[]; state.enemies=[]; state.upgrades=[]; state.particles=[]; state.score=0; state.lives=3; state.level=1; state.starSpeed=2; state.waveStars=10; state.starsCaught=0; updateUI(); startStarTimer(); state.running=true; state.lastTime=performance.now(); requestAnimationFrame(loop); }
+  // level completion & rewards
+  function levelComplete(){
+    // called when starsCaught reaches waveStars or admin skip
+    state.level++;
+    state.starSpeed += 0.6;
+    state.waveStars += 5;
+    state.starsCaught = 0;
 
-  // UI update
-  function updateUI(){ document.getElementById('sc').textContent = state.score; document.getElementById('lv').textContent = state.lives; document.getElementById('lvn').textContent = state.level; }
+    // reward package: lives + score + unlock accessory stub
+    const rewardLives = 1 + Math.floor(state.level/5);
+    const rewardScore = 10 + state.level * 3;
+    state.lives += rewardLives;
+    state.score += rewardScore;
 
-  // Core loop
-  function applyGravityToStars(){
+    // simulate unlocking an accessory slot (client-only): create a simple colored accessory image (data URI)
+    const accId = 'unlock_' + Date.now();
+    const canvasAcc = document.createElement('canvas');
+    canvasAcc.width = 64; canvasAcc.height = 64;
+    const actx = canvasAcc.getContext('2d');
+    actx.fillStyle = '#222'; actx.fillRect(0,0,64,64);
+    actx.fillStyle = ['#ffd66b','#7be3ff','#cfa0ff','#7bffb8'][state.level % 4];
+    actx.beginPath(); actx.arc(32,28,18,0,Math.PI*2); actx.fill();
+    actx.fillStyle = '#001'; actx.font = '600 12px sans-serif'; actx.fillText('S'+state.level, 10,54);
+    accessoryStore.push({ id: accId, data: canvasAcc.toDataURL(), name: 'Reward ' + state.level });
+    // automatically equip new accessory at front
+    state.equipped[accId] = { id: accId, pos: 'top' };
+
+    // save progress: update bestLevel and wavesCleared
+    progress.wavesCleared = (progress.wavesCleared || 0) + 1;
+    if(state.level > (progress.bestLevel || 0)){
+      progress.bestLevel = state.level;
+      showReward(`Level ${state.level-1} beaten! Reward: +${rewardLives} lives, +${rewardScore} score, new accessory unlocked.`);
+    } else {
+      showReward(`Wave cleared: +${rewardLives} lives, +${rewardScore} score.`);
+    }
+    saveProgress(progress);
+    updateUI();
+    refreshAccessoryList();
+  }
+
+  // save progress helper
+  function saveProgress(p){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }catch(e){}
+  }
+  const STORAGE_KEY = 'BHSC_PROGRESS_v1';
+
+  // detection of star consumption and game flow
+  function applyGravity(){
     const pullRadius = state.hole.radius * 4;
-    for(let i=state.stars.length-1;i>=0;i--){
-      const s = state.stars[i];
+    for(const s of state.stars){
       const dx = state.hole.x - s.x, dy = state.hole.y - s.y;
-      const d = Math.max(6, Math.sqrt(dx*dx + dy*dy));
-      if(d < pullRadius){
-        const strength = (pullRadius - d) / pullRadius * 0.55;
-        s.vx += (dx / d) * strength * 0.5;
-        s.vy += (dy / d) * strength * 0.5;
+      const d2 = Math.max(6, Math.sqrt(dx*dx + dy*dy));
+      if(d2 < pullRadius){
+        const strength = (pullRadius - d2) / pullRadius * 0.45;
+        s.vx += (dx / d2) * strength * 0.6;
+        s.vy += (dy / d2) * strength * 0.6;
       }
     }
   }
 
+  function finishGame(){
+    stopStarTimer();
+    state.running = false;
+    document.getElementById('overScore').textContent = `Score: ${state.score}`;
+    document.getElementById('gameOverOverlay').style.display = 'flex';
+    // save best level if higher
+    if(state.level > (progress.bestLevel || 0)){
+      progress.bestLevel = state.level;
+      saveProgress(progress);
+      updateUI();
+    }
+  }
+
+  // main loop
   function loop(ts){
     if(!state.running) return;
     if(!state.lastTime) state.lastTime = ts;
     const dt = Math.min(40, ts - state.lastTime);
     state.lastTime = ts;
 
-    // move hole horizontally with keys
-    const speed = 6;
-    if(state.keys['ArrowLeft'] || state.keys['a'] || state.keys.LeftBtn) state.hole.x -= speed;
-    if(state.keys['ArrowRight'] || state.keys['d'] || state.keys.RightBtn) state.hole.x += speed;
+    // movement
+    const sp = 6;
+    if(state.keys['ArrowLeft'] || state.keys['a'] || state.keys.LeftBtn) state.hole.x -= sp;
+    if(state.keys['ArrowRight'] || state.keys['d'] || state.keys.RightBtn) state.hole.x += sp;
     state.hole.x = clamp(state.hole.x, 60, VW-60);
 
-    // apply gravity
-    applyGravityToStars();
-
-    // update stars
+    // apply gravity and update stars
+    applyGravity();
     for(let i=state.stars.length-1;i>=0;i--){
       const s = state.stars[i];
       s.x += s.vx; s.y += s.vy; s.vy += 0.02;
-      // eaten by black hole core when within radius
-      const dx = state.hole.x - s.x, dy = state.hole.y - s.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+      const dx = state.hole.x - s.x, dy = state.hole.y - s.y; const dist = Math.sqrt(dx*dx + dy*dy);
       if(dist < state.hole.radius * 0.75){
-        // star consumed
-        state.score += 1;
-        state.starsCaught += 1;
-        spawnParticle(s.x, s.y, s.color);
-        // small chance to drop upgrade
-        if(Math.random() < 0.08 + state.level*0.01) spawnUpgrade(s.x, s.y);
-        state.stars.splice(i,1);
-        updateUI();
-        if(state.starsCaught >= state.waveStars){ state.level++; state.starSpeed += 0.5; state.waveStars += 5; state.starsCaught = 0; updateUI(); }
+        state.score++; state.starsCaught++; spawnParticle(s.x,s.y,s.color); state.stars.splice(i,1); updateUI();
+        if(state.starsCaught >= state.waveStars){
+          levelComplete();
+        }
         continue;
       }
-      // missed
-      if(s.y - s.r > VH){
-        state.stars.splice(i,1);
-        state.lives--;
-        spawnParticle(s.x, VH-20, '#ff7b7b');
-        updateUI();
-        if(state.lives <= 0){ finishGame(); return; }
-      }
+      if(s.y - s.r > VH){ state.stars.splice(i,1); state.lives--; spawnParticle(s.x, VH-20, '#ff7b7b'); updateUI(); if(state.lives <= 0){ finishGame(); return; } }
     }
 
     // enemies
@@ -307,34 +353,23 @@
       if(e.type === 'basic'){
         e.x += e.dir * (1 + state.level*0.08);
         if(e.x < 20 || e.x + e.w > VW-20) e.dir *= -1;
-        if(Math.random() < 0.001 + state.level*0.001) e.y += 4;
+        if(Math.random() < 0.002 + state.level*0.001) e.y += 4;
       } else {
-        // kamikaze
-        const dx = (state.hole.x) - (e.x + e.w/2);
-        const dy = (state.hole.y) - (e.y + e.h/2);
-        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
-        e.x += (dx / mag) * (1.5 + state.level*0.07);
-        e.y += (dy / mag) * (1.5 + state.level*0.07);
+        const dx = state.hole.x - (e.x + e.w/2), dy = state.hole.y - (e.y + e.h/2), mag = Math.sqrt(dx*dx + dy*dy) || 1;
+        e.x += (dx / mag) * (1.5 + state.level*0.07); e.y += (dy / mag) * (1.5 + state.level*0.07);
       }
-      // collision: enemy hits hole (damage)
       if(hit(state.hole.x, state.hole.y, state.hole.radius, e.x, e.y, e.w, e.h)){
-        state.lives--; updateUI();
-        spawnParticle(state.hole.x, state.hole.y, '#ff7b7b'); state.enemies.splice(i,1);
-        if(state.lives <= 0){ finishGame(); return; }
+        state.lives--; updateUI(); spawnParticle(state.hole.x, state.hole.y, '#ff7b7b'); state.enemies.splice(i,1); if(state.lives <= 0){ finishGame(); return; }
       }
       if(e.y > VH + 80 || e.x < -120 || e.x > VW + 120) state.enemies.splice(i,1);
     }
 
     // upgrades
     for(let i=state.upgrades.length-1;i>=0;i--){
-      const u = state.upgrades[i];
-      u.y += u.vy;
+      const u = state.upgrades[i]; u.y += u.vy;
       if(hit(state.hole.x, state.hole.y, state.hole.radius, u.x - u.r, u.y - u.r, u.r*2, u.r*2)){
-        if(u.type === 'life') state.lives++;
-        else if(u.type === 'bonus') state.score += 3;
-        else if(u.type === 'speed') {/* could boost pull or speed */}
-        spawnParticle(u.x, u.y, '#fff'); state.upgrades.splice(i,1); updateUI();
-        continue;
+        if(u.type === 'life') state.lives++; else if(u.type==='bonus') state.score += 3;
+        spawnParticle(u.x,u.y,'#fff'); state.upgrades.splice(i,1); updateUI(); continue;
       }
       if(u.y - u.r > VH) state.upgrades.splice(i,1);
     }
@@ -347,30 +382,22 @@
     drawBackground(ts);
 
     // stars
-    state.stars.forEach(s=>{
-      ctx.save(); ctx.beginPath(); ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = Math.max(6, s.r); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); ctx.restore();
-    });
+    state.stars.forEach(s=>{ ctx.save(); ctx.beginPath(); ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = Math.max(6, s.r); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); ctx.restore(); });
 
     // upgrades
-    state.upgrades.forEach(u=>{
-      ctx.save(); ctx.fillStyle = u.color; ctx.beginPath(); ctx.arc(u.x, u.y, u.r, 0, Math.PI*2); ctx.fill(); ctx.restore();
-      ctx.fillStyle = '#001'; ctx.font = '600 10px Inter, sans-serif'; ctx.fillText(u.type[0].toUpperCase(), u.x-4, u.y+4);
-    });
+    state.upgrades.forEach(u=>{ ctx.save(); ctx.fillStyle = u.color; ctx.beginPath(); ctx.arc(u.x, u.y, u.r, 0, Math.PI*2); ctx.fill(); ctx.restore(); ctx.fillStyle = '#001'; ctx.font = '600 10px Inter, sans-serif'; ctx.fillText(u.type[0].toUpperCase(), u.x-4, u.y+4); });
 
     // enemies
-    state.enemies.forEach(e=>{
-      ctx.save(); ctx.fillStyle = e.type==='kamikaze' ? '#ff6b6b' : '#b0c4ff'; ctx.fillRect(e.x, e.y, e.w, e.h);
-      ctx.fillStyle = '#001'; ctx.font = '700 12px Inter, sans-serif'; ctx.fillText(e.type[0].toUpperCase(), e.x + e.w/2 - 6, e.y + e.h/2 + 4); ctx.restore();
-    });
+    state.enemies.forEach(e=>{ ctx.save(); ctx.fillStyle = e.type==='kamikaze' ? '#ff6b6b' : '#b0c4ff'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = '#001'; ctx.font = '700 12px Inter, sans-serif'; ctx.fillText(e.type[0].toUpperCase(), e.x + e.w/2 - 6, e.y + e.h/2 + 4); ctx.restore(); });
 
-    // black hole drawing (skin + accessories)
+    // black hole (skin + accessories)
     drawBlackHole();
 
     // particles
     state.particles.forEach(p=>{ ctx.globalAlpha = clamp(p.life/80,0,1); ctx.fillStyle = p.col; ctx.fillRect(p.x, p.y, 2, 2); ctx.globalAlpha = 1; });
 
     // HUD
-    ctx.fillStyle = 'rgba(0,0,0,0.36)'; ctx.fillRect(10,10,210,56); ctx.fillStyle = skins[state.skin].accent; ctx.font = '700 14px Inter, sans-serif'; ctx.fillText(`Score: ${state.score}`, 20, 32); ctx.fillText(`Lives: ${state.lives}`, 20, 52);
+    ctx.fillStyle = 'rgba(0,0,0,0.36)'; ctx.fillRect(10,10,260,56); ctx.fillStyle = skins[state.skin].accent; ctx.font = '700 14px Inter, sans-serif'; ctx.fillText(`Score: ${state.score}`, 20, 32); ctx.fillText(`Lives: ${state.lives}`, 20, 52);
 
     requestAnimationFrame(loop);
   }
@@ -378,39 +405,30 @@
   function drawBlackHole(){
     const s = skins[state.skin] || skins.classic;
     const x = state.hole.x, y = state.hole.y, r = state.hole.radius;
-    // outer glow
     const grad = ctx.createRadialGradient(x, y, r*0.4, x, y, r*2);
     grad.addColorStop(0, s.accent);
     grad.addColorStop(0.4, s.glow);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x, y, r*2, 0, Math.PI*2); ctx.fill();
-    // ring
     ctx.beginPath(); ctx.strokeStyle = s.ringColor; ctx.lineWidth = 8; ctx.arc(x, y, r*0.95, 0, Math.PI*2); ctx.stroke();
-    // core
     ctx.beginPath(); ctx.fillStyle = s.coreColor; ctx.arc(x, y, r*0.7, 0, Math.PI*2); ctx.fill();
-    // event horizon (black center)
     ctx.beginPath(); ctx.fillStyle = '#000'; ctx.arc(x, y, r*0.45, 0, Math.PI*2); ctx.fill();
 
-    // draw equipped accessories positioned relative to hole
+    // accessories
     Object.values(state.equipped).forEach(e=>{
       const acc = accessoryStore.find(a=>a.id === e.id);
       if(!acc) return;
       const img = new Image(); img.src = acc.data;
-      // compute position
       let ax = x, ay = y;
       const scaleFactor = 0.9;
       if(e.pos === 'top'){ ax = x; ay = y - r*1.05; }
       else if(e.pos === 'left'){ ax = x - r*1.05; ay = y; }
       else if(e.pos === 'right'){ ax = x + r*1.05; ay = y; }
       else { ax = x; ay = y; }
-      // draw accessory image centered
       const aw = r * 1.1 * scaleFactor, ah = aw;
-      // draw synchronously if cached: use stored data URI
       ctx.save();
       ctx.beginPath();
-      // circular clip slightly smaller than accessory to keep neat
       ctx.arc(ax, ay, aw/2 + 2, 0, Math.PI*2); ctx.clip();
-      // draw image with try-catch; image may be large but data URI OK
       try { ctx.drawImage(img, ax - aw/2, ay - ah/2, aw, ah); } catch(err){}
       ctx.restore();
     });
@@ -422,12 +440,11 @@
     ctx.fillStyle = '#fff'; for(let i=0;i<80;i++){ const sx=(i*47)%(VW-10)+5; const sy=(i*73)%(VH-40)+20; ctx.globalAlpha = 0.2 + 0.6*Math.abs(Math.sin((t*0.001+i)*0.7)); ctx.fillRect(sx,sy,1.2,1.2); } ctx.globalAlpha=1;
   }
 
-  // Start routine
+  // start & restart
   function startGame(){
     resizeCanvas();
-    // center hole
     state.hole.x = VW/2; state.hole.y = VH - 200;
-    // initial objects
+    state.stars = []; state.enemies = []; state.upgrades = []; state.particles = [];
     for(let i=0;i<6;i++) spawnStar();
     for(let i=0;i<1;i++) spawnEnemy();
     startStarTimer();
@@ -435,58 +452,28 @@
     state.lastTime = performance.now();
     requestAnimationFrame(loop);
   }
-  // finish game
-  function finishGame(){ stopStarTimer(); state.running = false; document.getElementById('overScore').textContent = `Score: ${state.score}`; document.getElementById('gameOverOverlay').style.display = 'flex'; }
 
-  // load saved accessory images? (we keep everything client-only; no persistence unless desired)
-  // initialization
-  resizeCanvas();
-  // wire admin buttons
-  document.getElementById('giveLives').addEventListener('click', ()=> { state.lives += 5; updateUI(); });
-  document.getElementById('skipWave').addEventListener('click', ()=> { skipWave(); });
+  function restartGame(){
+    state.score = 0; state.lives = 3; state.level = 1; state.starSpeed = 2; state.waveStars = 10; state.starsCaught = 0;
+    updateUI();
+    startGame();
+  }
 
-  document.getElementById('restartBtn').addEventListener('click', ()=> { document.getElementById('gameOverOverlay').style.display='none'; restartGame(); });
+  // show saved progress in HUD initially
+  updateUI();
 
-  // accessory list toggle will be refreshed when admin opens panel
-  function refreshAccessoryListOnOpen(){ refreshAccessoryList(); }
-  function refreshAccessoryList(){ accessoryListEl.innerHTML = ''; accessoryStore.forEach(acc => {
-      const wrapper = document.createElement('div'); wrapper.className = 'acc-item';
-      const img = document.createElement('img'); img.src = acc.data;
-      const label = document.createElement('div'); label.style.fontSize='12px'; label.style.color='#dfeff6'; label.textContent = acc.name || 'Accessory';
-      const chk = document.createElement('input'); chk.type='checkbox'; chk.style.marginLeft='6px'; chk.checked = !!state.equipped[acc.id];
-      chk.addEventListener('change', ()=>{ if(chk.checked) state.equipped[acc.id] = { id: acc.id, pos: accPosSelect.value }; else delete state.equipped[acc.id]; });
-      wrapper.appendChild(img); wrapper.appendChild(label); wrapper.appendChild(chk); accessoryListEl.appendChild(wrapper);
-  }); }
-  // wire accessory upload with same in-function as earlier but push to accessoryStore
-  const accessoryListEl = document.getElementById('accessoryList');
-  document.getElementById('accessoryUpload').addEventListener('change', e=>{
-    const f = e.target.files && e.target.files[0]; if(!f) return;
-    const fr = new FileReader();
-    fr.onload = ev => {
-      const id = 'acc_' + Date.now();
-      accessoryStore.push({ id, data: ev.target.result, name: f.name });
-      refreshAccessoryList();
-    };
-    fr.readAsDataURL(f);
-  });
+  // load initial accessory list from saved progress (if any)
+  // (progress management currently only stores bestLevel and wavesCleared)
+  if(progress && progress.savedAccessories){
+    accessoryStore = progress.savedAccessories;
+    refreshAccessoryList();
+  }
 
-  // ensure accessory list functions exist used earlier
-  function updateUI(){ document.getElementById('sc').textContent = state.score; document.getElementById('lv').textContent = state.lives; document.getElementById('lvn').textContent = state.level; }
+  // fallback start after guide timeout
+  setTimeout(()=>{ if(!state.running && document.getElementById('guideOverlay').style.display === 'none') startGame(); }, 1200);
 
-  // small helper functions used above but declared after due to ordering
-  function refreshAccessoryListFallback(){ refreshAccessoryList(); } // alias
-
-  // Start after user closes guide
-  document.getElementById('closeGuide').addEventListener('click', ()=>{
-    document.getElementById('guideOverlay').style.display = 'none';
-    if(!state.running) startGame();
-  });
-
-  // allow starting automatically if guide already hidden
-  if(document.getElementById('guideOverlay').style.display === 'none') startGame();
-
-  // expose minimalist debug
-  window.BHSC = { state: ()=> ({score:state.score, lives:state.lives, level:state.level, accessories: accessoryStore.length}), equip: (id,pos)=> { state.equipped[id] = {id,pos}; } };
+  // Expose debug
+  window.BHSC = { state: ()=> ({score: state.score, lives: state.lives, level: state.level}), reward: ()=> levelComplete(), saveNow: ()=> { saveProgress(progress); } };
 
 })();
 </script>
