@@ -3,71 +3,107 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Catch the Falling Stars</title>
+  <title>Galactic Star Catcher</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
+      background: radial-gradient(ellipse at bottom, #0d1b2a 0%, #000000 100%);
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #001f3f, #0074D9);
       color: white;
     }
     #gameCanvas {
       display: block;
       margin: 0 auto;
-      background-color: #111;
-      border: 2px solid #fff;
+      background: transparent;
     }
     #scoreboard {
       text-align: center;
-      margin-top: 10px;
       font-size: 1.2em;
+      margin-top: 10px;
+    }
+    #characterSelect {
+      text-align: center;
+      margin: 10px;
+    }
+    .char-btn {
+      margin: 0 10px;
+      padding: 5px 10px;
+      font-size: 1em;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
+  <div id="characterSelect">
+    Choose your catcher:
+    <button class="char-btn" onclick="selectCharacter('astronaut')">🧑‍🚀 Astronaut</button>
+    <button class="char-btn" onclick="selectCharacter('alien')">👽 Alien</button>
+    <button class="char-btn" onclick="selectCharacter('robot')">🤖 Robot</button>
+  </div>
   <canvas id="gameCanvas" width="480" height="640"></canvas>
-  <div id="scoreboard">Score: 0 | Lives: 3</div>
+  <div id="scoreboard">Score: 0 | Lives: 3 | Level: 1</div>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    let character = 'astronaut';
 
-    let basket = { x: canvas.width / 2 - 40, y: canvas.height - 30, width: 80, height: 20 };
+    const catcherImages = {
+      astronaut: '🧑‍🚀',
+      alien: '👽',
+      robot: '🤖'
+    };
+
+    let catcher = { x: canvas.width / 2 - 20, y: canvas.height - 40, width: 40, height: 40 };
     let stars = [];
     let score = 0;
     let lives = 3;
+    let level = 1;
     let keys = {};
+    let starSpeed = 2;
+
+    function selectCharacter(type) {
+      character = type;
+    }
 
     function createStar() {
       const x = Math.random() * (canvas.width - 20);
-      stars.push({ x, y: 0, radius: 10 });
+      const color = `hsl(${Math.random() * 360}, 100%, 70%)`;
+      stars.push({ x, y: 0, radius: 8, color });
     }
 
-    function drawBasket() {
-      ctx.fillStyle = '#FFD700';
-      ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+    function drawCatcher() {
+      ctx.font = '32px Arial';
+      ctx.fillText(catcherImages[character], catcher.x, catcher.y + 30);
     }
 
     function drawStars() {
-      ctx.fillStyle = '#00FFFF';
       stars.forEach(star => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = star.color;
+        ctx.shadowColor = star.color;
+        ctx.shadowBlur = 10;
         ctx.fill();
+        ctx.shadowBlur = 0;
       });
     }
 
     function updateStars() {
       stars.forEach((star, index) => {
-        star.y += 4;
+        star.y += starSpeed;
         if (
-          star.y + star.radius > basket.y &&
-          star.x > basket.x &&
-          star.x < basket.x + basket.width
+          star.y + star.radius > catcher.y &&
+          star.x > catcher.x &&
+          star.x < catcher.x + catcher.width
         ) {
           score++;
           stars.splice(index, 1);
+          if (score % 10 === 0) {
+            level++;
+            starSpeed += 0.5;
+          }
         } else if (star.y > canvas.height) {
           lives--;
           stars.splice(index, 1);
@@ -75,13 +111,22 @@
       });
     }
 
-    function updateBasket() {
-      if (keys['ArrowLeft'] && basket.x > 0) basket.x -= 6;
-      if (keys['ArrowRight'] && basket.x < canvas.width - basket.width) basket.x += 6;
+    function updateCatcher() {
+      if (keys['ArrowLeft'] && catcher.x > 0) catcher.x -= 5;
+      if (keys['ArrowRight'] && catcher.x < canvas.width - catcher.width) catcher.x += 5;
+    }
+
+    function drawBackgroundStars() {
+      for (let i = 0; i < 100; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
     }
 
     function updateScoreboard() {
-      document.getElementById('scoreboard').textContent = `Score: ${score} | Lives: ${lives}`;
+      document.getElementById('scoreboard').textContent = `Score: ${score} | Lives: ${lives} | Level: ${level}`;
     }
 
     function gameLoop() {
@@ -93,15 +138,16 @@
       }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBasket();
+      drawBackgroundStars();
+      drawCatcher();
       drawStars();
       updateStars();
-      updateBasket();
+      updateCatcher();
       updateScoreboard();
       requestAnimationFrame(gameLoop);
     }
 
-    setInterval(createStar, 1000);
+    setInterval(createStar, 800);
     window.addEventListener('keydown', e => keys[e.key] = true);
     window.addEventListener('keyup', e => keys[e.key] = false);
 
