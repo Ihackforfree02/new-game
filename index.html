@@ -1,101 +1,227 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>UNDERTALE GOLD — Menu</title>
-<style>
-:root{--bg:#000;--fg:#f7f6fb;--muted:#a9a9b6;--panel:#0d0c12;--line:#1b1a22;--gold:#ffd166}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:ui-monospace,monospace}
-#wrap{max-width:840px;margin:24px auto;padding:16px}
-.card{background:#0b0b12;border:1px solid #1b1a22;border-radius:12px;padding:16px}
-h1{margin:8px 0 4px 0;color:var(--gold)}
-small{color:var(--muted)}
-.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
-.label{min-width:120px;color:var(--muted)}
-.inp{background:#0c0c12;border:1px solid #1b1a22;color:#f7f6fb;border-radius:8px;padding:8px 10px;font-family:monospace}
-.btn{background:#11121a;color:#f7f6fb;border:1px solid #1b1a22;border-radius:8px;padding:10px 14px;cursor:pointer}
-.btnPrimary{background:var(--gold);color:#111;border-color:#111}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
-.sw{width:34px;height:34px;border-radius:6px;border:1px solid #1b1a22;cursor:pointer}
-.footer{margin-top:12px;display:flex;gap:8px;align-items:center;color:var(--muted)}
-canvas{image-rendering:pixelated}
-hr{border:0;border-top:1px solid #1b1a22;margin:14px 0}
-.note{font-size:12px;color:#a9a9b6}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Galactic Star Catcher</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(ellipse at bottom, #0d1b2a 0%, #000000 100%);
+      font-family: 'Segoe UI', sans-serif;
+      color: white;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: transparent;
+    }
+    #scoreboard, #characterSelect {
+      text-align: center;
+      font-size: 1.2em;
+      margin: 10px;
+    }
+    .char-btn {
+      margin: 0 10px;
+      padding: 5px 10px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #adminPanel {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #222;
+      padding: 10px;
+      border: 2px solid #fff;
+      z-index: 999;
+    }
+    #adminPanel button {
+      margin: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-<div id="wrap">
-  <div class="card">
-    <h1>UNDERTALE GOLD</h1>
-    <div class="row"><small>Walk until your heart glows.</small></div>
-    <hr/>
-    <div class="row">
-      <div class="label">Name</div>
-      <input id="nameInput" class="inp" type="text" maxlength="12" placeholder="Traveler"/>
-    </div>
-    <div class="row">
-      <div class="label">Pronouns</div>
-      <select id="pronouns" class="inp">
-        <option value="they/them">they/them</option>
-        <option value="she/her">she/her</option>
-        <option value="he/him">he/him</option>
-        <option value="custom">custom…</option>
-      </select>
-      <input id="pronounsCustom" class="inp" type="text" placeholder="xe/xem" style="display:none"/>
-    </div>
-    <div class="row" style="align-items:flex-start">
-      <div class="label">Glow color</div>
-      <div id="swRow" class="row" style="gap:8px"></div>
-      <canvas id="heartPrev" width="100" height="100" style="width:100px;height:100px"></canvas>
-    </div>
-    <div class="footer">
-      <button id="saveBtn" class="btn">Save profile</button>
-      <span id="status" class="note">Profile autosaves when launching a mode.</span>
-    </div>
-    <hr/>
-    <div class="grid">
-      <div>
-        <h3 style="margin:0 0 6px 0">Story</h3>
-        <small class="note">Explore as a human with a golden heart, talk to NPCs, save at embers, discover the Emberwild.</small>
-        <div class="row" style="margin-top:8px">
-          <a href="story.html" id="storyLink" class="btn btnPrimary">Play story</a>
-        </div>
-      </div>
-      <div>
-        <h3 style="margin:0 0 6px 0">Battle</h3>
-        <small class="note">Boss rush: control the heart in the box, fight wave after wave with unique patterns.</small>
-        <div class="row" style="margin-top:8px">
-          <a href="battle.html" id="battleLink" class="btn btnPrimary">Play battle</a>
-        </div>
-      </div>
-    </div>
+  <div id="characterSelect">
+    Choose your catcher:
+    <button class="char-btn" onclick="selectCharacter('astronaut')">Astronaut</button>
+    <button class="char-btn" onclick="selectCharacter('alien')">Alien</button>
+    <button class="char-btn" onclick="selectCharacter('robot')">Robot</button>
   </div>
-</div>
-<script>
-const LS='utg_shared_profile_v1';
-const PALETTE=['#ffd166','#ff9f1c','#ff6b6b','#ffc4a3','#fff1b6','#ffdd55','#ffb347','#ffd2ae','#fff3d0','#ffe299','#a6c7ff','#7affb7'];
-function defProfile(){return{name:'Traveler',pronouns:'they/them',glow:'#ffd166'};}
-function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):defProfile();}catch{return defProfile();}}
-function save(p){try{localStorage.setItem(LS,JSON.stringify(p));setStatus('Saved');}catch{setStatus('Save error');}}
-function setStatus(t){document.getElementById('status').textContent=t;setTimeout(()=>{document.getElementById('status').textContent='Profile autosaves when launching a mode.'},1500);}
-const P=load();
-const nameInput=document.getElementById('nameInput');
-const pronouns=document.getElementById('pronouns');
-const pronounsCustom=document.getElementById('pronounsCustom');
-const swRow=document.getElementById('swRow');
-const heartPrev=document.getElementById('heartPrev').getContext('2d');
-function drawHeart(ctx,x,y,color,scale=2){ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);const m=[[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0]];ctx.fillStyle=color;const s=4;for(let r=0;r<m.length;r++)for(let c=0;c<m[r].length;c++) if(m[r][c]) ctx.fillRect((c-4)*s+40,(r-3)*s+20,s,s);ctx.restore();}
-function redraw(){heartPrev.clearRect(0,0,100,100);drawHeart(heartPrev,0,0,P.glow,2);}
-function buildSwatches(){swRow.innerHTML='';PALETTE.forEach(c=>{const d=document.createElement('div');d.className='sw';d.style.background=c;d.onclick=()=>{P.glow=c;redraw();};swRow.appendChild(d);});}
-nameInput.value=P.name||'';
-pronouns.value=(P.pronouns==='they/them'||P.pronouns==='she/her'||P.pronouns==='he/him')?P.pronouns:'custom';
-if(pronouns.value==='custom'){pronounsCustom.style.display='inline-block';pronounsCustom.value=P.pronouns;}
-pronouns.onchange=()=>{pronounsCustom.style.display=(pronouns.value==='custom')?'inline-block':'none';};
-buildSwatches();redraw();
-document.getElementById('saveBtn').onclick=()=>{P.name=nameInput.value.trim()||'Traveler';P.pronouns=(pronouns.value==='custom')?(pronounsCustom.value.trim()||'they/them'):pronouns.value;save(P);};
-document.getElementById('storyLink').onclick=()=>{P.name=nameInput.value.trim()||'Traveler';P.pronouns=(pronouns.value==='custom')?(pronounsCustom.value.trim()||'they/them'):pronouns.value;save(P);};
-document.getElementById('battleLink').onclick=()=>{P.name=nameInput.value.trim()||'Traveler';P.pronouns=(pronouns.value==='custom')?(pronounsCustom.value.trim()||'they/them'):pronouns.value;save(P);};
-</script>
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <div id="scoreboard">Score: 0 | Lives: 3 | Level: 1 | Ammo: 0</div>
+
+  <div id="adminPanel">
+    <h3>Admin Panel</h3>
+    <button onclick="lives += 5">+5 Lives</button>
+    <button onclick="ammo += 10">+10 Ammo</button>
+    <button onclick="skipWave()">Skip Wave</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let character = 'astronaut';
+    let catcher = { x: canvas.width / 2 - 20, y: canvas.height - 60, width: 40, height: 40 };
+    let stars = [], bullets = [];
+    let score = 0, lives = 3, level = 1, ammo = 0;
+    let keys = {}, starSpeed = 2, waveStars = 10, starsCaught = 0;
+
+    const characterSprites = {
+      astronaut: 'https://opengameart.org/sites/default/files/astronaut.png',
+      alien: 'https://opengameart.org/sites/default/files/alienGreen.png',
+      robot: 'https://opengameart.org/sites/default/files/robot.png'
+    };
+
+    const characterImg = new Image();
+    characterImg.src = characterSprites[character];
+
+    function selectCharacter(type) {
+      character = type;
+      characterImg.src = characterSprites[type];
+    }
+
+    function createStar() {
+      const x = Math.random() * (canvas.width - 20);
+      const color = `hsl(${Math.random() * 360}, 100%, 70%)`;
+      stars.push({ x, y: 0, radius: 8, color });
+    }
+
+    function shoot() {
+      if (ammo > 0) {
+        bullets.push({ x: catcher.x + catcher.width / 2 - 2, y: catcher.y });
+        ammo--;
+      }
+    }
+
+    function drawCatcher() {
+      ctx.drawImage(characterImg, catcher.x, catcher.y, catcher.width, catcher.height);
+    }
+
+    function drawStars() {
+      stars.forEach(star => {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = star.color;
+        ctx.shadowColor = star.color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+    }
+
+    function drawBullets() {
+      ctx.fillStyle = 'yellow';
+      bullets.forEach(b => {
+        ctx.fillRect(b.x, b.y, 4, 10);
+      });
+    }
+
+    function updateStars() {
+      stars.forEach((star, index) => {
+        star.y += starSpeed;
+        if (
+          star.y + star.radius > catcher.y &&
+          star.x > catcher.x &&
+          star.x < catcher.x + catcher.width
+        ) {
+          score++;
+          ammo++;
+          starsCaught++;
+          stars.splice(index, 1);
+          if (starsCaught >= waveStars) {
+            level++;
+            starSpeed += 0.5;
+            waveStars += 5;
+            starsCaught = 0;
+          }
+        } else if (star.y > canvas.height) {
+          lives--;
+          stars.splice(index, 1);
+        }
+      });
+    }
+
+    function updateBullets() {
+      bullets.forEach((b, i) => {
+        b.y -= 5;
+        if (b.y < 0) bullets.splice(i, 1);
+      });
+    }
+
+    function updateCatcher() {
+      if (keys['ArrowLeft'] && catcher.x > 0) catcher.x -= 5;
+      if (keys['ArrowRight'] && catcher.x < canvas.width - catcher.width) catcher.x += 5;
+    }
+
+    function drawBackgroundStars() {
+      for (let i = 0; i < 100; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    function updateScoreboard() {
+      document.getElementById('scoreboard').textContent = `Score: ${score} | Lives: ${lives} | Level: ${level} | Ammo: ${ammo}`;
+    }
+
+    function skipWave() {
+      level++;
+      starSpeed += 0.5;
+      waveStars += 5;
+      starsCaught = 0;
+    }
+
+    function gameLoop() {
+      if (lives <= 0) {
+        ctx.fillStyle = 'white';
+        ctx.font = '36px Arial';
+        ctx.fillText('Game Over', canvas.width / 2 - 90, canvas.height / 2);
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackgroundStars();
+      drawCatcher();
+      drawStars();
+      drawBullets();
+      updateStars();
+      updateBullets();
+      updateCatcher();
+      updateScoreboard();
+      requestAnimationFrame(gameLoop);
+    }
+
+    setInterval(createStar, 800);
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === ' ') shoot();
+      handleAdminTrigger(e.key);
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    // 🔐 Hidden Admin Panel Trigger
+    let adminCode = '';
+    let adminTriggerCount = 0;
+    function handleAdminTrigger(key) {
+      adminCode += key;
+      if (adminCode.endsWith('67')) {
+        adminTriggerCount++;
+        adminCode = '';
+      }
+      if (adminTriggerCount >= 3) {
+        document.getElementById('adminPanel').style.display = 'block';
+      }
+    }
+
+    gameLoop();
+  </script>
 </body>
 </html>
