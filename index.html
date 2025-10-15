@@ -1,39 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Galactic Star Catcher</title>
-  <style>
-    :root{--ui-bg:rgba(8,10,20,0.6);--accent:#7be3ff;--muted:#cfeefc;--panel:rgba(0,0,0,0.45)}
-    html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 10%, #0b2030 0%, #00010a 35%, #000 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
-    #uiTop{position:fixed;left:10px;right:10px;top:8px;display:flex;justify-content:space-between;gap:12px;z-index:40;align-items:center}
-    #characterSelect{background:var(--ui-bg);padding:8px;border-radius:10px;display:flex;gap:8px;align-items:center;backdrop-filter:blur(6px)}
-    .char-btn{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--muted);padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer}
-    .char-btn.active{border-color:var(--accent);box-shadow:0 6px 18px rgba(123,227,255,0.06);color:var(--accent)}
-    #scoreboard{background:var(--ui-bg);padding:8px 12px;border-radius:10px;display:flex;gap:12px;align-items:center;font-weight:700}
-    #gameWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-    canvas{display:block;max-width:100%;height:auto;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.7)}
-    #bottomUi{position:fixed;left:10px;right:10px;bottom:12px;display:flex;justify-content:center;gap:12px;z-index:40}
-    #controls{background:var(--ui-bg);padding:8px;border-radius:10px;display:flex;gap:8px;align-items:center}
-    .control-btn{background:transparent;border:1px solid rgba(255,255,255,0.08);padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:700}
-    #adminPanel{display:none;position:fixed;left:18px;top:70px;z-index:50;background:var(--panel);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);min-width:180px}
-    #adminPanel h4{margin:0 0 8px 0;font-size:14px;color:var(--accent)}
-    #adminPanel button{display:block;width:100%;margin:6px 0;padding:8px;border-radius:8px;border:0;background:linear-gradient(90deg,#123 0%,#045 100%);color:#fff;font-weight:700;cursor:pointer}
-    #gameOverOverlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:linear-gradient(0deg, rgba(0,0,0,0.5), rgba(0,0,0,0.2));z-index:60}
-    #gameOverCard{background:rgba(6,8,12,0.95);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);text-align:center}
-    @media (max-width:600px){#characterSelect{font-size:13px}.char-btn{padding:6px 8px}#scoreboard{font-size:13px}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Galactic Star Catcher — Enhanced</title>
+<style>
+  :root{
+    --ui-bg:rgba(8,10,20,0.6);
+    --accent:#7be3ff;
+    --muted:#cfeefc;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 10%, #071827 0%, #00010a 40%, #000 100%);font-family:Inter,Segoe UI,Arial,sans-serif;color:#fff;overflow:hidden;-webkit-tap-highlight-color:transparent}
+  #uiTop{position:fixed;left:10px;right:10px;top:8px;display:flex;justify-content:space-between;gap:12px;z-index:40;align-items:center}
+  #characterSelect{background:var(--ui-bg);padding:8px;border-radius:10px;display:flex;gap:8px;align-items:center;backdrop-filter:blur(6px)}
+  .char-btn{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--muted);padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer}
+  .char-btn.active{border-color:var(--accent);box-shadow:0 6px 18px rgba(123,227,255,0.06);color:var(--accent)}
+  #scoreboard{background:var(--ui-bg);padding:8px 12px;border-radius:10px;display:flex;gap:12px;align-items:center;font-weight:700}
+  #gameWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;max-width:100%;height:auto;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.7)}
+  #bottomUi{position:fixed;left:10px;right:10px;bottom:12px;display:flex;justify-content:center;gap:12px;z-index:40}
+  #controls{background:var(--ui-bg);padding:8px;border-radius:10px;display:flex;gap:8px;align-items:center}
+  .control-btn{background:transparent;border:1px solid rgba(255,255,255,0.08);padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:700}
+  #adminPanel{display:none;position:fixed;left:18px;top:70px;z-index:50;background:rgba(0,0,0,0.7);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);min-width:220px}
+  #adminPanel h4{margin:0 0 8px 0;font-size:14px;color:var(--accent)}
+  #adminPanel button, #adminPanel input[type=file]{display:block;width:100%;margin:6px 0;padding:8px;border-radius:8px;border:0;background:linear-gradient(90deg,#123 0%,#045 100%);color:#fff;font-weight:700;cursor:pointer}
+  #gameOverOverlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0.2));z-index:60}
+  #gameOverCard{background:rgba(6,8,12,0.95);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);text-align:center}
+  @media (max-width:600px){#characterSelect{font-size:13px}.char-btn{padding:6px 8px}#scoreboard{font-size:13px}}
+</style>
 </head>
 <body>
   <div id="uiTop">
     <div id="characterSelect" role="tablist" aria-label="Character select">
       <span style="opacity:0.9;margin-right:6px">Choose:</span>
-      <button class="char-btn active" data-char="hero" aria-pressed="true">Hero</button>
-      <button class="char-btn" data-char="ninja" aria-pressed="false">Ninja</button>
-      <button class="char-btn" data-char="cyborg" aria-pressed="false">Cyborg</button>
+      <button class="char-btn active" data-char="hero">Hero</button>
+      <button class="char-btn" data-char="ninja">Ninja</button>
+      <button class="char-btn" data-char="cyborg">Cyborg</button>
     </div>
-    <div id="scoreboard" aria-live="polite">Score: <strong id="sc">0</strong> • Lives: <strong id="lv">3</strong> • Level: <strong id="lvn">1</strong> • Ammo: <strong id="am">0</strong></div>
+    <div id="scoreboard" aria-live="polite">
+      Score: <strong id="sc">0</strong> • Lives: <strong id="lv">3</strong> • Level: <strong id="lvn">1</strong> • Ammo: <strong id="am">0</strong>
+    </div>
   </div>
 
   <div id="gameWrap">
@@ -53,6 +59,8 @@
     <button id="giveLives">Give +5 Lives</button>
     <button id="giveAmmo">Give +10 Ammo</button>
     <button id="skipWave">Skip Wave</button>
+    <label style="color:#ddd;font-size:13px;margin-top:8px">Upload avatar (PNG/JPG):</label>
+    <input id="avatarUpload" type="file" accept="image/*" />
     <button id="hideAdmin" style="background:#333;margin-top:6px">Hide Admin</button>
   </div>
 
@@ -65,138 +73,166 @@
   </div>
 
 <script>
-/* Self-contained game script — robust initialization, mobile + desktop */
-(() => {
-  // DOM refs
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d', { alpha:true });
+/* Galactic Star Catcher — Enhanced single-file game
+   Features implemented as requested:
+   - shooting, avatars (preset + upload), enemies that attack, falling upgrades, admin panel with uploads (client-side)
+   - mobile touch + keyboard, waves, particles, UI
+*/
 
-  // Virtual game size (kept constant internally)
-  const VWIDTH = 720, VHEIGHT = 960;
+(() => {
+  // Canvas setup
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const VW = 720, VH = 960;
   let scale = 1, DPR = Math.max(1, window.devicePixelRatio || 1);
 
   function resizeCanvas() {
     const vw = window.innerWidth, vh = window.innerHeight;
-    scale = Math.min(vw / VWIDTH, vh / VHEIGHT);
-    const displayW = Math.max(320, Math.floor(VWIDTH * scale));
-    const displayH = Math.max(480, Math.floor(VHEIGHT * scale));
-    canvas.style.width = displayW + 'px';
-    canvas.style.height = displayH + 'px';
-    canvas.width = Math.floor(displayW * DPR);
-    canvas.height = Math.floor(displayH * DPR);
+    scale = Math.min(vw / VW, vh / VH);
+    const w = Math.max(320, Math.floor(VW * scale));
+    const h = Math.max(480, Math.floor(VH * scale));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.floor(w * DPR);
+    canvas.height = Math.floor(h * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
-
-  window.addEventListener('resize', resizeCanvas, { passive:true });
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
 
   // Game state
   const state = {
     running: false,
     lastTime: 0,
     keys: {},
-    catcher: { x: VWIDTH/2 - 44, y: VHEIGHT - 140, w: 88, h: 88 },
-    stars: [],
-    bullets: [],
-    particles: [],
-    score: 0,
-    lives: 3,
-    level: 1,
-    ammo: 0,
-    starSpeed: 2,
-    waveStars: 10,
-    starsCaught: 0,
-    starTimer: null,
-    adminCode: '',
-    adminCount: 0
+    catcher: { x: VW/2 - 44, y: VH - 140, w: 88, h: 88 },
+    stars: [], bullets: [], eBullets: [], enemies: [], upgrades: [], particles: [],
+    score: 0, lives: 3, level: 1, ammo: 0, starSpeed: 2, waveStars: 10, starsCaught: 0,
+    starTimer: null, adminCode:'', adminCount:0, rapidFireTimer:0, speedBoostTimer:0
   };
 
-  // Assets (public/open placeholders). If any fail, game uses fallback shapes.
-  const sprites = {
+  // Assets
+  const presetSprites = {
     hero: 'https://opengameart.org/sites/default/files/warrior.png',
     ninja: 'https://opengameart.org/sites/default/files/ninja.png',
     cyborg: 'https://opengameart.org/sites/default/files/cyborg.png'
   };
   const images = {};
-  let imagesToLoad = Object.keys(sprites).length;
-  let imagesLoaded = 0;
+  let toLoad = Object.keys(presetSprites).length;
+  let loaded = 0;
 
-  function loadImages(callback) {
-    Object.keys(sprites).forEach(key => {
+  function loadPresets(cb){
+    Object.entries(presetSprites).forEach(([k,url])=>{
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => { images[key] = img; imagesLoaded++; if(imagesLoaded >= imagesToLoad) callback(); };
-      img.onerror = () => { images[key] = null; imagesLoaded++; if(imagesLoaded >= imagesToLoad) callback(); };
-      img.src = sprites[key];
+      img.onload = () => { images[k]=img; loaded++; if(loaded>=toLoad) cb(); };
+      img.onerror = () => { images[k]=null; loaded++; if(loaded>=toLoad) cb(); };
+      img.src = url;
     });
   }
 
-  // Utility
-  const rand = (a,b) => (Math.random()*(b-a)+a)|0;
-  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-  const rectHit = (ax,ay,aw,ah, bx,by,bw,bh) => ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+  // Active avatar image (preset or uploaded)
+  let avatarImg = null;
 
-  // Spawning
+  // Utilities
+  const rand = (a,b) => (Math.random()*(b-a)+a);
+  const irand = (a,b) => Math.floor(rand(a,b+1));
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const rectHit = (ax,ay,aw,ah, bx,by,bw,bh) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+
+  // Spawn functions
   function spawnStar() {
-    const r = rand(8,16);
-    const x = Math.random()*(VWIDTH - r*2) + r;
-    const hue = rand(170,320);
-    state.stars.push({ x, y: -r*2, r, vx: (Math.random()-0.5)*0.6, vy: state.starSpeed + Math.random()*1.2, color:`hsl(${hue} 88% 68%)` });
+    const r = irand(8,16);
+    const x = rand(r, VW - r);
+    const hue = irand(160,320);
+    state.stars.push({ x, y:-r*2, r, vx: rand(-0.5,0.5), vy: state.starSpeed + rand(0,1.2), color:`hsl(${hue} 88% 68%)`});
   }
+
+  function spawnEnemy() {
+    // enemy types: basic (moves horizontally), turret (shoots), kamikaze (homes)
+    const type = Math.random() < 0.55 ? 'basic' : (Math.random() < 0.7 ? 'turret' : 'kamikaze');
+    const w = 48, h = 48;
+    const x = rand(40, VW - 40 - w);
+    const y = rand(40, 140);
+    const enemy = { x, y, w, h, type, hp: type==='basic'?2:(type==='turret'?3:1), dir: Math.random()<0.5?-1:1, shootTimer: irand(60,140) };
+    state.enemies.push(enemy);
+  }
+
+  function spawnUpgrade(x, y) {
+    // types: life, ammo, rapid, speed
+    const types = ['life','ammo','rapid','speed'];
+    const t = types[irand(0, types.length-1)];
+    state.upgrades.push({ x, y, vy: 1.2, r: 12, type: t, color: t==='life'?'#7bffb8': t==='ammo'?'#ffd66b': t==='rapid'?'#7be3ff':'#cfa0ff' });
+  }
+
   function spawnParticle(x,y,col){
     for(let i=0;i<8;i++){
-      state.particles.push({ x, y, vx:(Math.random()-0.5)*4, vy:(Math.random()-1.5)*3, life: rand(24,72), col });
+      state.particles.push({ x, y, vx: rand(-2,2), vy: rand(-2,0), life: irand(30,80), col});
     }
-  }
-
-  // UI references
-  const scEl = document.getElementById('sc'), lvEl = document.getElementById('lv'), lvnEl = document.getElementById('lvn'), amEl = document.getElementById('am');
-  const adminPanel = document.getElementById('adminPanel');
-  const gameOverOverlay = document.getElementById('gameOverOverlay');
-
-  function updateUI(){
-    scEl.textContent = state.score;
-    lvEl.textContent = state.lives;
-    lvnEl.textContent = state.level;
-    amEl.textContent = state.ammo;
   }
 
   // Timers
   function startStarTimer(){
     stopStarTimer();
-    const delay = Math.max(220, 900 - state.level*60);
-    state.starTimer = setInterval(()=> {
-      const count = 1 + Math.floor(state.level/3);
-      for(let i=0;i<count;i++) spawnStar();
-    }, delay);
+    state.starTimer = setInterval(()=>{
+      const per = Math.min(1 + Math.floor(state.level/2), 4);
+      for(let i=0;i<per;i++) spawnStar();
+      // occasionally spawn enemies and upgrades with increasing chance
+      if(Math.random() < 0.25 + state.level*0.03) spawnEnemy();
+      if(Math.random() < 0.07 + state.level*0.02) {
+        const ux = rand(40, VW-40), uy = -10;
+        spawnUpgrade(ux, uy);
+      }
+    }, Math.max(250, 900 - state.level * 60));
   }
-  function stopStarTimer(){ if(state.starTimer){ clearInterval(state.starTimer); state.starTimer = null; } }
+  function stopStarTimer(){ if(state.starTimer) { clearInterval(state.starTimer); state.starTimer = null; } }
 
   // Actions
   function shoot(){
-    if(state.ammo <= 0) return;
-    const b = { x: state.catcher.x + state.catcher.w/2 - 6, y: state.catcher.y + 6, w: 12, h: 18, vy: -9 };
-    state.bullets.push(b);
-    state.ammo--; updateUI();
+    // rapid fire support
+    if(state.rapidFireTimer > 0) {
+      // allow quick shoots; require at least 1 ammo still
+      if(state.ammo <= 0) return;
+      // shoot 2 bullets in spread
+      const cx = state.catcher.x + state.catcher.w/2;
+      state.bullets.push({ x: cx-10, y: state.catcher.y + 6, w:8, h:14, vy:-10 });
+      state.bullets.push({ x: cx+2, y: state.catcher.y + 6, w:8, h:14, vy:-10 });
+      state.ammo = Math.max(0, state.ammo-1);
+    } else {
+      if(state.ammo <= 0) return;
+      state.bullets.push({ x: state.catcher.x + state.catcher.w/2 - 6, y: state.catcher.y + 6, w:12, h:18, vy:-10 });
+      state.ammo = Math.max(0, state.ammo-1);
+    }
+    updateUI();
   }
+
   function levelUp(){
     state.level++;
     state.starSpeed += 0.6;
     state.waveStars += 6;
     state.starsCaught = 0;
-    for(let i=0;i<14;i++) spawnParticle(rand(60,VWIDTH-60), rand(80,VHEIGHT-180), '#7be3ff');
+    for(let i=0;i<12;i++) spawnParticle(rand(60,VW-60), rand(80,VH-180), '#7be3ff');
     updateUI();
   }
+
+  function giveLives(n){ state.lives += n; updateUI(); }
+  function giveAmmo(n){ state.ammo += n; updateUI(); }
+  function skipWave(){ levelUp(); }
+
+  // Game over / restart
   function gameOver(){
     stopStarTimer();
     state.running = false;
     document.getElementById('overScore').textContent = `Score: ${state.score}`;
-    gameOverOverlay.style.display = 'flex';
+    document.getElementById('gameOverOverlay').style.display = 'flex';
   }
   function restart(){
-    state.stars.length = 0; state.bullets.length = 0; state.particles.length = 0;
+    state.stars = []; state.bullets = []; state.eBullets = []; state.enemies = []; state.upgrades = []; state.particles = [];
     state.score = 0; state.lives = 3; state.level = 1; state.ammo = 0; state.starSpeed = 2; state.waveStars = 10; state.starsCaught = 0;
+    state.rapidFireTimer = 0; state.speedBoostTimer = 0;
     updateUI();
-    gameOverOverlay.style.display = 'none';
+    document.getElementById('gameOverOverlay').style.display = 'none';
     startStarTimer();
     state.running = true;
     state.lastTime = performance.now();
@@ -207,202 +243,395 @@
   window.addEventListener('keydown', e => {
     state.keys[e.key] = true;
     if(e.key === ' ') shoot();
-    adminTriggerKey(e.key);
+    adminKey(e.key);
   }, false);
-  window.addEventListener('keyup', e => { state.keys[e.key] = false; }, false);
+  window.addEventListener('keyup', e => state.keys[e.key] = false, false);
 
-  // Touch & pointer
+  // touch controls
+  let touchActive = false;
   canvas.addEventListener('touchstart', e => {
-    const rect = canvas.getBoundingClientRect(); const t = e.touches[0];
+    touchActive = true;
+    const t = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
     const x = (t.clientX - rect.left) / scale;
-    state.catcher.x = clamp(x - state.catcher.w/2, 0, VWIDTH - state.catcher.w);
-    if(t.clientY > rect.top + rect.height*0.65) shoot();
+    state.catcher.x = clamp(x - state.catcher.w/2, 0, VW - state.catcher.w);
+    // bottom area tap to shoot
+    if(t.clientY > rect.top + rect.height * 0.65) shoot();
     e.preventDefault();
   }, {passive:false});
   canvas.addEventListener('touchmove', e => {
-    const rect = canvas.getBoundingClientRect(); const t = e.touches[0];
+    const t = e.touches[0]; const rect = canvas.getBoundingClientRect();
     const x = (t.clientX - rect.left) / scale;
-    state.catcher.x = clamp(x - state.catcher.w/2, 0, VWIDTH - state.catcher.w);
-    e.preventDefault();
+    state.catcher.x = clamp(x - state.catcher.w/2, 0, VW - state.catcher.w); e.preventDefault();
   }, {passive:false});
+  canvas.addEventListener('touchend', e => { touchActive = false; }, false);
 
   // on-screen buttons
-  document.getElementById('btnLeft').addEventListener('pointerdown', ()=> state.keys.LeftBtn = true );
-  document.getElementById('btnLeft').addEventListener('pointerup', ()=> state.keys.LeftBtn = false );
-  document.getElementById('btnRight').addEventListener('pointerdown', ()=> state.keys.RightBtn = true );
-  document.getElementById('btnRight').addEventListener('pointerup', ()=> state.keys.RightBtn = false );
-  document.getElementById('btnShoot').addEventListener('click', ()=> shoot() );
+  document.getElementById('btnLeft').addEventListener('pointerdown', ()=> state.keys.LeftBtn = true);
+  document.getElementById('btnLeft').addEventListener('pointerup', ()=> state.keys.LeftBtn = false);
+  document.getElementById('btnRight').addEventListener('pointerdown', ()=> state.keys.RightBtn = true);
+  document.getElementById('btnRight').addEventListener('pointerup', ()=> state.keys.RightBtn = false);
+  document.getElementById('btnShoot').addEventListener('click', ()=> shoot());
 
-  // Character select
-  let activeImg = null;
+  // character selection
   document.querySelectorAll('.char-btn').forEach(b=>{
     b.addEventListener('click', ()=>{
-      document.querySelectorAll('.char-btn').forEach(x=>{ x.classList.remove('active'); x.setAttribute('aria-pressed','false'); });
-      b.classList.add('active'); b.setAttribute('aria-pressed','true');
+      document.querySelectorAll('.char-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
       const key = b.getAttribute('data-char');
-      activeImg = images[key] || null;
+      avatarImg = images[key] || null;
     });
   });
 
-  // Admin panel wiring
-  document.getElementById('giveLives').addEventListener('click', ()=>{ state.lives += 5; updateUI(); });
-  document.getElementById('giveAmmo').addEventListener('click', ()=>{ state.ammo += 10; updateUI(); });
-  document.getElementById('skipWave').addEventListener('click', ()=>{ levelUp(); });
-  document.getElementById('hideAdmin').addEventListener('click', ()=>{ adminPanel.style.display='none'; adminPanel.setAttribute('aria-hidden','true'); state.adminCount = 0; state.adminCode=''; });
-
-  function adminTriggerKey(k){
+  // Admin panel trigger & wiring
+  function adminKey(k){
     state.adminCode += k.toString();
-    if(state.adminCode.endsWith('67')){ state.adminCount++; state.adminCode = ''; }
-    if(state.adminCount >= 3){ adminPanel.style.display='block'; adminPanel.setAttribute('aria-hidden','false'); state.adminCount = 0; state.adminCode=''; }
+    if(state.adminCode.endsWith('67')){ state.adminCount++; state.adminCode=''; }
+    if(state.adminCount >= 3){ document.getElementById('adminPanel').style.display = 'block'; document.getElementById('adminPanel').setAttribute('aria-hidden','false'); state.adminCount = 0; state.adminCode=''; }
     if(state.adminCode.length > 12) state.adminCode = state.adminCode.slice(-12);
   }
+  document.getElementById('giveLives').addEventListener('click', ()=> giveLives(5));
+  document.getElementById('giveAmmo').addEventListener('click', ()=> giveAmmo(10));
+  document.getElementById('skipWave').addEventListener('click', ()=> skipWave());
+  document.getElementById('hideAdmin').addEventListener('click', ()=> { document.getElementById('adminPanel').style.display='none'; });
 
-  // Restart button
-  document.getElementById('restartBtn').addEventListener('click', ()=> restart() );
+  // avatar upload (client-side only)
+  document.getElementById('avatarUpload').addEventListener('change', e=>{
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    const fr = new FileReader();
+    fr.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => { avatarImg = img; /* keep in-memory only */ };
+      img.onerror = () => { alert('Failed to load image'); };
+      img.src = ev.target.result;
+    };
+    fr.readAsDataURL(f);
+  });
 
-  // Drawing helpers
-  function drawBackground(perf){
-    // gradient
-    const g = ctx.createLinearGradient(0,0,VWIDTH, VHEIGHT);
-    g.addColorStop(0, '#021b2b'); g.addColorStop(0.5, '#001021'); g.addColorStop(1, '#000010');
-    ctx.fillStyle = g; ctx.fillRect(0,0,VWIDTH,VHEIGHT);
+  // restart button
+  document.getElementById('restartBtn').addEventListener('click', ()=> restart());
 
-    // faint nebula shapes (time-varying)
-    ctx.save();
-    ctx.globalAlpha = 0.06 + Math.abs(Math.sin(perf*0.0003))*0.03;
-    ctx.fillStyle = '#07304a';
-    ctx.beginPath(); ctx.ellipse(VWIDTH*0.18, VHEIGHT*0.22, 220, 120, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(VWIDTH*0.78, VHEIGHT*0.45, 260, 140, 0, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-
-    // stable micro stars
-    ctx.fillStyle = '#fff';
-    for(let i=0;i<80;i++){
-      const sx = (i*47) % (VWIDTH-10) + 5;
-      const sy = (i*73) % (VHEIGHT-40) + 20;
-      ctx.globalAlpha = 0.2 + 0.6 * Math.abs(Math.sin((perf*0.001 + i)*0.7));
-      ctx.fillRect(sx, sy, 1.4, 1.4);
-    }
-    ctx.globalAlpha = 1;
+  // UI update
+  function updateUI(){
+    document.getElementById('sc').textContent = state.score;
+    document.getElementById('lv').textContent = state.lives;
+    document.getElementById('lvn').textContent = state.level;
+    document.getElementById('am').textContent = state.ammo;
   }
 
-  // Main loop
-  let lastPerf = 0;
+  // Main game loop
   function loop(ts){
     if(!state.running) return;
-    const dt = Math.min(40, ts - (state.lastTime || ts));
+    if(!state.lastTime) state.lastTime = ts;
+    const dt = Math.min(40, ts - state.lastTime);
     state.lastTime = ts;
 
-    // input movement
-    if(state.keys['ArrowLeft'] || state.keys['a'] || state.keys['A'] || state.keys.LeftBtn) state.catcher.x -= 6;
-    if(state.keys['ArrowRight'] || state.keys['d'] || state.keys['D'] || state.keys.RightBtn) state.catcher.x += 6;
-    state.catcher.x = clamp(state.catcher.x, 0, VWIDTH - state.catcher.w);
+    // update temporary timers
+    if(state.rapidFireTimer > 0) state.rapidFireTimer = Math.max(0, state.rapidFireTimer - dt/16);
+    if(state.speedBoostTimer > 0) state.speedBoostTimer = Math.max(0, state.speedBoostTimer - dt/16);
+
+    // movement (keyboard or on-screen)
+    const speed = 6 + (state.speedBoostTimer>0?3:0);
+    if(state.keys['ArrowLeft'] || state.keys['a'] || state.keys.LeftBtn) state.catcher.x -= speed;
+    if(state.keys['ArrowRight'] || state.keys['d'] || state.keys.RightBtn) state.catcher.x += speed;
+    state.catcher.x = clamp(state.catcher.x, 0, VW - state.catcher.w);
 
     // update stars
     for(let i=state.stars.length-1;i>=0;i--){
       const s = state.stars[i];
       s.x += s.vx; s.y += s.vy; s.vy += 0.02;
-      // catch
-      if(rectHit(s.x - s.r, s.y - s.r, s.r*2, s.r*2, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h)){
-        state.score += 1; state.ammo += 1; state.starsCaught += 1;
-        spawnParticle(s.x, s.y, s.color); state.stars.splice(i,1); updateUI();
-        if(state.starsCaught >= state.waveStars){ levelUp(); }
+      if(rectHit(s.x - s.r, s.y - s.r, s.r*2, s.r*2, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h)) {
+        state.score++; state.ammo++; state.starsCaught++; spawnParticle(s.x,s.y,s.color); state.stars.splice(i,1); updateUI();
+        if(state.starsCaught >= state.waveStars) levelUp();
         continue;
       }
-      // miss
-      if(s.y - s.r > VHEIGHT){
-        spawnParticle(s.x, VHEIGHT - 20, '#ff7b7b'); state.stars.splice(i,1); state.lives -= 1; updateUI();
+      if(s.y - s.r > VH) { state.stars.splice(i,1); state.lives--; spawnParticle(s.x, VH-20, '#ff7b7b'); updateUI(); if(state.lives<=0){ gameOver(); return; } }
+    }
+
+    // update enemies
+    for(let i=state.enemies.length-1;i>=0;i--){
+      const e = state.enemies[i];
+      // basic movement
+      if(e.type === 'basic'){
+        e.x += e.dir * (1 + state.level*0.08);
+        if(e.x < 20 || e.x + e.w > VW-20) e.dir *= -1;
+        // chance to dive toward player occasionally
+        if(Math.random() < 0.001 + state.level*0.001) e.y += 4;
+      } else if(e.type === 'turret'){
+        // small horizontal hover
+        e.x += Math.sin((ts + i*1000)*0.001) * 0.6;
+        // shoot timer
+        e.shootTimer -= 1;
+        if(e.shootTimer <= 0){
+          // fire an enemy bullet toward player
+          const bx = e.x + e.w/2, by = e.y + e.h;
+          const dx = (state.catcher.x + state.catcher.w/2) - bx;
+          const dy = (state.catcher.y + state.catcher.h/2) - by;
+          const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+          const vx = dx / mag * (3 + state.level*0.2);
+          const vy = dy / mag * (3 + state.level*0.2);
+          state.eBullets.push({ x: bx, y: by, vx, vy, w:8, h:8 });
+          e.shootTimer = irand(Math.max(40, 60 - state.level*2), Math.max(80, 140 - state.level*3));
+        }
+      } else if(e.type === 'kamikaze'){
+        // home onto player
+        const dx = (state.catcher.x + state.catcher.w/2) - (e.x + e.w/2);
+        const dy = (state.catcher.y + state.catcher.h/2) - (e.y + e.h/2);
+        const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+        e.x += (dx / mag) * (2 + state.level*0.1);
+        e.y += (dy / mag) * (2 + state.level*0.1);
+      }
+
+      // collision with bullets (player bullets)
+      let died = false;
+      for(let bidx=state.bullets.length-1;bidx>=0;bidx--){
+        const b = state.bullets[bidx];
+        if(rectHit(b.x,b.y,b.w,b.h, e.x, e.y, e.w, e.h)){
+          e.hp -= 1;
+          state.bullets.splice(bidx,1);
+          spawnParticle(e.x + e.w/2, e.y + e.h/2, '#ffd66b');
+          if(e.hp <= 0){
+            state.score += (e.type==='kamikaze'?4:3);
+            spawnParticle(e.x + e.w/2, e.y + e.h/2, '#ff8b6b');
+            // chance to drop an upgrade
+            if(Math.random() < 0.35) spawnUpgrade(e.x + e.w/2, e.y + e.h/2);
+            state.enemies.splice(i,1);
+            died = true;
+          }
+          updateUI();
+          break;
+        }
+      }
+      if(died) continue;
+
+      // enemy collision with player
+      if(rectHit(e.x, e.y, e.w, e.h, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h)){
+        // damage player
+        spawnParticle(state.catcher.x + state.catcher.w/2, state.catcher.y + 10, '#ff7b7b');
+        state.lives -= 1;
+        updateUI();
+        state.enemies.splice(i,1);
         if(state.lives <= 0){ gameOver(); return; }
       }
     }
 
-    // bullets
+    // update player bullets
     for(let i=state.bullets.length-1;i>=0;i--){
       const b = state.bullets[i];
       b.y += b.vy;
-      // hit check
-      let destroyed = false;
-      for(let j=state.stars.length-1;j>=0;j--){
-        const s = state.stars[j];
-        if(rectHit(b.x,b.y,b.w,b.h, s.x - s.r, s.y - s.r, s.r*2, s.r*2)){
-          state.score += 2; spawnParticle(s.x, s.y, '#ffd66b'); state.stars.splice(j,1);
-          state.bullets.splice(i,1); destroyed = true; updateUI(); break;
-        }
-      }
-      if(!destroyed && b.y + b.h < 0) state.bullets.splice(i,1);
+      if(b.y + b.h < 0) { state.bullets.splice(i,1); continue; }
+      // bullets already checked for enemy collisions earlier
     }
 
-    // particles update
+    // update enemy bullets
+    for(let i=state.eBullets.length-1;i>=0;i--){
+      const eb = state.eBullets[i];
+      eb.x += eb.vx; eb.y += eb.vy;
+      if(rectHit(eb.x, eb.y, eb.w, eb.h, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h)){
+        // hit player
+        spawnParticle(state.catcher.x + state.catcher.w/2, state.catcher.y + 6, '#ff7b7b');
+        state.lives -= 1;
+        state.eBullets.splice(i,1);
+        updateUI();
+        if(state.lives <= 0){ gameOver(); return; }
+        continue;
+      }
+      if(eb.x < -50 || eb.x > VW + 50 || eb.y > VH + 50) state.eBullets.splice(i,1);
+    }
+
+    // upgrades falling
+    for(let i=state.upgrades.length-1;i>=0;i--){
+      const u = state.upgrades[i];
+      u.y += u.vy;
+      if(rectHit(u.x - u.r, u.y - u.r, u.r*2, u.r*2, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h)){
+        // apply upgrade
+        if(u.type === 'life'){ state.lives += 1; }
+        else if(u.type === 'ammo'){ state.ammo += 5; }
+        else if(u.type === 'rapid'){ state.rapidFireTimer = 600; } // ticks
+        else if(u.type === 'speed'){ state.speedBoostTimer = 600; }
+        spawnParticle(u.x,u.y,'#fff');
+        state.upgrades.splice(i,1);
+        updateUI();
+        continue;
+      }
+      if(u.y - u.r > VH) state.upgrades.splice(i,1);
+    }
+
+    // particles
     for(let i=state.particles.length-1;i>=0;i--){
       const p = state.particles[i];
-      p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 1;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life--;
       if(p.life <= 0) state.particles.splice(i,1);
     }
 
     // draw
-    ctx.clearRect(0,0,VWIDTH,VHEIGHT);
+    ctx.clearRect(0,0,VW,VH);
     drawBackground(ts);
 
     // stars
     state.stars.forEach(s=>{
       ctx.save();
       ctx.beginPath();
-      ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = Math.max(6, s.r);
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = s.color;
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur = Math.max(6, s.r);
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
     });
 
-    // bullets
+    // upgrades
+    state.upgrades.forEach(u=>{
+      ctx.save();
+      ctx.fillStyle = u.color;
+      ctx.beginPath();
+      ctx.arc(u.x, u.y, u.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      // label
+      ctx.fillStyle = '#001';
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.fillText(u.type[0].toUpperCase(), u.x-4, u.y+4);
+    });
+
+    // enemies
+    state.enemies.forEach(e=>{
+      ctx.save();
+      ctx.fillStyle = e.type==='kamikaze'?'#ff6b6b': e.type==='turret'?'#ffd66b':'#b0c4ff';
+      ctx.fillRect(e.x, e.y, e.w, e.h);
+      ctx.fillStyle = '#001';
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.fillText(e.type[0].toUpperCase(), e.x+e.w/2-6, e.y+e.h/2+4);
+      ctx.restore();
+    });
+
+    // enemy bullets
+    ctx.fillStyle = '#ff8b8b';
+    state.eBullets.forEach(b => ctx.fillRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h));
+
+    // player bullets
     ctx.fillStyle = '#ffeb7a';
     state.bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
 
-    // catcher
-    if(activeImg) ctx.drawImage(activeImg, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h);
-    else { ctx.fillStyle = '#7be3ff'; ctx.fillRect(state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h); }
+    // catcher (avatar)
+    if(avatarImg){
+      ctx.drawImage(avatarImg, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h);
+    } else {
+      // fallback: draw a colored rounded rect
+      ctx.save();
+      ctx.fillStyle = '#7be3ff';
+      roundRect(ctx, state.catcher.x, state.catcher.y, state.catcher.w, state.catcher.h, 10, true, false);
+      ctx.restore();
+    }
 
     // particles
-    state.particles.forEach(p => { ctx.globalAlpha = clamp(p.life/72,0,1); ctx.fillStyle = p.col; ctx.fillRect(p.x,p.y,2,2); ctx.globalAlpha = 1; });
+    state.particles.forEach(p => {
+      ctx.globalAlpha = clamp(p.life/80,0,1);
+      ctx.fillStyle = p.col;
+      ctx.fillRect(p.x, p.y, 2, 2);
+      ctx.globalAlpha = 1;
+    });
 
-    // HUD
-    ctx.fillStyle = 'rgba(0,0,0,0.36)'; ctx.fillRect(10,10,170,56);
-    ctx.fillStyle = '#7be3ff'; ctx.font = '600 14px Inter, sans-serif';
-    ctx.fillText(`Score: ${state.score}`, 20, 30); ctx.fillText(`Lives: ${state.lives}`, 20, 52);
+    // HUD (on-canvas)
+    ctx.fillStyle = 'rgba(0,0,0,0.36)';
+    ctx.fillRect(10,10,210,56);
+    ctx.fillStyle = '#7be3ff';
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.fillText(`Score: ${state.score}`, 20, 32);
+    ctx.fillText(`Lives: ${state.lives}`, 20, 52);
 
+    // continue
     requestAnimationFrame(loop);
+  } // loop
+
+  // small helper to draw rounded rect
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+    if(typeof r === 'undefined') r=5;
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
   }
 
-  // Start / init
-  function start(){
+  // background
+  function drawBackground(t){
+    const g = ctx.createLinearGradient(0,0,VW, VH);
+    g.addColorStop(0, '#021b2b'); g.addColorStop(0.5, '#001021'); g.addColorStop(1, '#000010');
+    ctx.fillStyle = g; ctx.fillRect(0,0,VW,VH);
+
+    // nebula
+    ctx.save();
+    ctx.globalAlpha = 0.06 + Math.abs(Math.sin(t*0.0003))*0.03;
+    ctx.fillStyle = '#07304a';
+    ctx.beginPath(); ctx.ellipse(VW*0.18, VH*0.22, 220, 120, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(VW*0.78, VH*0.45, 260, 140, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // small stars
+    ctx.fillStyle = '#fff';
+    for(let i=0;i<80;i++){
+      const sx = (i*47) % (VW-10) + 5;
+      const sy = (i*73) % (VH-40) + 20;
+      ctx.globalAlpha = 0.2 + 0.6 * Math.abs(Math.sin((t*0.001 + i)*0.7));
+      ctx.fillRect(sx, sy, 1.2, 1.2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Start sequence: load images then start
+  loadPresets(() => {
+    // default avatar is hero preset
+    avatarImg = images['hero'] || null;
+    state.catcher.x = VW/2 - state.catcher.w/2;
+    state.catcher.y = VH - 140;
     resizeCanvas();
-    updateUI();
+    // start with a couple stars
+    spawnStar(); spawnStar(); spawnStar();
     startStarTimer();
     state.running = true;
     state.lastTime = performance.now();
     requestAnimationFrame(loop);
-  }
-
-  // Load images then start
-  loadImages(()=>{
-    // use hero by default
-    activeImg = images['hero'] || null;
-    // center catcher within internal size
-    state.catcher.x = (VWIDTH/2) - state.catcher.w/2;
-    state.catcher.y = VHEIGHT - 140;
-    resizeCanvas();
-    // ensure a few stars appear shortly even if timer has small delay
-    spawnStar(); spawnStar();
-    start();
   });
 
-  // Defensive fallback: if images take long/failed, still start after 1.3s
-  setTimeout(()=>{ if(!state.running){ activeImg = images['hero'] || null; resizeCanvas(); start(); } }, 1300);
+  setTimeout(()=>{ // fallback if images slow
+    if(!state.running){
+      avatarImg = images['hero'] || null;
+      state.catcher.x = VW/2 - state.catcher.w/2;
+      state.catcher.y = VH - 140;
+      resizeCanvas();
+      startStarTimer();
+      state.running = true;
+      state.lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }
+  }, 1300);
 
-  // Expose small debug API
+  // Start/stop star timer helpers
+  function startStarTimer(){ stopStarTimer(); state.starTimer = setInterval(()=> {
+    spawnStar();
+    if(Math.random() < 0.3 + state.level*0.02) spawnEnemy();
+    if(Math.random() < 0.08 + state.level*0.02) spawnUpgrade(rand(40,VW-40), -10);
+  }, Math.max(260, 900 - state.level*60)); }
+  function stopStarTimer(){ if(state.starTimer){ clearInterval(state.starTimer); state.starTimer = null; } }
+
+  // UI updates
+  function updateUI(){ document.getElementById('sc').textContent = state.score; document.getElementById('lv').textContent = state.lives; document.getElementById('lvn').textContent = state.level; document.getElementById('am').textContent = state.ammo; }
+  updateUI();
+
+  // Expose simple debug API
   window.GSC = {
-    state: ()=> ({ score: state.score, lives: state.lives, level: state.level, ammo: state.ammo, stars: state.stars.length }),
+    state: () => ({score: state.score, lives: state.lives, level: state.level, ammo: state.ammo, enemies: state.enemies.length}),
     addLives: n => { state.lives += n; updateUI(); },
     addAmmo: n => { state.ammo += n; updateUI(); }
   };
 })();
 </script>
+
 </body>
 </html>
